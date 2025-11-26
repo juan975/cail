@@ -51,7 +51,11 @@ Un diagrama de clases sigue la siguiente estructura:
 
 ## Diagrama de Clases del Proyecto (CAIL)
 
-![Diagrama de Clases CAIL](https://github.com/user-attachments/assets/a5074d62-f217-4163-884b-0687d42e1436)
+![Diagrama de Clases CAIL](https://github.com/user-attachments/assets/8c9356f1-2c53-4288-b98c-28322f19ac3c)
+
+
+
+
 
 
 
