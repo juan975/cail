@@ -153,6 +153,7 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
   const empresasFiltradas = empresasDB.filter(empresa =>
     empresa.nombre.toLowerCase().includes(empresaNombre.toLowerCase())
   );
+  const dropdownActivo = showDropdown && empresasFiltradas.length > 0;
 
   const seleccionarEmpresa = (empresa: typeof empresasDB[0]) => {
     setEmpresaNombre(empresa.nombre);
@@ -219,14 +220,14 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
         >
           <View style={styles.form}>
             {/* Información de la Empresa */}
-            <View style={styles.section}>
+            <View style={[styles.section, dropdownActivo && styles.sectionRaised]}>
               <View style={styles.sectionHeader}>
                 <Feather name="briefcase" size={16} color="#F59E0B" />
                 <Text style={styles.sectionTitle}>Información de la empresa</Text>
               </View>
 
               {/* Nombre de empresa con dropdown */}
-              <View style={styles.inputGroup}>
+              <View style={[styles.inputGroup, dropdownActivo && styles.inputGroupRaised]}>
                 <Text style={styles.label}>Nombre de empresa *</Text>
                 <View style={styles.dropdownInput}>
                   <TextInput
@@ -256,8 +257,8 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
                 </Text>
 
                 {/* Dropdown de opciones */}
-                {showDropdown && empresasFiltradas.length > 0 && (
-                  <View style={styles.dropdown}>
+                {dropdownActivo && (
+                  <View style={[styles.dropdown, styles.dropdownElevated]}>
                     <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
                       {empresasFiltradas.map((empresa, index) => (
                         <TouchableOpacity
@@ -496,6 +497,9 @@ const styles = StyleSheet.create({
   section: {
     gap: 12,
   },
+  sectionRaised: {
+    zIndex: 20,
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -510,6 +514,9 @@ const styles = StyleSheet.create({
     gap: 6,
     position: 'relative',
     zIndex: 1,
+  },
+  inputGroupRaised: {
+    zIndex: 30,
   },
   label: {
     fontSize: 13,
@@ -558,6 +565,11 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+  },
+  dropdownElevated: {
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12,
   },
   dropdownScroll: {
     maxHeight: 200,
