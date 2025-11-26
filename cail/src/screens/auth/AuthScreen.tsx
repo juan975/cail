@@ -2,9 +2,6 @@ import { useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { colors, gradients } from '@/theme/colors';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { UserRole } from '@/types';
 import { LoginForm } from './LoginForm';
@@ -33,15 +30,14 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
     onAuthSuccess(selectedRole, data);
   };
 
-  return (
-    <LinearGradient colors={['#0B7A4D', '#0A6B43', '#085C3A']} style={styles.gradient}>
-      <SafeAreaView style={styles.safe}>
-        <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingHorizontal: horizontalGutter }]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.inner, { maxWidth: contentWidth }]}>
+  const content = (
+    <SafeAreaView style={styles.safe}>
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingHorizontal: horizontalGutter }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.inner, { maxWidth: contentWidth }]}>
             {/* Hero Section */}
             {mode === 'select' && (
               <View style={styles.heroSection}>
@@ -97,11 +93,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
               </View>
             ) : (
               /* Login/Register Forms */
-              <Card
-                tone="accent"
-                spacing="lg"
-                style={[styles.formCard, (isTablet || isDesktop) && styles.formCardWide]}
-              >
+              <View style={[styles.formCard, (isTablet || isDesktop) && styles.formCardWide]}>
                 {mode === 'login' && (
                   <LoginForm
                     role={selectedRole}
@@ -124,12 +116,19 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                     onSwitchToLogin={() => setMode('login')}
                   />
                 )}
-              </Card>
+              </View>
             )}
           </View>
         </ScrollView>
       </SafeAreaView>
+  );
+
+  return mode === 'select' ? (
+    <LinearGradient colors={['#0B7A4D', '#0A6B43', '#085C3A']} style={styles.gradient}>
+      {content}
     </LinearGradient>
+  ) : (
+    <View style={[styles.gradient, styles.plainBackground]}>{content}</View>
   );
 }
 
@@ -185,6 +184,9 @@ function RoleCard({
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
+  },
+  plainBackground: {
+    backgroundColor: '#0B7A4D',
   },
   safe: {
     flex: 1,
@@ -405,6 +407,7 @@ const styles = StyleSheet.create({
   formCard: {
     marginTop: 0,
     overflow: 'visible',
+    backgroundColor: 'transparent',
   },
   formCardWide: {
     maxWidth: 560,

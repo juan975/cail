@@ -51,130 +51,127 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: Login
   const accentIcon = role === 'candidate' ? 'user' : 'briefcase';
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <View style={styles.card}>
+      {/* Header dentro de la card */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Feather name="arrow-left" size={20} color="black" />
+          <Feather name="arrow-left" size={20} color="#6B7280" />
         </TouchableOpacity>
         <View style={styles.headerBadge}>
-          <Feather name="shield" size={14} color="black" />
-          <Text style={styles.headerBadgeText}>Acceso Seguro</Text>
+          <Feather name="shield" size={14} color={accentColor} />
+          <Text style={[styles.headerBadgeText, { color: accentColor }]}>Acceso Seguro</Text>
         </View>
       </View>
 
-      {/* Main Card */}
-      <View style={styles.card}>
-        {/* Icon Circle */}
-        <View style={[styles.iconCircle, { backgroundColor: accentLight }]}>
-          <View style={[styles.iconInner, { backgroundColor: accentColor }]}>
-            <Feather name={accentIcon} size={28} color="#FFFFFF" />
+      {/* Icon Circle */}
+      <View style={[styles.iconCircle, { backgroundColor: accentLight }]}>
+        <View style={[styles.iconInner, { backgroundColor: accentColor }]}>
+          <Feather name={accentIcon} size={28} color="#FFFFFF" />
+        </View>
+      </View>
+
+      {/* Title */}
+      <Text style={styles.title}>Bienvenido de nuevo</Text>
+      <Text style={styles.subtitle}>
+        {role === 'candidate' 
+          ? 'Accede como Candidato' 
+          : 'Accede como Empleador'}
+      </Text>
+
+      {/* Form */}
+      <View style={styles.form}>
+        {/* Email Input */}
+        <View style={styles.inputGroup}>
+          <View style={styles.labelRow}>
+            <Feather name="mail" size={16} color="#6B7280" />
+            <Text style={styles.label}>Correo electrónico</Text>
+          </View>
+          <View style={styles.inputWrapper}>
+            <InputField
+              value={email}
+              onChangeText={setEmail}
+              placeholder={role === 'candidate' ? 'tu@email.com' : 'empresa@dominio.com'}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
           </View>
         </View>
 
-        {/* Title */}
-        <Text style={styles.title}>Bienvenido de nuevo</Text>
-        <Text style={styles.subtitle}>
-          {role === 'candidate' 
-            ? 'Accede como Candidato' 
-            : 'Accede como Empleador'}
-        </Text>
-
-        {/* Form */}
-        <View style={styles.form}>
-          {/* Email Input */}
-          <View style={styles.inputGroup}>
-            <View style={styles.labelRow}>
-              <Feather name="mail" size={16} color="#6B7280" />
-              <Text style={styles.label}>Correo electrónico</Text>
-            </View>
-            <View style={styles.inputWrapper}>
+        {/* Password Input */}
+        <View style={styles.inputGroup}>
+          <View style={styles.labelRow}>
+            <Feather name="lock" size={16} color="#6B7280" />
+            <Text style={styles.label}>Contraseña</Text>
+          </View>
+          <View style={styles.inputWrapper}>
+            <View style={styles.passwordContainer}>
               <InputField
-                value={email}
-                onChangeText={setEmail}
-                placeholder={role === 'candidate' ? 'tu@email.com' : 'empresa@dominio.com'}
-                keyboardType="email-address"
-                autoCapitalize="none"
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Ingresa tu contraseña"
+                secureTextEntry={!showPassword}
               />
-            </View>
-          </View>
-
-          {/* Password Input */}
-          <View style={styles.inputGroup}>
-            <View style={styles.labelRow}>
-              <Feather name="lock" size={16} color="#6B7280" />
-              <Text style={styles.label}>Contraseña</Text>
-            </View>
-            <View style={styles.inputWrapper}>
-              <View style={styles.passwordContainer}>
-                <InputField
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Ingresa tu contraseña"
-                  secureTextEntry={!showPassword}
+              <TouchableOpacity 
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.passwordToggle}
+              >
+                <Feather 
+                  name={showPassword ? 'eye-off' : 'eye'} 
+                  size={18} 
+                  color="#9CA3AF" 
                 />
-                <TouchableOpacity 
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.passwordToggle}
-                >
-                  <Feather 
-                    name={showPassword ? 'eye-off' : 'eye'} 
-                    size={18} 
-                    color="#9CA3AF" 
-                  />
-                </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             </View>
           </View>
-
-          {/* Forgot Password */}
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={[styles.forgotText, { color: accentColor }]}>
-              ¿Olvidaste tu contraseña?
-            </Text>
-          </TouchableOpacity>
-
-          {/* Submit Button */}
-          <TouchableOpacity 
-            onPress={handleSubmit}
-            style={[styles.submitButton, { backgroundColor: accentColor }]}
-            activeOpacity={0.8}
-            disabled={loading}
-          >
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <Text style={styles.submitText}>Ingresando...</Text>
-              </View>
-            ) : (
-              <>
-                <Text style={styles.submitText}>Iniciar Sesión</Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>¿Nuevo en CAIL?</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Register Link */}
-          <TouchableOpacity 
-            onPress={onSwitchToRegister}
-            style={styles.registerButton}
-          >
-            <Feather name="user-plus" size={18} color={accentColor} />
-            <Text style={[styles.registerText, { color: accentColor }]}>
-              Crear cuenta nueva
-            </Text>
-          </TouchableOpacity>
         </View>
+
+        {/* Forgot Password */}
+        <TouchableOpacity style={styles.forgotPassword}>
+          <Text style={[styles.forgotText, { color: accentColor }]}>
+            ¿Olvidaste tu contraseña?
+          </Text>
+        </TouchableOpacity>
+
+        {/* Submit Button */}
+        <TouchableOpacity 
+          onPress={handleSubmit}
+          style={[styles.submitButton, { backgroundColor: accentColor }]}
+          activeOpacity={0.8}
+          disabled={loading}
+        >
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.submitText}>Ingresando...</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.submitText}>Iniciar Sesión</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        {/* Divider */}
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>¿Nuevo en CAIL?</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* Register Link */}
+        <TouchableOpacity 
+          onPress={onSwitchToRegister}
+          style={styles.registerButton}
+        >
+          <Feather name="user-plus" size={18} color={accentColor} />
+          <Text style={[styles.registerText, { color: accentColor }]}>
+            Crear cuenta nueva
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Feather name="shield" size={14} color="rgba(255,255,255,0.6)" />
+        <Feather name="shield" size={14} color="rgba(0,0,0,0.4)" />
         <Text style={styles.footerText}>
           Al continuar, aceptas los términos y condiciones de uso
         </Text>
@@ -184,44 +181,7 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: Login
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 20,
-  },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  headerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  headerBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
-  },
-
-  // Card
+  // Card principal - ahora es el contenedor raíz
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
@@ -232,6 +192,40 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 5,
+  },
+
+  // Header dentro de la card
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 24,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  headerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  headerBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 
   // Icon Circle
@@ -334,25 +328,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Info Box
-  infoBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    backgroundColor: '#EFF6FF',
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-    marginBottom: 20,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 11,
-    color: '#1E40AF',
-    lineHeight: 16,
-  },
-
   // Divider
   divider: {
     flexDirection: 'row',
@@ -388,17 +363,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Footer
+  // Footer dentro de la card
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    marginTop: 20,
   },
   footerText: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
+    fontSize: 11,
+    color: '#9CA3AF',
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 16,
   },
 });

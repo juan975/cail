@@ -189,15 +189,15 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Feather name="arrow-left" size={20} color="rgba(255,255,255,0.9)" />
-        </TouchableOpacity>
-      </View>
-
       {/* Main Card */}
       <View style={styles.card}>
+        {/* Header */}
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Feather name="arrow-left" size={20} color="#F59E0B" />
+          </TouchableOpacity>
+        </View>
+
         {/* Card Header */}
         <View style={styles.cardHeader}>
           <View style={styles.iconCircle}>
@@ -221,7 +221,7 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
             {/* Información de la Empresa */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Feather name="building" size={16} color="#F59E0B" />
+                <Feather name="briefcase" size={16} color="#F59E0B" />
                 <Text style={styles.sectionTitle}>Información de la empresa</Text>
               </View>
 
@@ -418,33 +418,34 @@ const styles = StyleSheet.create({
     gap: 16,
   },
 
-  // Header
-  header: {
+  // Header inside card
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 12,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: '#E5E7EB',
   },
 
   // Card
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 20,
+    paddingVertical: 26,
+    paddingHorizontal: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 5,
-    maxHeight: '82%',
   },
   cardHeader: {
     flexDirection: 'row',

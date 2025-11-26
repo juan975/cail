@@ -87,23 +87,23 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Feather name="arrow-left" size={20} color="rgba(255,255,255,0.9)" />
-        </TouchableOpacity>
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: activeTab === 'personal' ? '50%' : '100%' }]} />
-          </View>
-          <Text style={styles.progressText}>
-            Paso {activeTab === 'personal' ? '1' : '2'} de 2
-          </Text>
-        </View>
-      </View>
-
       {/* Main Card */}
       <View style={styles.card}>
+        {/* Header + Progress */}
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Feather name="arrow-left" size={20} color="#0B7A4D" />
+          </TouchableOpacity>
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: activeTab === 'personal' ? '50%' : '100%' }]} />
+            </View>
+            <Text style={styles.progressText}>
+              Paso {activeTab === 'personal' ? '1' : '2'} de 2
+            </Text>
+          </View>
+        </View>
+
         {/* Card Header */}
         <View style={styles.cardHeader}>
           <View style={styles.iconCircle}>
@@ -510,21 +510,22 @@ const styles = StyleSheet.create({
     gap: 16,
   },
 
-  // Header
-  header: {
+  // Header inside card
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    marginBottom: 16,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: '#E5E7EB',
   },
   progressContainer: {
     flex: 1,
@@ -532,32 +533,32 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 6,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: '#E6F4EC',
     borderRadius: 3,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0B7A4D',
     borderRadius: 3,
   },
   progressText: {
     fontSize: 12,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
+    color: '#0B7A4D',
   },
 
   // Card
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 20,
+    paddingVertical: 26,
+    paddingHorizontal: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 5,
-    maxHeight: '82%',
   },
   cardHeader: {
     flexDirection: 'row',
