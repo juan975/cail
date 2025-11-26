@@ -69,7 +69,6 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                     description="Busco oportunidades laborales"
                     icon="user"
                     color="#0B7A4D"
-                    features={['Explorar ofertas', 'Postular empleos', 'Gestionar perfil']}
                     onPress={() => handleRoleSelect('candidate')}
                   />
                   
@@ -78,7 +77,6 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                     description="Busco talento para mi empresa"
                     icon="briefcase"
                     color="#F59E0B"
-                    features={['Publicar vacantes', 'Revisar candidatos', 'Gestionar procesos']}
                     onPress={() => handleRoleSelect('employer')}
                   />
                 </View>
@@ -137,14 +135,12 @@ function RoleCard({
   description,
   icon,
   color,
-  features,
   onPress,
 }: {
   title: string;
   description: string;
   icon: keyof typeof Feather.glyphMap;
   color: string;
-  features: string[];
   onPress: () => void;
 }) {
   return (
@@ -159,16 +155,6 @@ function RoleCard({
             <Text style={styles.roleTitle}>{title}</Text>
             <Text style={styles.roleDescription}>{description}</Text>
           </View>
-        </View>
-
-        {/* Features List */}
-        <View style={styles.featuresList}>
-          {features.map((feature, index) => (
-            <View key={index} style={styles.featureItem}>
-              <View style={[styles.featureDot, { backgroundColor: color }]} />
-              <Text style={styles.featureText}>{feature}</Text>
-            </View>
-          ))}
         </View>
 
         {/* Action Button */}
