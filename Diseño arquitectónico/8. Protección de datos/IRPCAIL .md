@@ -1,28 +1,76 @@
-# Resumen Técnico: Consentimiento Informado
+# Resumen Técnico: Plan de Respuesta a Incidentes (IRP)
 
 ## Objetivo
-Establecer el mecanismo de validación legal tipo **clickwrap**, mediante el cual el usuario otorga su consentimiento explícito para el tratamiento lícito de sus datos personales previo al registro en la plataforma.
+Establecer un protocolo estandarizado basado en **NIST SP 800-61** para la identificación, gestión, contención, comunicación y recuperación ante incidentes de ciberseguridad que afecten la plataforma.
 
-## Validez Jurídica
-El acto de marcar el **check-box de aceptación** constituye una **firma electrónica válida**, conforme a la Ley de Comercio Electrónico, Firmas Electrónicas y Mensajes de Datos, y a la Ley Orgánica de Protección de Datos Personales (LOPDP).  
-Este mecanismo demuestra la **voluntad inequívoca** del usuario para autorizar el tratamiento de su información.
+---
 
-## Autorización de Transferencia de Datos
-El usuario autoriza expresamente que su información personal y su CV puedan ser compartidos con **empresas reclutadoras** que formen parte del flujo de postulación o procesos de selección dentro de la plataforma.  
-No se realizarán transferencias fuera de esa finalidad sin un consentimiento adicional.
+## Equipo de Respuesta (CSIRT)
 
-## Declaración de Veracidad
-El usuario declara que toda la información académica, profesional y personal que ingrese es **real, exacta y verificable**, y reconoce su responsabilidad ante la falsedad o manipulación de datos.
+### Líder de Incidente (Gerencia)
+Responsable de la toma de decisiones críticas, tales como:
+- Aislar servidores.
+- Suspender servicios.
+- Autorizar comunicaciones oficiales.
 
-## Mecanismos de Revocación del Consentimiento
+### Líder Técnico (DevSecOps)
+Responsable de:
+- Analizar el impacto técnico.
+- Ejecutar la contención y erradicación.
+- Aplicar parches, restauraciones y validaciones post-incidente.
 
-### Opt-out Parcial
-El usuario puede desuscribirse de comunicaciones no esenciales (informativas o de marketing) mediante un enlace directo incluido en los correos electrónicos enviados por la plataforma.
+### Oficial Legal / Protección de Datos
+Responsable de:
+- Determinar si el incidente constituye una violación de datos personales.
+- Gestionar notificaciones obligatorias ante la Autoridad de Protección de Datos.
+- Evaluar obligaciones de comunicación hacia usuarios afectados.
 
-### Revocación Total
-El usuario puede solicitar la eliminación completa de su cuenta a través de la opción **“Eliminar Cuenta”** disponible en su perfil.  
-Este proceso activa:
+---
 
-- Borrado lógico inmediato.  
-- Borrado físico definitivo dentro de los plazos establecidos por la política de conservación de datos.
+## Clasificación de Severidad del Incidente
+
+### S3 – Baja Severidad
+**Ejemplos:** intentos fallidos de inicio de sesión, escaneo de puertos, alertas triviales del WAF.  
+**Tiempo de respuesta:** < 24 horas.
+
+### S2 – Severidad Media
+**Ejemplos:** degradación parcial del servicio, defacement del sitio, actividad anómala no crítica.  
+**Tiempo de respuesta:** < 4 horas.
+
+### S1 – Severidad Crítica
+**Ejemplos:** fuga confirmada de datos personales (*Data Breach*), compromiso de credenciales administrativas, ransomware, caída total del servicio.  
+**Tiempo de respuesta:** inmediata (< 1 hora).
+
+---
+
+## Estrategia Preventiva
+
+- Integración de **SonarQube (SAST)** en el pipeline CI/CD para detectar vulnerabilidades antes del despliegue.
+- Implementación de un **WAF perimetral** para mitigar ataques OWASP Top 10 (SQLi, XSS, RFI, bots, etc.).
+- Uso obligatorio de HTTPS/TLS 1.3.
+- Reglas de firewall y segmentación por zonas (pública, privada, base de datos).
+- Monitoreo continuo con alertas en tiempo real (SIEM recomendado).
+
+---
+
+## Ciclo de Vida del IRP
+Basado en NIST SP 800-61:
+
+1. **Preparación**  
+   Entrenamiento del CSIRT, herramientas, documentación, simulacros.
+
+2. **Detección / Análisis**  
+   Identificación de alertas, verificación, clasificación y severidad.
+
+3. **Contención**  
+   Aislamiento del ataque, bloqueo de IPs, deshabilitación de accesos, snapshots forenses.
+
+4. **Erradicación**  
+   Eliminación de la amenaza: parches, limpieza de archivos maliciosos, rotación de credenciales.
+
+5. **Recuperación**  
+   Restauración de servicios, validación de integridad, monitoreo reforzado.
+
+6. **Lecciones Aprendidas**  
+   Informe post-mortem, actualización de políticas, mejora de controles.
 
