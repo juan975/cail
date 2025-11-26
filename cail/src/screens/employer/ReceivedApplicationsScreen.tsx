@@ -1,14 +1,15 @@
 import { useState } from "react";
 import {
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
-  View,
-  TouchableOpacity,
   TextInput,
-  Modal,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useResponsiveLayout } from "@/hooks/useResponsive";
 
 type ApplicationStatus = "pending" | "review" | "accepted" | "rejected";
 
@@ -109,15 +110,14 @@ const mockApplications: Application[] = [
 ];
 
 export default function ApplicationsScreen() {
-  const [applications, setApplications] =
-    useState<Application[]>(mockApplications);
+  const { isDesktop, contentWidth, horizontalGutter } = useResponsiveLayout();
+  const [applications, setApplications] = useState<Application[]>(mockApplications);
   const [selectedView, setSelectedView] = useState<"cvs" | "offers">("cvs");
-  const [selectedApplication, setSelectedApplication] =
-    useState<Application | null>(null);
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [experienceFilter, setExperienceFilter] = useState("Toda exp.");
-  const [statusFilter, setStatusFilter] = useState("Todos");
+  const [experienceFilter] = useState("Toda exp.");
+  const [statusFilter] = useState("Todos");
 
   const stats = {
     total: applications.length,
@@ -125,6 +125,24 @@ export default function ApplicationsScreen() {
     review: applications.filter((a) => a.status === "review").length,
     accepted: applications.filter((a) => a.status === "accepted").length,
   };
+
+  const filteredApplications = applications.filter((app) => {
+    const query = searchQuery.toLowerCase();
+    const matchesSearch =
+      query.length === 0 ||
+      app.candidateName.toLowerCase().includes(query) ||
+      app.skills.some((s) => s.toLowerCase().includes(query)) ||
+      app.position.toLowerCase().includes(query);
+    return matchesSearch;
+  });
+
+  const groupedApplications = filteredApplications.reduce((acc, app) => {
+    if (!acc[app.position]) {
+      acc[app.position] = [];
+    }
+    acc[app.position].push(app);
+    return acc;
+  }, {} as Record<string, Application[]>);
 
   const openEvaluationModal = (app: Application) => {
     setSelectedApplication(app);
@@ -134,9 +152,7 @@ export default function ApplicationsScreen() {
   const handleSelectCandidate = () => {
     if (selectedApplication) {
       const updated = applications.map((app) =>
-        app.id === selectedApplication.id
-          ? { ...app, status: "accepted" as ApplicationStatus }
-          : app
+        app.id === selectedApplication.id ? { ...app, status: "accepted" as ApplicationStatus } : app,
       );
       setApplications(updated);
       setShowEvaluationModal(false);
@@ -147,9 +163,7 @@ export default function ApplicationsScreen() {
   const handleReject = () => {
     if (selectedApplication) {
       const updated = applications.map((app) =>
-        app.id === selectedApplication.id
-          ? { ...app, status: "rejected" as ApplicationStatus }
-          : app
+        app.id === selectedApplication.id ? { ...app, status: "rejected" as ApplicationStatus } : app,
       );
       setApplications(updated);
       setShowEvaluationModal(false);
@@ -159,185 +173,145 @@ export default function ApplicationsScreen() {
 
   const getStatusBadge = (status: ApplicationStatus) => {
     const badges = {
-      pending: { label: "Pend.", bg: "#FEF3C7", color: "#92400E" },
-      review: { label: "Rev.", bg: "#DBEAFE", color: "#1E40AF" },
-      accepted: { label: "Acept.", bg: "#D1FAE5", color: "#065F46" },
-      rejected: { label: "Rech.", bg: "#FEE2E2", color: "#991B1B" },
+      pending: { label: "Pendiente", bg: "#FEF3C7", color: "#92400E" },
+      review: { label: "En Revisión", bg: "#DBEAFE", color: "#1E40AF" },
+      accepted: { label: "Aceptado", bg: "#D1FAE5", color: "#065F46" },
+      rejected: { label: "Rechazado", bg: "#FEE2E2", color: "#991B1B" },
     };
     return badges[status] || badges.pending;
   };
 
-  // Group applications by position
-  const groupedApplications = applications.reduce((acc, app) => {
-    if (!acc[app.position]) {
-      acc[app.position] = [];
-    }
-    acc[app.position].push(app);
-    return acc;
-  }, {} as Record<string, Application[]>);
-
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingHorizontal: horizontalGutter }]}>
       <ScrollView
         style={styles.fullScroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { maxWidth: contentWidth, alignSelf: "center" }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>{stats.total}</Text>
-            <Text style={styles.statLabel}>Total</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={[styles.statNumber, { color: "#F59E0B" }]}>
-              {stats.pending}
-            </Text>
-            <Text style={styles.statLabel}>Pend.</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={[styles.statNumber, { color: "#3B82F6" }]}>
-              {stats.review}
-            </Text>
-            <Text style={styles.statLabel}>Revisión</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={[styles.statNumber, { color: "#10B981" }]}>
-              {stats.accepted}
-            </Text>
-            <Text style={styles.statLabel}>Acept.</Text>
-          </View>
-        </View>
-
-        {/* Filters */}
-        <View style={styles.filtersContainer}>
-          <View style={styles.searchBox}>
-            <Feather name="search" size={16} color="#9CA3AF" />
-            <TextInput
-              style={styles.searchInput}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Buscar por nombre, habilidades..."
-              placeholderTextColor="#9CA3AF"
-            />
+        <View style={styles.pageStack}>
+          <View style={[styles.surfaceCard, styles.block]}>
+            <View style={styles.statsContainer}>
+              <StatBox label="Total" value={stats.total} isDesktop={isDesktop} />
+              <StatBox label="Pendiente" value={stats.pending} color="#F59E0B" isDesktop={isDesktop} />
+              <StatBox label="En Revisión" value={stats.review} color="#3B82F6" isDesktop={isDesktop} />
+              <StatBox label="Aceptado" value={stats.accepted} color="#10B981" isDesktop={isDesktop} />
+            </View>
           </View>
 
-          <TouchableOpacity style={styles.filterButton}>
-            <Text style={styles.filterButtonText}>{experienceFilter}</Text>
-            <Feather name="chevron-down" size={16} color="#6B7280" />
-          </TouchableOpacity>
+          <View style={[styles.surfaceCard, styles.block, styles.filtersCard]}>
+            <View style={styles.searchBox}>
+              <Feather name="search" size={16} color="#9CA3AF" />
+              <TextInput
+                style={styles.searchInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Buscar por nombre, habilidades..."
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+            <View style={styles.filterRow}>
+              <TouchableOpacity style={styles.filterButton}>
+                <Text style={styles.filterButtonText}>{experienceFilter}</Text>
+                <Feather name="chevron-down" size={16} color="#6B7280" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.filterButton}>
+                <Text style={styles.filterButtonText}>{statusFilter}</Text>
+                <Feather name="chevron-down" size={16} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+          </View>
 
-          <TouchableOpacity style={styles.filterButton}>
-            <Text style={styles.filterButtonText}>{statusFilter}</Text>
-            <Feather name="chevron-down" size={16} color="#6B7280" />
-          </TouchableOpacity>
-        </View>
-
-        {/* View Tabs */}
-        <View style={styles.viewTabs}>
-          <TouchableOpacity
-            style={[
-              styles.viewTab,
-              selectedView === "cvs" && styles.viewTabActive,
-            ]}
-            onPress={() => setSelectedView("cvs")}
-          >
-            <Feather
-              name="file-text"
-              size={16}
-              color={selectedView === "cvs" ? "#1F2937" : "#6B7280"}
-            />
-            <Text
-              style={[
-                styles.viewTabText,
-                selectedView === "cvs" && styles.viewTabTextActive,
-              ]}
+          <View style={[styles.surfaceCard, styles.block, styles.viewTabsCard]}>
+            <TouchableOpacity
+              style={[styles.viewTab, selectedView === "cvs" && styles.viewTabActive]}
+              onPress={() => setSelectedView("cvs")}
             >
-              CVs ({applications.length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.viewTab,
-              selectedView === "offers" && styles.viewTabActive,
-            ]}
-            onPress={() => setSelectedView("offers")}
-          >
-            <Feather
-              name="briefcase"
-              size={16}
-              color={selectedView === "offers" ? "#1F2937" : "#6B7280"}
-            />
-            <Text
-              style={[
-                styles.viewTabText,
-                selectedView === "offers" && styles.viewTabTextActive,
-              ]}
+              <Feather name="file-text" size={16} color={selectedView === "cvs" ? "#1F2937" : "#6B7280"} />
+              <Text style={[styles.viewTabText, selectedView === "cvs" && styles.viewTabTextActive]}>
+                CVs Espontáneos({applications.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.viewTab, selectedView === "offers" && styles.viewTabActive]}
+              onPress={() => setSelectedView("offers")}
             >
-              Ofertas (3)
-            </Text>
-          </TouchableOpacity>
-        </View>
+              <Feather name="briefcase" size={16} color={selectedView === "offers" ? "#1F2937" : "#6B7280"} />
+              <Text style={[styles.viewTabText, selectedView === "offers" && styles.viewTabTextActive]}>
+                Por Ofertas (3)
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Info Banner */}
-        <View style={styles.infoBanner}>
-          <Feather name="info" size={16} color="#1E40AF" />
-          <Text style={styles.infoBannerText}>
+          <View style={[styles.surfaceCard, styles.block]}>
+            <View style={styles.infoBanner}>
+              <Feather name="info" size={16} color="#1E40AF" />
+              <Text style={styles.infoBannerText}>
+                {selectedView === "cvs"
+                  ? "CVs Recibidos Espontáneamente: Candidatos que enviaron su hoja de vida sin aplicar a una oferta específica. Puedes revisar sus perfiles y contactarlos directamente."
+                  : "Postulaciones por Oferta: Candidatos que aplicaron específicamente a tus ofertas de trabajo publicadas. Puedes clasificarlos por experiencia, formación y compatibilidad."}
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.surfaceCard, styles.block, styles.listCard]}>
             {selectedView === "cvs"
-              ? "CVs Recibidos Espontáneamente: Candidatos que enviaron su hoja de vida sin aplicar a una oferta específica. Puedes revisar sus perfiles y contactarlos directamente."
-              : "Postulaciones por Oferta: Candidatos que aplicaron específicamente a tus ofertas de trabajo publicadas. Puedes clasificarlos por experiencia, formación y compatibilidad."}
-          </Text>
-        </View>
-
-        {/* Applications List */}
-        <View style={styles.applicationsList}>
-          {selectedView === "cvs"
-            ? applications
-                .filter(
-                  (app) => app.status === "pending" || app.status === "review"
+              ? filteredApplications.length > 0 ? (
+                  filteredApplications.map((app) => (
+                    <ApplicationCard
+                      key={app.id}
+                      application={app}
+                      onPress={() => openEvaluationModal(app)}
+                      getStatusBadge={getStatusBadge}
+                    />
+                  ))
+                ) : (
+                  <EmptyState message="No hay CVs que coincidan. Ajusta filtros o busca por nombre/habilidad." />
                 )
-                .map((app) => (
-                  <ApplicationCard
-                    key={app.id}
-                    application={app}
-                    onPress={() => openEvaluationModal(app)}
-                    getStatusBadge={getStatusBadge}
-                  />
-                ))
-            : Object.entries(groupedApplications).map(
-                ([position, apps]) => (
-                  <View key={position} style={styles.positionGroup}>
-                    <View style={styles.positionHeader}>
-                      <Feather name="briefcase" size={16} color="#F59E0B" />
-                      <Text style={styles.positionTitle}>{position}</Text>
-                      <Text style={styles.positionCount}>
-                        {apps.length} postulaciones
-                      </Text>
+              : Object.entries(groupedApplications).length > 0 ? (
+                  Object.entries(groupedApplications).map(([position, apps]) => (
+                    <View key={position} style={styles.positionGroup}>
+                      <View style={styles.positionHeader}>
+                        <Feather name="briefcase" size={16} color="#F59E0B" />
+                        <Text style={styles.positionTitle}>{position}</Text>
+                        <Text style={styles.positionCount}>{apps.length} postulaciones</Text>
+                      </View>
+                      {apps.map((app) => (
+                        <ApplicationCard
+                          key={app.id}
+                          application={app}
+                          onPress={() => openEvaluationModal(app)}
+                          getStatusBadge={getStatusBadge}
+                          compact
+                        />
+                      ))}
                     </View>
-                    {apps.map((app) => (
-                      <ApplicationCard
-                        key={app.id}
-                        application={app}
-                        onPress={() => openEvaluationModal(app)}
-                        getStatusBadge={getStatusBadge}
-                        compact
-                      />
-                    ))}
-                  </View>
-                )
-              )}
+                  ))
+                ) : (
+                  <EmptyState message="No hay postulaciones agrupadas. Cambia a la vista CVs o ajusta filtros." />
+                )}
+          </View>
         </View>
       </ScrollView>
 
-      {/* Evaluation Modal */}
       <Modal
         visible={showEvaluationModal}
         animationType="slide"
         transparent
         onRequestClose={() => setShowEvaluationModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <View
+          style={[
+            styles.modalOverlay,
+            isDesktop ? styles.modalOverlayDesktop : styles.modalOverlayMobile,
+          ]}
+        >
+          <View
+            style={[
+              styles.modalContent,
+              isDesktop ? styles.modalContentDesktop : styles.modalContentMobile,
+              { maxWidth: isDesktop ? 980 : contentWidth },
+            ]}
+          >
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Evaluar Postulación</Text>
               <TouchableOpacity onPress={() => setShowEvaluationModal(false)}>
@@ -346,47 +320,30 @@ export default function ApplicationsScreen() {
             </View>
 
             {selectedApplication && (
-              <ScrollView
-                style={styles.modalBody}
-                showsVerticalScrollIndicator={false}
-              >
+              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
                 <View style={styles.candidateHeader}>
                   <View style={styles.avatarLarge}>
-                    <Text style={styles.avatarLargeText}>
-                      {selectedApplication.initials}
-                    </Text>
+                    <Text style={styles.avatarLargeText}>{selectedApplication.initials}</Text>
                   </View>
                   <View style={styles.candidateInfo}>
-                    <Text style={styles.candidateName}>
-                      {selectedApplication.candidateName}
-                    </Text>
-                    <Text style={styles.candidateDepartment}>
-                      {selectedApplication.department}
-                    </Text>
+                    <Text style={styles.candidateName}>{selectedApplication.candidateName}</Text>
+                    <Text style={styles.candidateDepartment}>{selectedApplication.department}</Text>
                   </View>
                 </View>
 
                 <View style={styles.modalSection}>
-                  <Text style={styles.sectionTitle}>
-                    Información de Contacto
-                  </Text>
+                  <Text style={styles.sectionTitle}>Información de Contacto</Text>
                   <View style={styles.contactRow}>
                     <Feather name="mail" size={14} color="#6B7280" />
-                    <Text style={styles.contactText}>
-                      {selectedApplication.email}
-                    </Text>
+                    <Text style={styles.contactText}>{selectedApplication.email}</Text>
                   </View>
                   <View style={styles.contactRow}>
                     <Feather name="phone" size={14} color="#6B7280" />
-                    <Text style={styles.contactText}>
-                      {selectedApplication.phone}
-                    </Text>
+                    <Text style={styles.contactText}>{selectedApplication.phone}</Text>
                   </View>
                   <View style={styles.contactRow}>
                     <Feather name="map-pin" size={14} color="#6B7280" />
-                    <Text style={styles.contactText}>
-                      {selectedApplication.location}
-                    </Text>
+                    <Text style={styles.contactText}>{selectedApplication.location}</Text>
                   </View>
                 </View>
 
@@ -394,9 +351,7 @@ export default function ApplicationsScreen() {
                   <Text style={styles.sectionTitle}>Formación</Text>
                   <View style={styles.infoRow}>
                     <Feather name="award" size={14} color="#1F2937" />
-                    <Text style={styles.infoText}>
-                      {selectedApplication.education}
-                    </Text>
+                    <Text style={styles.infoText}>{selectedApplication.education}</Text>
                   </View>
                 </View>
 
@@ -404,17 +359,15 @@ export default function ApplicationsScreen() {
                   <Text style={styles.sectionTitle}>Experiencia</Text>
                   <View style={styles.infoRow}>
                     <Feather name="briefcase" size={14} color="#1F2937" />
-                    <Text style={styles.infoText}>
-                      {selectedApplication.experience}
-                    </Text>
+                    <Text style={styles.infoText}>{selectedApplication.experience}</Text>
                   </View>
                 </View>
 
                 <View style={styles.modalSection}>
                   <Text style={styles.sectionTitle}>Habilidades</Text>
                   <View style={styles.skillsContainer}>
-                    {selectedApplication.skills.map((skill, index) => (
-                      <View key={index} style={styles.skillChip}>
+                    {selectedApplication.skills.map((skill) => (
+                      <View key={skill} style={styles.skillChip}>
                         <Text style={styles.skillChipText}>{skill}</Text>
                       </View>
                     ))}
@@ -426,9 +379,7 @@ export default function ApplicationsScreen() {
                     <Text style={styles.sectionTitle}>Curriculum Vitae</Text>
                     <TouchableOpacity style={styles.cvDownload}>
                       <Feather name="file-text" size={16} color="#6B7280" />
-                      <Text style={styles.cvFileName}>
-                        {selectedApplication.cvFile}
-                      </Text>
+                      <Text style={styles.cvFileName}>{selectedApplication.cvFile}</Text>
                       <Feather name="download" size={16} color="#F59E0B" />
                     </TouchableOpacity>
                   </View>
@@ -437,26 +388,25 @@ export default function ApplicationsScreen() {
             )}
 
             <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={handleSelectCandidate}
-              >
-                <Feather name="check-circle" size={18} color="#fff" />
-                <Text style={styles.selectButtonText}>
-                  Seleccionar Candidato
-                </Text>
+              <TouchableOpacity style={styles.selectButton} onPress={handleSelectCandidate}>
+                <Text style={styles.selectButtonText}>Agregar Candidato</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.rejectButton}
-                onPress={handleReject}
-              >
-                <Feather name="x-circle" size={18} color="#6B7280" />
+              <TouchableOpacity style={styles.rejectButton} onPress={handleReject}>
                 <Text style={styles.rejectButtonText}>Rechazar</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+    </View>
+  );
+}
+
+function StatBox({ label, value, color, isDesktop }: { label: string; value: number; color?: string; isDesktop: boolean }) {
+  return (
+    <View style={[styles.statBox, !isDesktop && styles.statBoxMobile]}>
+      <Text style={[styles.statNumber, color ? { color } : undefined]}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
 }
@@ -469,11 +419,7 @@ function ApplicationCard({
 }: {
   application: Application;
   onPress: () => void;
-  getStatusBadge: (status: ApplicationStatus) => {
-    label: string;
-    bg: string;
-    color: string;
-  };
+  getStatusBadge: (status: ApplicationStatus) => { label: string; bg: string; color: string };
   compact?: boolean;
 }) {
   const statusBadge = getStatusBadge(application.status);
@@ -482,18 +428,7 @@ function ApplicationCard({
     <TouchableOpacity style={styles.applicationCard} onPress={onPress}>
       <View style={styles.cardHeader}>
         <View style={styles.cardLeft}>
-          <View
-            style={[
-              styles.avatar,
-              application.status === "pending" && {
-                backgroundColor: "#10B981",
-              },
-              application.status === "review" && { backgroundColor: "#3B82F6" },
-              application.status === "accepted" && {
-                backgroundColor: "#10B981",
-              },
-            ]}
-          >
+          <View style={[styles.avatar, statusBadge && { backgroundColor: statusBadge.bg }]}>
             <Text style={styles.avatarText}>{application.initials}</Text>
           </View>
           <View style={styles.cardInfo}>
@@ -502,33 +437,16 @@ function ApplicationCard({
           </View>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: statusBadge.bg }]}>
-          <Text style={[styles.statusBadgeText, { color: statusBadge.color }]}>
-            {statusBadge.label}
-          </Text>
+          <Text style={[styles.statusBadgeText, { color: statusBadge.color }]}>{statusBadge.label}</Text>
         </View>
       </View>
 
       <View style={styles.cardDetails}>
-        <View style={styles.detailRow}>
-          <Feather name="award" size={12} color="#6B7280" />
-          <Text style={styles.detailText}>{application.education}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Feather name="calendar" size={12} color="#6B7280" />
-          <Text style={styles.detailText}>{application.experience}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Feather name="mail" size={12} color="#6B7280" />
-          <Text style={styles.detailText}>{application.email}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Feather name="phone" size={12} color="#6B7280" />
-          <Text style={styles.detailText}>{application.phone}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Feather name="map-pin" size={12} color="#6B7280" />
-          <Text style={styles.detailText}>{application.location}</Text>
-        </View>
+        <Detail icon="award" text={application.education} />
+        <Detail icon="calendar" text={application.experience} />
+        <Detail icon="mail" text={application.email} />
+        <Detail icon="phone" text={application.phone} />
+        <Detail icon="map-pin" text={application.location} />
       </View>
 
       {!compact && (
@@ -536,8 +454,8 @@ function ApplicationCard({
           <View style={styles.skillsList}>
             <Text style={styles.skillsLabel}>Habilidades principales:</Text>
             <View style={styles.skillsRow}>
-              {application.skills.map((skill, index) => (
-                <View key={index} style={styles.skillTag}>
+              {application.skills.map((skill) => (
+                <View key={skill} style={styles.skillTag}>
                   <Text style={styles.skillTagText}>{skill}</Text>
                 </View>
               ))}
@@ -545,26 +463,34 @@ function ApplicationCard({
           </View>
 
           <View style={styles.cardFooter}>
-            <Text style={styles.receivedDate}>
-              Recibido: {application.receivedDate}
-            </Text>
+            <Text style={styles.receivedDate}>Recibido: {application.receivedDate}</Text>
             <View style={styles.cardActions}>
-              <TouchableOpacity
-                style={styles.viewProfileButton}
-                onPress={onPress}
-              >
+              <TouchableOpacity style={styles.viewProfileButton} onPress={onPress}>
                 <Feather name="eye" size={14} color="#1F2937" />
                 <Text style={styles.viewProfileText}>Ver Perfil</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.statusButton}>
-                <Text style={styles.statusButtonText}>Pendiente</Text>
-                <Feather name="chevron-down" size={14} color="#6B7280" />
               </TouchableOpacity>
             </View>
           </View>
         </>
       )}
     </TouchableOpacity>
+  );
+}
+
+function Detail({ icon, text }: { icon: keyof typeof Feather.glyphMap; text: string }) {
+  return (
+    <View style={styles.detailRow}>
+      <Feather name={icon} size={12} color="#6B7280" />
+      <Text style={styles.detailText}>{text}</Text>
+    </View>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyText}>{message}</Text>
+    </View>
   );
 }
 
@@ -578,54 +504,35 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 32,
+    width: "100%",
   },
-  header: {
+  pageStack: {
+    width: "100%",
+    gap: 16,
+  },
+  block: {
+    width: "100%",
+  },
+  surfaceCard: {
     backgroundColor: "#fff",
-    padding: 20,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 1,
-  },
-  iconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#FEF3C7",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerText: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1F2937",
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: "#6B7280",
-    marginTop: 2,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+    padding: 16,
   },
   statsContainer: {
-    backgroundColor: "#fff",
     flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
     gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    flexWrap: "wrap",
   },
   statBox: {
     flex: 1,
+    minWidth: 120,
     backgroundColor: "#F9FAFB",
     padding: 12,
     borderRadius: 12,
@@ -633,23 +540,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
+  statBoxMobile: {
+    flexBasis: "48%",
+    maxWidth: "48%",
+  },
   statNumber: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "700",
     color: "#1F2937",
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: "#6B7280",
-    marginTop: 2,
-    fontWeight: "500",
+    marginTop: 4,
+    fontWeight: "600",
+  },
+  filtersCard: {
+    gap: 12,
   },
   filtersContainer: {
-    backgroundColor: "#fff",
-    padding: 20,
+    paddingVertical: 12,
     gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
   },
   searchBox: {
     flexDirection: "row",
@@ -658,7 +569,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F9FAFB",
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
@@ -667,14 +578,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#1F2937",
   },
+  filterRow: {
+    flexDirection: "row",
+    gap: 10,
+    flexWrap: "wrap",
+  },
   filterButton: {
+    flexGrow: 1,
+    minWidth: 150,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "#F9FAFB",
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
@@ -683,14 +601,11 @@ const styles = StyleSheet.create({
     color: "#1F2937",
     fontWeight: "500",
   },
-  viewTabs: {
-    backgroundColor: "#fff",
+  viewTabsCard: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    alignItems: "stretch",
+    gap: 10,
+    paddingVertical: 12,
   },
   viewTab: {
     flex: 1,
@@ -700,10 +615,11 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: 12,
+    backgroundColor: "#F9FAFB",
   },
   viewTabActive: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#EEF2FF",
   },
   viewTabText: {
     fontSize: 14,
@@ -712,44 +628,38 @@ const styles = StyleSheet.create({
   },
   viewTabTextActive: {
     color: "#1F2937",
-    fontWeight: "600",
+    fontWeight: "700",
   },
   infoBanner: {
-    backgroundColor: "#EFF6FF",
     flexDirection: "row",
     gap: 10,
-    padding: 16,
-    marginHorizontal: 20,
-    marginTop: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
+    alignItems: "flex-start",
   },
   infoBannerText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 13,
     color: "#1E40AF",
     lineHeight: 18,
   },
+  listCard: {
+    gap: 12,
+  },
   applicationsList: {
     width: "100%",
-    padding: 20,
+    gap: 12,
   },
   positionGroup: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   positionHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    marginBottom: 10,
   },
   positionTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#1F2937",
     flex: 1,
   },
@@ -761,15 +671,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
     borderWidth: 1,
     borderColor: "#E5E7EB",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   cardLeft: {
     flexDirection: "row",
@@ -794,7 +708,7 @@ const styles = StyleSheet.create({
   },
   cardName: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#1F2937",
   },
   cardDepartment: {
@@ -809,7 +723,7 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   cardDetails: {
     gap: 6,
@@ -838,15 +752,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   skillTag: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#EEF2FF",
     paddingVertical: 4,
     paddingHorizontal: 10,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   skillTagText: {
     fontSize: 12,
-    color: "#374151",
-    fontWeight: "500",
+    color: "#3730A3",
+    fontWeight: "600",
   },
   cardFooter: {
     flexDirection: "row",
@@ -868,47 +782,74 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 6,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
   viewProfileText: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#1F2937",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   statusButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
     backgroundColor: "#F9FAFB",
   },
   statusButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#6B7280",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0,0,0,0.55)",
+    paddingHorizontal: 12,
+  },
+  modalOverlayDesktop: {
+    justifyContent: "center",
+    paddingVertical: 24,
+  },
+  modalOverlayMobile: {
     justifyContent: "flex-end",
+    paddingVertical: 12,
+    paddingBottom: 20,
   },
   modalContent: {
     backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderRadius: 20,
+    padding: 20,
+    width: "100%",
+    maxHeight: "92%",
+    alignSelf: "center",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 5,
+  },
+  modalContentDesktop: {
     padding: 24,
-    gap: 12,
+  },
+  modalContentMobile: {
+    padding: 16,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    maxHeight: "85%",
   },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginBottom: 12,
   },
   modalTitle: {
     fontSize: 18,
@@ -916,14 +857,14 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   modalBody: {
-    maxHeight: 420,
-    marginBottom: 24,
+    maxHeight: 480,
+    marginBottom: 20,
   },
   candidateHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   avatarLarge: {
     width: 64,
@@ -952,22 +893,22 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   modalSection: {
-    marginBottom: 20,
-    paddingBottom: 16,
+    marginBottom: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
   sectionTitle: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#1F2937",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   contactRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   contactText: {
     fontSize: 13,
@@ -989,15 +930,16 @@ const styles = StyleSheet.create({
   },
   skillChip: {
     backgroundColor: "#EEF2FF",
-    borderRadius: 16,
-    paddingHorizontal: 12,
     paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 10,
   },
   skillChipText: {
+    color: "#1F2937",
     fontSize: 12,
-    color: "#3730A3",
-    fontWeight: "600",
+    fontWeight: "700",
   },
+  skillChipModal: {},
   cvDownload: {
     flexDirection: "row",
     alignItems: "center",
@@ -1016,7 +958,7 @@ const styles = StyleSheet.create({
   modalActions: {
     flexDirection: "row",
     gap: 12,
-    marginTop: 4,
+    flexWrap: "wrap",
   },
   selectButton: {
     flex: 1,
@@ -1025,13 +967,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     backgroundColor: "#10B981",
-    borderRadius: 10,
     paddingVertical: 14,
+    borderRadius: 10,
   },
   selectButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
     color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
   },
   rejectButton: {
     flex: 1,
@@ -1039,14 +981,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    borderRadius: 10,
     paddingVertical: 14,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
   },
   rejectButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
     color: "#6B7280",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  emptyState: {
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+  },
+  emptyText: {
+    color: "#4B5563",
+    fontSize: 13,
+    textAlign: "center",
   },
 });

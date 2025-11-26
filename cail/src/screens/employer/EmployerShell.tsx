@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { EmployerProfileScreen } from './EmployerProfileScreen';
 import { OffersManagementScreen } from './OffersManagementScreen';
 import ReceivedApplicationsScreen from './ReceivedApplicationsScreen';
 import { EmployerUserData } from '@/types';
 
-const logo = require('@/assets/0198b872f16fe45d3593d066ae15f05331a33cf2.png');
+const logo = require('@/assets/logo.png');
 
 type EmployerTab = 'offers' | 'applications' | 'profile';
 
@@ -18,6 +19,7 @@ interface EmployerShellProps {
 
 export function EmployerShell({ userData, onLogout }: EmployerShellProps) {
   const [tab, setTab] = useState<EmployerTab>('offers');
+  const { contentWidth, horizontalGutter } = useResponsiveLayout();
 
   const renderScreen = () => {
     switch (tab) {
@@ -33,43 +35,42 @@ export function EmployerShell({ userData, onLogout }: EmployerShellProps) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        {/* Header simple */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Image source={logo} style={styles.logo} />
-            <View>
-              <Text style={styles.headerLabel}>Empleador</Text>
-              <Text style={styles.headerCompany}>{userData.company}</Text>
+        {/* Appbar */}
+        <View style={styles.appBar}>
+          <View style={[styles.appBarContent, { maxWidth: contentWidth, paddingHorizontal: horizontalGutter }]}>
+            <View style={styles.headerLeft}>
+              <Image source={logo} style={styles.logo} />
+              <View>
+                <Text style={styles.headerLabel}>Empleador</Text>
+                <Text style={styles.headerCompany}>{userData.company}</Text>
+              </View>
             </View>
+            <TouchableOpacity onPress={onLogout} style={styles.logoutBtn}>
+              <Feather name="log-out" color="#374151" size={20} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={onLogout} style={styles.logoutBtn}>
-            <Feather name="log-out" color="#374151" size={20} />
-          </TouchableOpacity>
         </View>
 
         {/* Contenido */}
-        <View style={styles.content}>{renderScreen()}</View>
+        <View style={styles.body}>{renderScreen()}</View>
 
         {/* Navbar inferior */}
-        <View style={styles.navbar}>
-          <EmployerNavItem
-            icon="briefcase"
-            label="Ofertas"
-            active={tab === 'offers'}
-            onPress={() => setTab('offers')}
-          />
-          <EmployerNavItem
-            icon="users"
-            label="Postulaciones"
-            active={tab === 'applications'}
-            onPress={() => setTab('applications')}
-          />
-          <EmployerNavItem
-            icon="home"
-            label="Empresa"
-            active={tab === 'profile'}
-            onPress={() => setTab('profile')}
-          />
+        <View style={styles.navWrapper}>
+          <View style={[styles.navbar, { maxWidth: contentWidth, paddingHorizontal: horizontalGutter }]}>
+            <EmployerNavItem
+              icon="briefcase"
+              label="Ofertas"
+              active={tab === 'offers'}
+              onPress={() => setTab('offers')}
+            />
+            <EmployerNavItem
+              icon="users"
+              label="Postulaciones"
+              active={tab === 'applications'}
+              onPress={() => setTab('applications')}
+            />
+            <EmployerNavItem icon="home" label="Empresa" active={tab === 'profile'} onPress={() => setTab('profile')} />
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -108,16 +109,20 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  appBar: {
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+  },
+  appBarContent: {
+    width: '100%',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -142,18 +147,23 @@ const styles = StyleSheet.create({
   logoutBtn: {
     padding: 8,
   },
-  content: {
+  body: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
+    paddingTop: 15,
+  },
+  navWrapper: {
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    backgroundColor: '#fff',
   },
   navbar: {
+    width: '100%',
+    alignSelf: 'center',
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
     paddingVertical: 12,
-    paddingHorizontal: 20,
   },
   navItem: {
     alignItems: 'center',

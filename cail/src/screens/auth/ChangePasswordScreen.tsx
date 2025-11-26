@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
+import { useResponsiveLayout } from '@/hooks/useResponsive';
 
 interface ChangePasswordScreenProps {
   userData: any;
@@ -10,6 +11,7 @@ interface ChangePasswordScreenProps {
 }
 
 export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: ChangePasswordScreenProps) {
+  const { contentWidth, horizontalGutter } = useResponsiveLayout();
   const [tempPassword, setTempPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -36,7 +38,7 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
   return (
     <LinearGradient colors={['#F59E0B', '#D97706']} style={styles.gradient}>
       <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.container}>
+        <ScrollView contentContainerStyle={[styles.container, { paddingHorizontal: horizontalGutter }]}>
           {/* Header con ícono */}
           <View style={styles.header}>
             <View style={styles.iconCircle}>
@@ -49,7 +51,7 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
           </View>
 
           {/* Card con información de empresa */}
-          <View style={styles.card}>
+          <View style={[styles.card, { maxWidth: contentWidth, alignSelf: 'center' }]}>
             <View style={styles.companyInfo}>
               <View style={styles.companyIcon}>
                 <Feather name="briefcase" size={20} color="#F59E0B" />

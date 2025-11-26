@@ -5,16 +5,24 @@ import { colors } from '@/theme/colors';
 interface InputFieldProps extends TextInputProps {
   label?: string;
   helperText?: string;
+  tone?: 'default' | 'employer' | 'candidate';
 }
 
 export const InputField = forwardRef<TextInput, InputFieldProps>(
-  ({ label, helperText, multiline, style, onFocus, onBlur, ...rest }, ref) => {
+  ({ label, helperText, multiline, tone = 'default', style, onFocus, onBlur, ...rest }, ref) => {
     const [focused, setFocused] = useState(false);
+    const accent =
+      tone === 'employer' ? colors.employer : tone === 'candidate' ? colors.candidate : colors.accent;
 
     return (
       <View style={styles.container}>
         {label && <Text style={styles.label}>{label}</Text>}
-        <View style={[styles.inputWrapper, focused && styles.inputWrapperFocused]}>
+        <View
+          style={[
+            styles.inputWrapper,
+            focused && [styles.inputWrapperFocused, { borderColor: accent, shadowOpacity: 0.08 }],
+          ]}
+        >
           <TextInput
             ref={ref}
             style={[styles.input, multiline && styles.multiline, style]}
@@ -60,7 +68,6 @@ const styles = StyleSheet.create({
   },
   inputWrapperFocused: {
     borderColor: colors.accent,
-    shadowOpacity: 0.08,
   },
   input: {
     paddingHorizontal: 14,

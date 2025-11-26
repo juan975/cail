@@ -6,13 +6,16 @@ interface SectionHeaderProps {
   title: string;
   subtitle?: string;
   action?: ReactNode;
+  accentColor?: string;
 }
 
-export function SectionHeader({ title, subtitle, action }: SectionHeaderProps) {
+export function SectionHeader({ title, subtitle, action, accentColor }: SectionHeaderProps) {
+  const pillColor = accentColor ?? colors.accent;
+
   return (
     <View style={styles.container}>
       <View style={styles.titleWrapper}>
-        <View style={styles.pill} />
+        <View style={[styles.pill, { backgroundColor: pillColor }]} />
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>{title}</Text>
           {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}

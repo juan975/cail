@@ -1,10 +1,9 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Card } from '@/components/ui/Card';
-import { SectionHeader } from '@/components/ui/SectionHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { colors } from '@/theme/colors';
 import { CANDIDATE_APPLICATIONS } from '@/data/mockData';
+import { useResponsiveLayout } from '@/hooks/useResponsive';
 
 const statusTone: Record<
   string,
@@ -19,40 +18,41 @@ const statusTone: Record<
   postulado: {
     label: 'Postulado',
     tone: 'neutral',
-    accent: colors.accent,
-    background: colors.accentSoft,
+    accent: '#6B7280',
+    background: '#F3F4F6',
     note: 'Tu postulación ha sido recibida y está pendiente de revisión.',
   },
   revision: {
     label: 'En revisión',
     tone: 'warning',
-    accent: colors.warning,
+    accent: '#F59E0B',
     background: '#FFF7E6',
     note: 'El empleador está revisando tu perfil.',
   },
   entrevista: {
     label: 'Entrevista',
     tone: 'info',
-    accent: colors.info,
-    background: '#E8F1FF',
+    accent: '#3B82F6',
+    background: '#EFF6FF',
     note: 'Tienes una entrevista en agenda.',
   },
   oferta: {
     label: 'Oferta',
     tone: 'success',
-    accent: colors.success,
-    background: '#E6F9ED',
+    accent: '#10B981',
+    background: '#ECFDF5',
     note: 'Recibiste una oferta. Revísala a la brevedad.',
   },
   finalizado: {
     label: 'Finalizado',
     tone: 'neutral',
-    accent: colors.muted,
-    background: colors.surfaceMuted,
+    accent: '#9CA3AF',
+    background: '#F9FAFB',
   },
 };
 
 export function MyApplicationsScreen() {
+  const { contentWidth } = useResponsiveLayout();
   const summary = CANDIDATE_APPLICATIONS.reduce(
     (acc, app) => {
       acc.total += 1;
@@ -63,146 +63,308 @@ export function MyApplicationsScreen() {
   );
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Card tone="accent" spacing="lg">
-        <Text style={styles.summaryEyebrow}>Gestión de Postulaciones</Text>
-        <Text style={styles.summaryTitle}>Seguimiento en tiempo real</Text>
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryStat}>
-            <Text style={styles.summaryValue}>{summary.total}</Text>
-            <Text style={styles.summaryLabel}>Total postulaciones</Text>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
+      <View style={[styles.stack, { maxWidth: contentWidth, alignSelf: 'center', width: '100%' }]}>
+        {/* Hero Card */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroContent}>
+            <View style={styles.heroIcon}>
+              <Feather name="clipboard" size={24} color="#FFFFFF" />
+            </View>
+            <View style={styles.heroText}>
+              <Text style={styles.heroTitle}>Gestión de Postulaciones</Text>
+              <Text style={styles.heroSubtitle}>Seguimiento en tiempo real</Text>
+            </View>
+            <View style={styles.heroPill}>
+              <Feather name="check-circle" size={12} color="#0B7A4D" />
+              <Text style={styles.heroPillText}>Al día</Text>
+            </View>
           </View>
-          <View style={styles.summaryStat}>
-            <Text style={styles.summaryValue}>{summary.revision}</Text>
-            <Text style={styles.summaryLabel}>En revisión</Text>
-          </View>
-          <View style={styles.summaryStat}>
-            <Text style={styles.summaryValue}>{summary.oferta}</Text>
-            <Text style={styles.summaryLabel}>Ofertas</Text>
+
+          {/* Stats Row */}
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Feather name="file-text" size={20} color="#0B7A4D" />
+              <Text style={styles.statNumber}>{summary.total}</Text>
+              <Text style={styles.statLabel}>Total postulaciones</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Feather name="eye" size={20} color="#F59E0B" />
+              <Text style={styles.statNumber}>{summary.revision}</Text>
+              <Text style={styles.statLabel}>En revisión</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Feather name="gift" size={20} color="#10B981" />
+              <Text style={styles.statNumber}>{summary.oferta}</Text>
+              <Text style={styles.statLabel}>Ofertas</Text>
+            </View>
           </View>
         </View>
-      </Card>
 
-      <SectionHeader title="Mis postulaciones" subtitle="Estados, recordatorios y próximos pasos" />
-      {CANDIDATE_APPLICATIONS.map((application) => {
-        const tone = statusTone[application.status];
-        return (
-          <Card
-            key={application.id}
-            style={[
-              styles.card,
-              { borderColor: tone.accent + '33', backgroundColor: tone.background },
-            ]}
-          >
-            <View style={styles.rowBetween}>
-              <View>
-                <Text style={styles.title}>{application.title}</Text>
-                <Text style={styles.subtitle}>{application.company}</Text>
+        {/* Section Header */}
+        <View style={styles.sectionHeaderWrap}>
+          <Text style={styles.sectionTitle}>Mis postulaciones</Text>
+          <Text style={styles.sectionSubtitle}>Estados, recordatorios y próximos pasos</Text>
+        </View>
+
+        {/* Application Cards */}
+        {CANDIDATE_APPLICATIONS.map((application) => {
+          const tone = statusTone[application.status];
+          return (
+            <View key={application.id} style={styles.applicationCard}>
+              <View style={[styles.cardAccent, { backgroundColor: tone.accent }]} />
+              
+              <View style={styles.cardContent}>
+                {/* Header with Title and Badge */}
+                <View style={styles.cardHeader}>
+                  <View style={styles.titleWrap}>
+                    <Text style={styles.cardTitle} numberOfLines={2}>
+                      {application.title}
+                    </Text>
+                    <Text style={styles.cardCompany} numberOfLines={1}>
+                      {application.company}
+                    </Text>
+                  </View>
+                  <StatusBadge label={tone.label} tone={tone.tone} />
+                </View>
+
+                {/* Metadata Grid */}
+                <View style={styles.metaGrid}>
+                  <MetaItem icon="calendar" label={application.submittedAt} prefix="Postulado:" />
+                  <MetaItem icon="clipboard" label={application.stage} />
+                </View>
+
+                <View style={styles.metaGrid}>
+                  <MetaItem icon="flag" label={`Prioridad ${application.priority}`} />
+                  <MetaItem icon="file-text" label="CV enviado" />
+                </View>
+
+                {/* Status Note */}
+                {tone.note && (
+                  <View style={[styles.noteBox, { backgroundColor: tone.background }]}>
+                    <Feather name="info" size={14} color={tone.accent} />
+                    <Text style={[styles.noteText, { color: tone.accent }]}>
+                      {tone.note}
+                    </Text>
+                  </View>
+                )}
               </View>
-              <StatusBadge label={tone.label} tone={tone.tone} />
             </View>
-            <View style={styles.metaRow}>
-              <Meta icon="calendar" label={`Postulado: ${application.submittedAt}`} />
-              <Meta icon="clipboard" label={application.stage} />
-            </View>
-            <View style={styles.metaRow}>
-              <Meta icon="flag" label={`Prioridad ${application.priority}`} />
-              <Meta icon="file-text" label={`CV: ${application.title.replace(/\s+/g, '_')}.pdf`} />
-            </View>
-            {tone.note && <Text style={[styles.note, { color: tone.accent }]}>{tone.note}</Text>}
-          </Card>
-        );
-      })}
+          );
+        })}
+      </View>
     </ScrollView>
   );
 }
 
-function Meta({ icon, label }: { icon: keyof typeof Feather.glyphMap; label: string }) {
+function MetaItem({ 
+  icon, 
+  label, 
+  prefix 
+}: { 
+  icon: keyof typeof Feather.glyphMap; 
+  label: string;
+  prefix?: string;
+}) {
   return (
-    <View style={styles.metaRowItem}>
-      <Feather name={icon} size={14} color={colors.muted} />
-      <Text style={styles.metaText}>{label}</Text>
+    <View style={styles.metaItem}>
+      <Feather name={icon} size={14} color={colors.textSecondary} />
+      <Text style={styles.metaText}>
+        {prefix && <Text style={styles.metaPrefix}>{prefix} </Text>}
+        {label}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+  },
   container: {
-    padding: 16,
-    gap: 16,
+    paddingVertical: 16,
     paddingBottom: 120,
   },
-  summaryEyebrow: {
-    color: colors.muted,
-    textTransform: 'uppercase',
-    fontSize: 12,
-    letterSpacing: 1,
-  },
-  summaryTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    marginTop: 12,
+  stack: {
     gap: 12,
   },
-  summaryStat: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 18,
-    paddingVertical: 12,
-    alignItems: 'center',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+
+  // Hero Card
+  heroCard: {
+    backgroundColor: '#0B7A4D',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    gap: 16,
   },
-  summaryValue: {
+  heroContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  heroIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroText: {
+    flex: 1,
+  },
+  heroTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  heroPill: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  heroPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0B7A4D',
+  },
+
+  // Stats Row
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  statNumber: {
     fontSize: 24,
     fontWeight: '700',
-    color: colors.textPrimary,
+    color: '#FFFFFF',
   },
-  summaryLabel: {
-    color: colors.textSecondary,
-    marginTop: 4,
+  statLabel: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.9)',
     textAlign: 'center',
   },
-  card: {
-    gap: 12,
-    borderWidth: 1,
+
+  // Section Header
+  sectionHeaderWrap: {
+    marginTop: 8,
+    marginBottom: 4,
   },
-  rowBetween: {
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+
+  // Application Card
+  applicationCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+  },
+  cardContent: {
+    padding: 16,
+    gap: 12,
+  },
+
+  // Card Header
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  subtitle: {
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: 12,
   },
-  metaRowItem: {
+  titleWrap: {
+    flex: 1,
+    gap: 4,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    lineHeight: 22,
+  },
+  cardCompany: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+
+  // Metadata
+  metaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flex: 1,
+    minWidth: '45%',
   },
   metaText: {
+    fontSize: 12,
     color: colors.textSecondary,
-    fontSize: 13,
+    flex: 1,
   },
-  note: {
-    marginTop: 8,
+  metaPrefix: {
     fontWeight: '600',
+  },
+
+  // Note Box
+  noteBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  noteText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 18,
   },
 });

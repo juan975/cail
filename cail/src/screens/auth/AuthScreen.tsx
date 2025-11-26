@@ -5,12 +5,13 @@ import { Feather } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { colors, gradients } from '@/theme/colors';
+import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { UserRole } from '@/types';
 import { LoginForm } from './LoginForm';
 import { RegisterCandidateForm } from './RegisterCandidateForm';
 import { RegisterEmployerForm } from './RegisterEmployerForm';
 
-const logo = require('@/assets/0198b872f16fe45d3593d066ae15f05331a33cf2.png');
+const logo = require('@/assets/logo.png');
 
 type AuthMode = 'select' | 'login' | 'register';
 
@@ -19,6 +20,7 @@ type AuthScreenProps = {
 };
 
 export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
+  const { isTablet, isDesktop, contentWidth, horizontalGutter } = useResponsiveLayout();
   const [selectedRole, setSelectedRole] = useState<UserRole>('candidate');
   const [mode, setMode] = useState<AuthMode>('select');
 
@@ -34,61 +36,70 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
   return (
     <LinearGradient colors={['#0F8154', '#0F8154', '#1A5F7A']} style={styles.gradient}>
       <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          {mode === 'select' && (
-            <View style={styles.logoWrapper}>
-              <View style={styles.logoBadge}>
-                <Image source={logo} style={styles.logo} resizeMode="contain" />
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingHorizontal: horizontalGutter }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={[styles.inner, { maxWidth: contentWidth }]}>
+            {mode === 'select' && (
+              <View style={styles.logoWrapper}>
+                <View style={styles.logoBadge}>
+                  <Image source={logo} style={styles.logo} resizeMode="contain" />
+                </View>
+                <Text style={styles.headline}>Bolsa de Empleo CAIL</Text>
+                <Text style={styles.subtitle}>Cámara de Industrias de Loja</Text>
+                <Text style={styles.tagline}>Gestión de Perfiles - Acceso al sistema</Text>
               </View>
-              <Text style={styles.headline}>Bolsa de Empleo CAIL</Text>
-              <Text style={styles.subtitle}>Cámara de Industrias de Loja</Text>
-              <Text style={styles.tagline}>Gestión de Perfiles - Acceso al sistema</Text>
-            </View>
-          )}
+            )}
 
-          {mode === 'select' ? (
-            <View style={styles.options}>
-              <RoleButton
-                title="Soy Candidato"
-                description="Busco empleo"
-                icon="user"
-                onPress={() => handleRoleSelect('candidate')}
-              />
-              <RoleButton
-                title="Soy Empleador"
-                description="Busco personal"
-                icon="briefcase"
-                accent="employer"
-                onPress={() => handleRoleSelect('employer')}
-              />
-              <Text style={styles.footerText}>Conectando talento con oportunidades en Loja</Text>
-            </View>
-          ) : (
-            <Card tone="accent" spacing="lg" style={styles.formCard}>
-              {mode === 'login' && (
-                <LoginForm
-                  role={selectedRole}
-                  onSuccess={handleSuccess}
-                  onBack={() => setMode('select')}
-                  onSwitchToRegister={() => setMode('register')}
+            {mode === 'select' ? (
+              <View style={[styles.options, (isTablet || isDesktop) && styles.optionsWide]}>
+                <RoleButton
+                  title="Soy Candidato"
+                  description="Busco empleo"
+                  icon="user"
+                  onPress={() => handleRoleSelect('candidate')}
                 />
-              )}
-              {mode === 'register' && selectedRole === 'candidate' && (
-                <RegisterCandidateForm
-                  onSuccess={handleSuccess}
-                  onBack={() => setMode('select')}
-                  onSwitchToLogin={() => setMode('login')}
+                <RoleButton
+                  title="Soy Empleador"
+                  description="Busco personal"
+                  icon="briefcase"
+                  accent="employer"
+                  onPress={() => handleRoleSelect('employer')}
                 />
-              )}
-              {mode === 'register' && selectedRole === 'employer' && (
-                <RegisterEmployerForm
-                  onSuccess={handleSuccess}
-                  onBack={() => setMode('select')}
-                  onSwitchToLogin={() => setMode('login')}
-                />
-              )}
-            </Card>
-          )}
+                <Text style={styles.footerText}>Conectando talento con oportunidades en Loja</Text>
+              </View>
+            ) : (
+              <Card
+                tone="accent"
+                spacing="lg"
+                style={[styles.formCard, (isTablet || isDesktop) && styles.formCardWide]}
+              >
+                {mode === 'login' && (
+                  <LoginForm
+                    role={selectedRole}
+                    onSuccess={handleSuccess}
+                    onBack={() => setMode('select')}
+                    onSwitchToRegister={() => setMode('register')}
+                  />
+                )}
+                {mode === 'register' && selectedRole === 'candidate' && (
+                  <RegisterCandidateForm
+                    onSuccess={handleSuccess}
+                    onBack={() => setMode('select')}
+                    onSwitchToLogin={() => setMode('login')}
+                  />
+                )}
+                {mode === 'register' && selectedRole === 'employer' && (
+                  <RegisterEmployerForm
+                    onSuccess={handleSuccess}
+                    onBack={() => setMode('select')}
+                    onSwitchToLogin={() => setMode('login')}
+                  />
+                )}
+              </Card>
+            )}
+          </View>
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
@@ -135,8 +146,13 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 1,
-    padding: 24,
+    paddingVertical: 24,
     justifyContent: 'center',
+  },
+  inner: {
+    width: '100%',
+    alignSelf: 'center',
+    gap: 12,
   },
   logoWrapper: {
     alignItems: 'center',
@@ -173,6 +189,10 @@ const styles = StyleSheet.create({
   },
   options: {
     gap: 16,
+  },
+  optionsWide: {
+    maxWidth: 680,
+    alignSelf: 'center',
   },
   roleCard: {
     flexDirection: 'row',
@@ -214,5 +234,9 @@ const styles = StyleSheet.create({
   formCard: {
     marginTop: 12,
     overflow: 'visible',
+  },
+  formCardWide: {
+    maxWidth: 760,
+    alignSelf: 'center',
   },
 });

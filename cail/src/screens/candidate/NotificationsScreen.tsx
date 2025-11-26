@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { Card } from '@/components/ui/Card';
-import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Feather } from '@expo/vector-icons';
 import { colors } from '@/theme/colors';
 import { NOTIFICATION_ITEMS, NOTIFICATION_PREFERENCES } from '@/data/mockData';
+import { useResponsiveLayout } from '@/hooks/useResponsive';
 
 export function NotificationsScreen() {
+  const { contentWidth } = useResponsiveLayout();
   const [preferences, setPreferences] = useState(NOTIFICATION_PREFERENCES);
   const [tab, setTab] = useState<'feed' | 'settings'>('feed');
 
@@ -14,189 +15,469 @@ export function NotificationsScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Card tone="accent" spacing="lg">
-        <Text style={styles.centerEyebrow}>Centro de notificaciones</Text>
-        <Text style={styles.centerTitle}>No hay alertas sin leer</Text>
-        <Text style={styles.centerSubtitle}>Recibe actualizaciones sobre nuevas ofertas y el estado de tus postulaciones.</Text>
-      </Card>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <View style={[styles.stack, { maxWidth: contentWidth, alignSelf: 'center', width: '100%' }]}>
+        {/* Hero Card */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroContent}>
+            <View style={styles.heroIcon}>
+              <Feather name="bell" size={24} color="#FFFFFF" />
+            </View>
+            <View style={styles.heroText}>
+              <Text style={styles.heroTitle}>Centro de alertas</Text>
+              <Text style={styles.heroSubtitle}>Notificaciones y comunicación</Text>
+            </View>
+          </View>
+        </View>
 
-      <View style={styles.tabBar}>
-        <TabButton label="Notificaciones" active={tab === 'feed'} onPress={() => setTab('feed')} />
-        <TabButton label="Configuración" active={tab === 'settings'} onPress={() => setTab('settings')} />
-      </View>
+        {/* Tab Bar */}
+        <View style={styles.tabBar}>
+          <TabButton 
+            label="Notificaciones" 
+            icon="bell"
+            active={tab === 'feed'} 
+            onPress={() => setTab('feed')} 
+          />
+          <TabButton 
+            label="Configuración" 
+            icon="settings"
+            active={tab === 'settings'} 
+            onPress={() => setTab('settings')} 
+          />
+        </View>
 
-      {tab === 'feed' ? (
-        <>
-          <SectionHeader title="Resumen" subtitle="Últimas actualizaciones" />
-          {NOTIFICATION_ITEMS.map((item) => (
-            <Card key={item.id} style={styles.notificationCard}>
-              <View style={styles.notificationHeader}>
-                <View style={styles.iconBadge}>
-                  <Text style={styles.iconBadgeText}>{item.title.charAt(0)}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.notificationTitle}>{item.title}</Text>
-                  <Text style={styles.notificationDescription}>{item.description}</Text>
-                  <View style={styles.notificationMeta}>
-                    <Text style={styles.notificationDate}>{item.date}</Text>
-                    <View style={[styles.categoryPill, { backgroundColor: getCategoryColor(item.category) + '20' }]}>
-                      <Text style={[styles.categoryText, { color: getCategoryColor(item.category) }]}>
-                        {item.category}
+        {tab === 'feed' ? (
+          <View style={styles.feedSection}>
+            {/* Section Header */}
+            <View style={styles.sectionHeaderWrap}>
+              <Text style={styles.sectionTitle}>Resumen</Text>
+              <Text style={styles.sectionSubtitle}>Últimas actualizaciones</Text>
+            </View>
+
+            {/* Notification Items */}
+            {NOTIFICATION_ITEMS.map((item, index) => (
+              <View key={item.id} style={styles.notificationCard}>
+                <View style={styles.notificationContent}>
+                  {/* Icon Badge */}
+                  <View style={[
+                    styles.iconBadge,
+                    { backgroundColor: getCategoryColor(item.category) + '20' }
+                  ]}>
+                    <Feather 
+                      name={getCategoryIcon(item.category)} 
+                      size={20} 
+                      color={getCategoryColor(item.category)} 
+                    />
+                  </View>
+
+                  {/* Content */}
+                  <View style={styles.notificationBody}>
+                    <View style={styles.notificationHeader}>
+                      <Text style={styles.notificationTitle} numberOfLines={2}>
+                        {item.title}
                       </Text>
+                      {item.category && (
+                        <View style={[
+                          styles.categoryBadge,
+                          { backgroundColor: getCategoryColor(item.category) + '15' }
+                        ]}>
+                          <Text style={[
+                            styles.categoryText,
+                            { color: getCategoryColor(item.category) }
+                          ]}>
+                            {item.category}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <Text style={styles.notificationDescription} numberOfLines={2}>
+                      {item.description}
+                    </Text>
+
+                    <View style={styles.notificationMeta}>
+                      <Feather name="clock" size={12} color={colors.textSecondary} />
+                      <Text style={styles.notificationDate}>{item.date}</Text>
                     </View>
                   </View>
                 </View>
               </View>
-            </Card>
-          ))}
-        </>
-      ) : (
-        <Card spacing="lg">
-          <SectionHeader title="Preferencias" subtitle="Activa los canales que prefieras" />
-          {preferences.map((pref) => (
-            <View key={pref.id} style={styles.preferenceRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.preferenceLabel}>{pref.label}</Text>
-                <Text style={styles.preferenceDescription}>{pref.description}</Text>
-              </View>
-              <Switch
-                trackColor={{ false: '#CBD5F5', true: '#A7F3D0' }}
-                thumbColor={pref.enabled ? colors.candidate : '#fff'}
-                value={pref.enabled}
-                onValueChange={() => togglePreference(pref.id)}
-              />
+            ))}
+          </View>
+        ) : (
+          <View style={styles.settingsSection}>
+            {/* Section Header */}
+            <View style={styles.sectionHeaderWrap}>
+              <Text style={styles.sectionTitle}>Preferencias</Text>
+              <Text style={styles.sectionSubtitle}>Activa los canales que prefieras</Text>
             </View>
-          ))}
-        </Card>
-      )}
+
+            {/* Preferences Card */}
+            <View style={styles.preferencesCard}>
+              {preferences.map((pref, index) => (
+                <View 
+                  key={pref.id} 
+                  style={[
+                    styles.preferenceRow,
+                    index < preferences.length - 1 && styles.preferenceRowBorder
+                  ]}
+                >
+                  <View style={styles.preferenceIcon}>
+                    <Feather 
+                      name={getPreferenceIcon(pref.label)} 
+                      size={20} 
+                      color={pref.enabled ? '#0B7A4D' : colors.textSecondary} 
+                    />
+                  </View>
+                  
+                  <View style={styles.preferenceContent}>
+                    <Text style={styles.preferenceLabel}>{pref.label}</Text>
+                    <Text style={styles.preferenceDescription}>{pref.description}</Text>
+                  </View>
+
+                  <Switch
+                    trackColor={{ false: '#E5E7EB', true: '#86EFAC' }}
+                    thumbColor={pref.enabled ? '#0B7A4D' : '#FFFFFF'}
+                    ios_backgroundColor="#E5E7EB"
+                    value={pref.enabled}
+                    onValueChange={() => togglePreference(pref.id)}
+                  />
+                </View>
+              ))}
+            </View>
+
+            {/* Info Box */}
+            <View style={styles.infoBox}>
+              <Feather name="info" size={16} color="#3B82F6" />
+              <Text style={styles.infoText}>
+                Puedes cambiar estas preferencias en cualquier momento. 
+                Las notificaciones importantes siempre te llegarán.
+              </Text>
+            </View>
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
 
-function TabButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function TabButton({ 
+  label, 
+  icon,
+  active, 
+  onPress 
+}: { 
+  label: string; 
+  icon: keyof typeof Feather.glyphMap;
+  active: boolean; 
+  onPress: () => void;
+}) {
   return (
-    <Pressable onPress={onPress} style={[styles.tabButton, active && styles.tabButtonActive]}>
-      <Text style={[styles.tabButtonText, active && styles.tabButtonTextActive]}>{label}</Text>
+    <Pressable 
+      onPress={onPress} 
+      style={[styles.tabButton, active && styles.tabButtonActive]}
+    >
+      <Feather 
+        name={icon} 
+        size={16} 
+        color={active ? '#0B7A4D' : colors.textSecondary} 
+      />
+      <Text style={[styles.tabButtonText, active && styles.tabButtonTextActive]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
 function getCategoryColor(category?: string) {
   switch (category) {
-    case 'proceso':
-      return colors.info;
-    case 'sugerencia':
-      return colors.candidate;
-    case 'alerta':
-      return colors.danger;
+    case 'Proceso':
+      return '#3B82F6'; // Blue
+    case 'Sugerencia':
+      return '#10B981'; // Green
+    case 'Alerta':
+      return '#EF4444'; // Red
+    case 'Sistema':
+      return '#8B5CF6'; // Purple
     default:
-      return colors.muted;
+      return '#6B7280'; // Gray
   }
 }
 
+function getCategoryIcon(category?: string): keyof typeof Feather.glyphMap {
+  switch (category) {
+    case 'Proceso':
+      return 'activity';
+    case 'Sugerencia':
+      return 'zap';
+    case 'Alerta':
+      return 'alert-circle';
+    case 'Sistema':
+      return 'settings';
+    default:
+      return 'bell';
+  }
+}
+
+function getPreferenceIcon(label: string): keyof typeof Feather.glyphMap {
+  if (label.toLowerCase().includes('correo') || label.toLowerCase().includes('email')) {
+    return 'mail';
+  }
+  if (label.toLowerCase().includes('push') || label.toLowerCase().includes('móvil')) {
+    return 'smartphone';
+  }
+  if (label.toLowerCase().includes('sms')) {
+    return 'message-square';
+  }
+  if (label.toLowerCase().includes('whatsapp')) {
+    return 'message-circle';
+  }
+  return 'bell';
+}
+
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    gap: 16,
+  screen: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+  },
+  content: {
+    paddingVertical: 16,
     paddingBottom: 120,
   },
-  centerEyebrow: {
-    textTransform: 'uppercase',
-    color: colors.muted,
-    fontSize: 12,
-    letterSpacing: 1,
+  stack: {
+    gap: 12,
+    width: '100%',
   },
-  centerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
+
+  // Hero Card
+  heroCard: {
+    backgroundColor: '#0B7A4D',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  centerSubtitle: {
-    color: colors.textSecondary,
-  },
-  tabBar: {
+  heroContent: {
     flexDirection: 'row',
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 4,
+    alignItems: 'center',
+    gap: 12,
+  },
+  heroIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroText: {
+    flex: 1,
+  },
+  heroTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  heroBadge: {
+    backgroundColor: '#EF4444',
+    minWidth: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  heroBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  // Tab Bar
+  tabBar: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 6,
+    flexDirection: 'row',
     gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  tabButtonActive: {
-    backgroundColor: colors.candidateSurface,
-  },
-  tabButtonText: {
-    color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  tabButtonTextActive: {
-    color: colors.candidateDark,
-  },
-  preferenceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
   },
-  preferenceLabel: {
+  tabButtonActive: {
+    backgroundColor: '#F0FDF4',
+  },
+  tabButtonText: {
+    fontSize: 14,
     fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  preferenceDescription: {
     color: colors.textSecondary,
-    marginTop: 4,
   },
+  tabButtonTextActive: {
+    color: '#0B7A4D',
+  },
+
+  // Section Headers
+  feedSection: {
+    gap: 12,
+  },
+  settingsSection: {
+    gap: 12,
+  },
+  sectionHeaderWrap: {
+    marginBottom: 4,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+
+  // Notification Card
   notificationCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  notificationHeader: {
+  notificationContent: {
     flexDirection: 'row',
     gap: 12,
   },
   iconBadge: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconBadgeText: {
-    fontWeight: '700',
-    color: colors.textPrimary,
+  notificationBody: {
+    flex: 1,
+    gap: 8,
+  },
+  notificationHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   notificationTitle: {
+    flex: 1,
+    fontSize: 15,
     fontWeight: '700',
-    fontSize: 16,
+    color: colors.textPrimary,
+    lineHeight: 20,
+  },
+  categoryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  categoryText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   notificationDescription: {
+    fontSize: 13,
     color: colors.textSecondary,
-    marginTop: 4,
+    lineHeight: 18,
   },
   notificationMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
+    gap: 4,
   },
   notificationDate: {
+    fontSize: 12,
     color: colors.textSecondary,
   },
-  categoryPill: {
+
+  // Preferences Card
+  preferencesCard: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  categoryText: {
-    fontSize: 12,
+  preferenceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+  },
+  preferenceRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  preferenceIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  preferenceContent: {
+    flex: 1,
+  },
+  preferenceLabel: {
+    fontSize: 15,
     fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  preferenceDescription: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 16,
+  },
+
+  // Info Box
+  infoBox: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: 'row',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#1E40AF',
+    lineHeight: 18,
   },
 });
