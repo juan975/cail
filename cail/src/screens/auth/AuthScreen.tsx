@@ -11,7 +11,7 @@ import { LoginForm } from './LoginForm';
 import { RegisterCandidateForm } from './RegisterCandidateForm';
 import { RegisterEmployerForm } from './RegisterEmployerForm';
 
-const logo = require('@/assets/0198b872f16fe45d3593d066ae15f05331a33cf2.png');
+const logo = require('@/assets/logo.png');
 
 type AuthMode = 'select' | 'login' | 'register';
 
