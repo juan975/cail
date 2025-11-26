@@ -1,4 +1,4 @@
-# Resumen Técnico: Términos y Condiciones de Uso
+# Términos y Condiciones de Uso
 
 **Objetivo:** Establecer el marco contractual que regula el acceso, uso, comportamiento y responsabilidades dentro de la plataforma Bolsa de Empleo CAIL.
 
@@ -40,3 +40,4 @@ Los conflictos derivados del uso de la plataforma se resolverán mediante:
 
 1. Negociación directa entre las partes (plazo de 30 días).  
 2. Arbitraje en la ciudad de Loja, conforme a la legislación ecuatoriana.
+
