@@ -1,7 +1,7 @@
 
 
 
-#  Diagramas de Casos de Uso (Detallados)
+#  Diagramas de Casos de Uso 
 
 ## ¿Qué son los diagramas de casos de uso?
 
@@ -171,4 +171,5 @@ Cubre la etapa final del proceso de selección por parte del **Usuario** (Empres
       * "Seleccionar postulante": Marca al candidato como elegido.
       * "Rechazar postulante": Descarta la aplicación.
 ![WhatsApp Image 2025-11-26 at 07 22 46 (2)](https://github.com/user-attachments/assets/47c7643c-603f-488b-9d51-23b68bf14e0d)
+
 
