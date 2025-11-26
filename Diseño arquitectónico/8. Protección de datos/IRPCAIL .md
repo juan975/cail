@@ -1,4 +1,4 @@
-# Resumen Técnico: Plan de Respuesta a Incidentes (IRP)
+# Plan de Respuesta a Incidentes (IRP)
 
 ## Objetivo
 Establecer un protocolo estandarizado basado en **NIST SP 800-61** para la identificación, gestión, contención, comunicación y recuperación ante incidentes de ciberseguridad que afecten la plataforma.
@@ -73,4 +73,5 @@ Basado en NIST SP 800-61:
 
 6. **Lecciones Aprendidas**  
    Informe post-mortem, actualización de políticas, mejora de controles.
+
 
