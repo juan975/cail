@@ -42,13 +42,21 @@ Un diagrama de clases sigue la siguiente estructura:
 
 4. **Cardinalidad**: Define la cantidad de objetos relacionados, como 1:1, 1:N o N:M.
 
-5. [Enlace al diccionario de clases](https://www.notion.so/alisrj/Diccionario-De-Clases-2a94cf4f2e1d8028bd21f6f3514e1d33)
+
+
+## [Enlace al diccionario de clases](https://docs.google.com/spreadsheets/d/1hxwaTHAO2R_OksnQfmuAEtSi2iNAO3yj/edit?usp=sharing&ouid=116639669699551119922&rtpof=true&sd=true)
+
 
 
 
 ## Diagrama de Clases del Proyecto (CAIL)
 
-![Diagrama de Clases CAIL](https://github.com/user-attachments/assets/481493b4-7ea5-4237-b318-bca591bdc8aa)
+![Diagrama de Clases CAIL](https://github.com/user-attachments/assets/a5074d62-f217-4163-884b-0687d42e1436)
+
+
+
+
+
 
 
 
