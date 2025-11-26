@@ -1,4 +1,4 @@
-# Resumen Técnico: Política de Protección de Datos Personales
+# Política de Protección de Datos Personales
 
 **Objetivo:** Definir el tratamiento jurídico y técnico de la información personal, en cumplimiento con la **Ley Orgánica de Protección de Datos Personales (LOPDP)** de Ecuador.
 
@@ -45,4 +45,5 @@ Se establece un canal oficial para que los usuarios ejerzan sus derechos de:
 - **Eliminación**  
 - **Oposición**  
 - **Portabilidad**
+
 
