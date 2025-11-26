@@ -1,4 +1,4 @@
-# Resumen Técnico: Consentimiento Informado
+# Consentimiento Informado
 
 **Objetivo:** Establecer un mecanismo de validación legal tipo “Clickwrap” que permita el tratamiento lícito de los datos personales antes del registro del usuario en la plataforma.
 
@@ -35,4 +35,5 @@
 - Este proceso activa:
   - Eliminación lógica del perfil en la aplicación.
   - Eliminación física de los datos personales en los sistemas de almacenamiento, conforme a los plazos y procedimientos definidos en la Política de Conservación de Datos.
+
 
