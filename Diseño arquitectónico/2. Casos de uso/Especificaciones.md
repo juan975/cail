@@ -175,4 +175,31 @@ Cubre la etapa final del proceso de selección por parte del **Usuario** (Empres
 ![WhatsApp Image 2025-11-26 at 07 22 46 (2)](https://github.com/user-attachments/assets/47c7643c-603f-488b-9d51-23b68bf14e0d)
 
 
+## Especificaciones de casos de uso
+
+- **Empresa registra Oferta**
+- **Gerente aprueba Oferta**
+- **Reclutador publica Oferta**
+- **Reclutador selecciona Postulacion**
+- **Reclutador actualiza Oferta**
+- **Candidato postula Oferta**
+- **Candidato revisa Postulacion**
+- **Matching analiza Candidato**
+- **Matching busca Candidato**
+- **Administrador genera Oferta**
+- **RegistroCivil verifica Candidato**
+- **Senecyt verifica Candidato**
+- **Gerente gestiona Empresa**
+- **Reclutador modifica Oferta**
+- **Reclutador selecciona Candidato**
+- **Matching notifica Candidato**
+- **Matching procesa Oferta**
+- **Candidato consulta Oferta**
+- **Candidato consulta Postulacion**
+- **Postulacion asocia Candidato**
+- **Postulacion asocia Oferta**
+- **Reclutador representa Empresa**
+- **RegistroCivil valida Usuario**
+- **Senecyt valida Usuario**
+
 
