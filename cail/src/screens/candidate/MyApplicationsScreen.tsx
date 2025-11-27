@@ -84,7 +84,7 @@ export function MyApplicationsScreen() {
           {/* Stats Row */}
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
-              <Feather name="file-text" size={20} color="#0B7A4D" />
+              <Feather name="file-text" size={20} color="#10B981" />
               <Text style={styles.statNumber}>{summary.total}</Text>
               <Text style={styles.statLabel}>Total postulaciones</Text>
             </View>
@@ -94,9 +94,9 @@ export function MyApplicationsScreen() {
               <Text style={styles.statLabel}>En revisión</Text>
             </View>
             <View style={styles.statBox}>
-              <Feather name="gift" size={20} color="#10B981" />
-              <Text style={styles.statNumber}>{summary.oferta}</Text>
-              <Text style={styles.statLabel}>Ofertas</Text>
+              <Feather name="calendar" size={20} color="#3B82F6" />
+              <Text style={styles.statNumber}>{summary.entrevista}</Text>
+              <Text style={styles.statLabel}>Entrevistas</Text>
             </View>
           </View>
         </View>

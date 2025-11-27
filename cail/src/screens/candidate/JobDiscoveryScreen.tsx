@@ -99,7 +99,6 @@ export function JobDiscoveryScreen() {
             <Text style={styles.offerTitle}>{item.title}</Text>
             <StatusBadge label={item.hierarchyLevel} tone="success" />
           </View>
-          <Text style={styles.offerCompany}>{item.company}</Text>
         </View>
       </View>
       
@@ -267,7 +266,7 @@ export function JobDiscoveryScreen() {
             <View style={styles.modalHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.modalTitle}>{selectedOffer?.title}</Text>
-                <Text style={styles.modalSubtitle}>{selectedOffer?.company} - {selectedOffer?.location}</Text>
+                <Text style={styles.modalSubtitle}>{selectedOffer?.location}</Text>
               </View>
               <TouchableOpacity onPress={resetModal} style={styles.closeButton}>
                 <Feather name="x" size={24} color={colors.textSecondary} />

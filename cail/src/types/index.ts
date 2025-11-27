@@ -45,7 +45,7 @@ export interface JobOffer {
   postedDate: string;
 }
 
-export type ApplicationStatus = 'postulado' | 'revision' | 'entrevista' | 'oferta' | 'finalizado';
+export type ApplicationStatus = 'Postulado' | 'En revisión' | 'Entrevista' | 'Oferta' | 'Finalizado';
 
 export interface CandidateApplication {
   id: string;
@@ -64,7 +64,7 @@ export interface NotificationItem {
   title: string;
   description: string;
   date: string;
-  category: 'proceso' | 'sugerencia' | 'alerta';
+  category: 'Proceso' | 'Sugerencia' | 'Alerta';
   unread?: boolean;
 }
 
@@ -89,7 +89,7 @@ export interface EmployerApplication {
   position: string;
   experienceYears: number;
   matchScore: number;
-  status: 'nuevo' | 'entrevista' | 'descartado' | 'contratado';
+  status: 'Nuevo' | 'En entrevista' | 'Descartado' | 'Contratado';
   submittedAt: string;
   channel: 'Web' | 'Recomendado' | 'Referencia';
   notes?: string;
