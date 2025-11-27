@@ -14,9 +14,10 @@ type AuthMode = 'select' | 'login' | 'register';
 
 type AuthScreenProps = {
   onAuthSuccess: (role: UserRole, data: any) => void;
+  onShowTerms: () => void;
 };
 
-export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
+export function AuthScreen({ onAuthSuccess, onShowTerms }: AuthScreenProps) {
   const { isTablet, isDesktop, contentWidth, horizontalGutter } = useResponsiveLayout();
   const [selectedRole, setSelectedRole] = useState<UserRole>('candidate');
   const [mode, setMode] = useState<AuthMode>('select');
@@ -116,6 +117,31 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                 )}
               </View>
             )}
+
+            <View style={styles.legalContainer}>
+              <TouchableOpacity
+                onPress={onShowTerms}
+                activeOpacity={0.85}
+                style={[
+                  styles.legalButton,
+                  mode === 'select' ? styles.legalButtonHero : styles.legalButtonForm,
+                ]}
+              >
+                <Feather
+                  name="file-text"
+                  size={14}
+                  color={mode === 'select' ? '#FFFFFF' : '#0F172A'}
+                />
+                <Text
+                  style={[
+                    styles.legalText,
+                    mode === 'select' ? styles.legalTextHero : styles.legalTextForm,
+                  ]}
+                >
+                  Términos y Condiciones
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -373,6 +399,38 @@ const styles = StyleSheet.create({
   roleActionText: {
     fontSize: 15,
     fontWeight: '700',
+  },
+
+  legalContainer: {
+    alignItems: 'center',
+  },
+  legalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  legalButtonHero: {
+    borderColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  legalButtonForm: {
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  legalText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  legalTextHero: {
+    color: '#FFFFFF',
+  },
+  legalTextForm: {
+    color: '#0F172A',
   },
 
   // Footer

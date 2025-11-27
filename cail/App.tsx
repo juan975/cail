@@ -6,11 +6,13 @@ import { AuthScreen } from '@/screens/auth/AuthScreen';
 import { ChangePasswordScreen } from '@/screens/auth/ChangePasswordScreen';
 import { CandidateShell } from '@/screens/candidate/CandidateShell';
 import { EmployerShell } from '@/screens/employer/EmployerShell';
+import { TermsScreen } from '@/screens/legal/TermsScreen';
 import { CandidateUserData, EmployerUserData, UserRole, UserSession } from '@/types';
 import { colors } from '@/theme/colors';
 
 function RootApp() {
   const [session, setSession] = useState<UserSession | null>(null);
+  const [showTerms, setShowTerms] = useState(false);
 
   const handleAuthSuccess = (role: UserRole, userData: any) => {
     setSession({
@@ -31,8 +33,15 @@ function RootApp() {
     }
   };
 
+  const handleShowTerms = () => setShowTerms(true);
+  const handleCloseTerms = () => setShowTerms(false);
+
+  if (showTerms) {
+    return <TermsScreen onClose={handleCloseTerms} />;
+  }
+
   if (!session) {
-    return <AuthScreen onAuthSuccess={handleAuthSuccess} />;
+    return <AuthScreen onAuthSuccess={handleAuthSuccess} onShowTerms={handleShowTerms} />;
   }
 
   if (session.role === 'employer' && session.needsPasswordChange) {
