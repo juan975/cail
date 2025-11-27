@@ -30,19 +30,19 @@ interface Application {
   cvFile?: string;
 }
 
-const mockApplications: Application[] = [
+const mockSpontaneousApplications: Application[] = [
   {
     id: "1",
     candidateName: "María Fernanda González",
     initials: "MF",
-    department: "Manufactura",
-    position: "Ingeniero de Producción",
-    education: "Ingeniería Industrial",
+    department: "Desarrollo de Software",
+    position: "Desarrollador Backend",
+    education: "Ingeniería en Sistemas",
     experience: "3 años de exp.",
     email: "mf.gonzalez@email.com",
     phone: "0998765432",
     location: "Loja",
-    skills: ["Control de Calidad", "ISO 9001", "Lean Manufacturing"],
+    skills: ["Node.js", "API Rest", "SQL/NoSQL"],
     receivedDate: "27/10/2025",
     status: "pending",
     cvFile: "CV_Maria_Fernanda_Gonzalez.pdf",
@@ -51,14 +51,14 @@ const mockApplications: Application[] = [
     id: "2",
     candidateName: "Carlos Alberto Moreno",
     initials: "CA",
-    department: "Administración",
-    position: "Analista de Recursos Humanos",
-    education: "Administración de Empresas",
+    department: "Tecnologías de la Información",
+    position: "Analista de Seguridad Informática",
+    education: "Ingeniería en Ciencias de la Computación",
     experience: "5 años de exp.",
     email: "ca.moreno@email.com",
     phone: "0987654321",
     location: "Loja",
-    skills: ["Gestión de Personal", "Recursos Humanos", "Nómina"],
+    skills: ["Ciberseguridad", "Penetration Testing", "Firewalls"],
     receivedDate: "26/10/2025",
     status: "pending",
   },
@@ -66,14 +66,14 @@ const mockApplications: Application[] = [
     id: "3",
     candidateName: "Roberto Miguel Sánchez",
     initials: "RM",
-    department: "Ingeniería",
-    position: "Ingeniero de Proyectos",
-    education: "Ingeniería Civil",
+    department: "Desarrollo de Software",
+    position: "Desarrollador Full Stack",
+    education: "Ingeniería en Sistemas",
     experience: "6 años de exp.",
     email: "rm.sanchez@email.com",
     phone: "0995432109",
     location: "Loja",
-    skills: ["AutoCAD", "Gestión de Proyectos", "Presupuestos"],
+    skills: ["React", "Node.js", "MongoDB", "Docker"],
     receivedDate: "24/10/2025",
     status: "pending",
   },
@@ -81,14 +81,14 @@ const mockApplications: Application[] = [
     id: "4",
     candidateName: "Patricia Elizabeth Jiménez",
     initials: "PE",
-    department: "Ingeniería",
-    position: "Ingeniero de Proyectos",
-    education: "Ingeniería Industrial",
+    department: "Ingeniería de Software",
+    position: "Ingeniero de Proyectos de TI",
+    education: "Ingeniería en Sistemas",
     experience: "4 años de exp.",
     email: "pe.jimenez@email.com",
     phone: "0994321098",
     location: "Loja",
-    skills: ["Project Management", "Six Sigma", "Gestión de Riesgos"],
+    skills: ["Gestión de Proyectos", "Agile", "Scrum", "DevOps"],
     receivedDate: "23/10/2025",
     status: "review",
   },
@@ -96,37 +96,108 @@ const mockApplications: Application[] = [
     id: "5",
     candidateName: "Fernando José Castillo",
     initials: "FJ",
-    department: "Calidad",
-    position: "Analista de Calidad",
-    education: "Ingeniería Química",
+    department: "Calidad de Software",
+    position: "QA Engineer",
+    education: "Ingeniería en Sistemas",
     experience: "3 años de exp.",
     email: "fj.castillo@email.com",
     phone: "0993210987",
     location: "Loja",
-    skills: ["Control de Calidad", "ISO 9001", "Auditorías"],
+    skills: ["Pruebas de Software", "Automatización", "Selenium"],
     receivedDate: "22/10/2025",
     status: "accepted",
   },
 ];
 
+const mockOfferApplications: Application[] = [
+  {
+    id: "a1",
+    candidateName: "Lucía Andrade Vega",
+    initials: "LA",
+    department: "Analítica de Datos",
+    position: "Data Analyst",
+    education: "Ingeniería en Estadística",
+    experience: "4 años de exp.",
+    email: "lucia.ava@email.com",
+    phone: "0991112233",
+    location: "Quito",
+    skills: ["SQL", "Power BI", "Python", "ETL"],
+    receivedDate: "18/10/2025",
+    status: "pending",
+    cvFile: "CV_Lucia_Andrade.pdf",
+  },
+  {
+    id: "a2",
+    candidateName: "Jorge Cabrera Mora",
+    initials: "JC",
+    department: "Infraestructura",
+    position: "Ingeniero DevOps",
+    education: "Ingeniería de Sistemas",
+    experience: "6 años de exp.",
+    email: "jorge.cabrera@email.com",
+    phone: "0982223344",
+    location: "Guayaquil",
+    skills: ["AWS", "Docker", "Kubernetes", "CI/CD"],
+    receivedDate: "17/10/2025",
+    status: "review",
+  },
+  {
+    id: "a3",
+    candidateName: "Elena Ruiz",
+    initials: "ER",
+    department: "Diseño y Producto",
+    position: "Diseñador UI/UX",
+    education: "Diseño Gráfico",
+    experience: "5 años de exp.",
+    email: "elena.ruiz@email.com",
+    phone: "0973334455",
+    location: "Cuenca",
+    skills: ["Figma", "Prototipado", "Investigación UX"],
+    receivedDate: "15/10/2025",
+    status: "accepted",
+  },
+  {
+    id: "a4",
+    candidateName: "Martín Benítez",
+    initials: "MB",
+    department: "Infraestructura",
+    position: "Ingeniero DevOps",
+    education: "Telecomunicaciones",
+    experience: "4 años de exp.",
+    email: "martin.benitez@email.com",
+    phone: "0964445566",
+    location: "Loja",
+    skills: ["Terraform", "Bash", "Observabilidad"],
+    receivedDate: "13/10/2025",
+    status: "pending",
+    cvFile: "CV_Martin_Benitez.pdf",
+  }
+];
+
 export default function ApplicationsScreen() {
   const { isDesktop, contentWidth, horizontalGutter } = useResponsiveLayout();
-  const [applications, setApplications] = useState<Application[]>(mockApplications);
+  const [spontaneousApplications, setSpontaneousApplications] = useState<Application[]>(
+    mockSpontaneousApplications,
+  );
+  const [offerApplications, setOfferApplications] = useState<Application[]>(mockOfferApplications);
   const [selectedView, setSelectedView] = useState<"cvs" | "offers">("cvs");
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  const [selectedSource, setSelectedSource] = useState<"cvs" | "offers">("cvs");
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [experienceFilter] = useState("Toda exp.");
   const [statusFilter] = useState("Todos");
 
+  const activeApplications = selectedView === "cvs" ? spontaneousApplications : offerApplications;
+
   const stats = {
-    total: applications.length,
-    pending: applications.filter((a) => a.status === "pending").length,
-    review: applications.filter((a) => a.status === "review").length,
-    accepted: applications.filter((a) => a.status === "accepted").length,
+    total: activeApplications.length,
+    pending: activeApplications.filter((a) => a.status === "pending").length,
+    review: activeApplications.filter((a) => a.status === "review").length,
+    accepted: activeApplications.filter((a) => a.status === "accepted").length,
   };
 
-  const filteredApplications = applications.filter((app) => {
+  const filteredApplications = activeApplications.filter((app) => {
     const query = searchQuery.toLowerCase();
     const matchesSearch =
       query.length === 0 ||
@@ -146,15 +217,25 @@ export default function ApplicationsScreen() {
 
   const openEvaluationModal = (app: Application) => {
     setSelectedApplication(app);
+    setSelectedSource(selectedView);
     setShowEvaluationModal(true);
   };
 
   const handleSelectCandidate = () => {
     if (selectedApplication) {
-      const updated = applications.map((app) =>
-        app.id === selectedApplication.id ? { ...app, status: "accepted" as ApplicationStatus } : app,
-      );
-      setApplications(updated);
+      if (selectedSource === "cvs") {
+        setSpontaneousApplications((prev) =>
+          prev.map((app) =>
+            app.id === selectedApplication.id ? { ...app, status: "accepted" as ApplicationStatus } : app,
+          ),
+        );
+      } else {
+        setOfferApplications((prev) =>
+          prev.map((app) =>
+            app.id === selectedApplication.id ? { ...app, status: "accepted" as ApplicationStatus } : app,
+          ),
+        );
+      }
       setShowEvaluationModal(false);
       setSelectedApplication(null);
     }
@@ -162,10 +243,19 @@ export default function ApplicationsScreen() {
 
   const handleReject = () => {
     if (selectedApplication) {
-      const updated = applications.map((app) =>
-        app.id === selectedApplication.id ? { ...app, status: "rejected" as ApplicationStatus } : app,
-      );
-      setApplications(updated);
+      if (selectedSource === "cvs") {
+        setSpontaneousApplications((prev) =>
+          prev.map((app) =>
+            app.id === selectedApplication.id ? { ...app, status: "rejected" as ApplicationStatus } : app,
+          ),
+        );
+      } else {
+        setOfferApplications((prev) =>
+          prev.map((app) =>
+            app.id === selectedApplication.id ? { ...app, status: "rejected" as ApplicationStatus } : app,
+          ),
+        );
+      }
       setShowEvaluationModal(false);
       setSelectedApplication(null);
     }
@@ -228,7 +318,7 @@ export default function ApplicationsScreen() {
             >
               <Feather name="file-text" size={16} color={selectedView === "cvs" ? "#1F2937" : "#6B7280"} />
               <Text style={[styles.viewTabText, selectedView === "cvs" && styles.viewTabTextActive]}>
-                CVs Espontáneos({applications.length})
+                CVs Espontáneos
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -237,7 +327,7 @@ export default function ApplicationsScreen() {
             >
               <Feather name="briefcase" size={16} color={selectedView === "offers" ? "#1F2937" : "#6B7280"} />
               <Text style={[styles.viewTabText, selectedView === "offers" && styles.viewTabTextActive]}>
-                Por Ofertas (3)
+                Por Ofertas
               </Text>
             </TouchableOpacity>
           </View>

@@ -36,7 +36,7 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: Login
       } else {
         onSuccess({
           id: 'employer-1',
-          company: 'Industrias ABC',
+          company: 'TechSolutions Loja',
           contactName: 'Patricia Ludeña',
           email,
           needsPasswordChange: false,
