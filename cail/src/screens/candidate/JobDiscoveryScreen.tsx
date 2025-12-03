@@ -156,7 +156,7 @@ export function JobDiscoveryScreen() {
               </View>
             </Card>
 
-            {/* Indicators Card */}
+            {/* Indicators Card
             <Card spacing="md" style={styles.indicatorsCard}>
               <View style={styles.indicatorsHeader}>
                 <Feather name="bar-chart-2" size={20} color={colors.warning} />
@@ -203,7 +203,7 @@ export function JobDiscoveryScreen() {
                   ))}
                 </View>
               </View>
-            </Card>
+            </Card> */}
 
             {/* Filters Card */}
             <Card spacing="md" style={styles.filtersCard}>
@@ -217,7 +217,7 @@ export function JobDiscoveryScreen() {
                 label=""
                 value={filters.search}
                 onChangeText={(text) => setFilters((prev) => ({ ...prev, search: text }))}
-                placeholder="Buscar por título, empresa..."
+                placeholder="Buscar por experiencia, formación..."
                 style={styles.searchInput}
               />
 
@@ -241,14 +241,14 @@ export function JobDiscoveryScreen() {
                 ))}
               </View>
 
-              <View style={styles.filterRow}>
+              {/* <View style={styles.filterRow}>
                 <TouchableOpacity style={styles.filterButton}>
                   <Text style={styles.filterButtonText}>Por experiencia</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.filterButton}>
                   <Text style={styles.filterButtonText}>Por formación</Text>
                 </TouchableOpacity>
-              </View>
+              </View> */}
 
               <Text style={styles.resultsText}>{filteredOffers.length} ofertas encontradas</Text>
             </Card>
