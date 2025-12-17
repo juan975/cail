@@ -20,7 +20,8 @@ export const colors = {
   success: '#16A34A',
   info: '#2F80ED',
   warning: '#FBBF24',
-  shadow: 'rgba(15, 23, 42, 0.12)',
+  shadow: 'rgba(15, 23, 42, 0.12)'
+  ,
 };
 
 export const gradients = {
