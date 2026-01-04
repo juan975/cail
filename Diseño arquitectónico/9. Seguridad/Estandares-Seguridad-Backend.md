@@ -959,12 +959,6 @@ jobs:
 
 ---
 
-## Contacto
-
-**Responsable de Seguridad:** Erick Gaona  
-**Email:** eogaona@utpl.edu.ec
-
-**En caso de dudas sobre estos estándares, contactar ANTES de implementar.**
 
 ---
 
