@@ -30,3 +30,7 @@ gradlew.bat
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Gradle checksums (Android del frontend)
+**/node_modules/*/.gradle/
+**/node_modules/*/android/.gradle/
