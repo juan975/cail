@@ -1,0 +1,45 @@
+# Dependencias (se instalan dentro de Docker)
+node_modules
+npm-debug.log
+
+# Build (se genera dentro de Docker)
+dist
+build
+
+# Archivos secretos
+.env
+serviceAccountKey.json
+firebase-config.json
+
+# Logs
+*.log
+logs
+
+# Git
+.git
+.gitignore
+
+# Documentación
+README.md
+docs/
+*.md
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output
+
+# IDEs
+.vscode
+.idea
+
+# Docker
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# Postman
+postman/
