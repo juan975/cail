@@ -1,0 +1,36 @@
+# Node modules (Frontend y Backend)
+node_modules/
+npm-debug.log*
+
+# Build
+dist/
+build/
+
+# Archivos secretos
+.env
+backend/.env
+backend/serviceAccountKey.json
+
+# IDEs
+.idea/
+.vscode/
+
+# Gradle (Android del frontend)
+.gradle/
+gradle/
+gradlew
+gradlew.bat
+**/android/.gradle/
+**/android/gradle/
+**/android/build/
+
+# Logs
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Gradle checksums (Android del frontend)
+**/node_modules/*/.gradle/
+**/node_modules/*/android/.gradle/

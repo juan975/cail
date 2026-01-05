@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: cail-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+    env_file:
+      - .env
+    restart: unless-stopped
+    volumes:
+      - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Puedes agregar más servicios aquí en el futuro
+  # Por ejemplo: Redis, PostgreSQL, etc.
