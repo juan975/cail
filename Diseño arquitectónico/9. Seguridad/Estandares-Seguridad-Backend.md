@@ -1942,6 +1942,6 @@ Agregar al `package.json`:
 
 ---
 
-*Documento actualizado: Enero 2026*  
+*Documento actualizado: 07 Enero 2026*  
 *Versión: 3.0*
 
