@@ -57,7 +57,7 @@ const validateEnv = (): EnvConfig => {
             expiresIn: process.env.JWT_EXPIRES_IN || '7d',
         },
         cors: {
-            allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:8081'],
+            allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || ['*'],
         },
         email: {
             apiKey: process.env.RESEND_API_KEY || '',

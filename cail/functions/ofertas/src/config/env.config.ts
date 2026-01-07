@@ -34,7 +34,7 @@ const validateEnv = (): EnvConfig => {
             secret: process.env.JWT_SECRET || 'default-secret',
         },
         cors: {
-            allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:8081'],
+            allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || ['*'],
         },
         services: {
             usuarios: process.env.USUARIOS_SERVICE_URL || 'http://localhost:8080',
