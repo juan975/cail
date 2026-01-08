@@ -1,36 +1,133 @@
 # Estándares de Seguridad para el Desarrollo del Backend
-## Proyecto CAIL - Bolsa de Empleo
+## Proyecto CAIL - Bolsa de Empleo (Arquitectura Microservicios)
 
-**Responsable de Seguridad:** Erick Gaona  
+**Responsable de Seguridad y Testing:** Erick Gaona  
 **Fecha:** Enero 2026  
-**Versión:** 1.0
+**Versión:** 4.0 (Actualizado para Microservicios)
+
+---
+
+## 📊 Estado Actual del Proyecto
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    ARQUITECTURA MICROSERVICIOS - IMPLEMENTADA               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  MICROSERVICIO          PUERTO    ESTADO           RESPONSABLE             │
+│  ──────────────────────────────────────────────────────────────────────    │
+│  usuarios (auth)        8080      ✅ Implementado   Alex (ALISrj)          │
+│  ofertas                8083      ✅ Implementado   Erick Gaona            │
+│  matching               8084      ✅ Implementado   Juan/Dara              │
+│                                                                             │
+│  TESTS EXISTENTES:                                                          │
+│  ├── functions/usuarios/tests/integration.test.ts ✅                       │
+│  ├── functions/ofertas/tests/integration.test.ts  ✅                       │
+│  └── functions/matching/tests/integration.test.ts ✅                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Tabla de Contenidos
 
 1. [Introducción](#1-introducción)
-2. [Estándares Generales para Todo el Equipo](#2-estándares-generales-para-todo-el-equipo)
-3. [Requerimientos por Desarrollador](#3-requerimientos-por-desarrollador)
-4. [Checklist de Validación de Código](#4-checklist-de-validación-de-código)
-5. [Herramientas de Validación](#5-herramientas-de-validación)
-6. [Proceso de Revisión de Código](#6-proceso-de-revisión-de-código)
-7. [Seguridad de APIs y Comunicación](#7-seguridad-de-apis-y-comunicación)
-8. [Notas Importantes por Desarrollador](#8-notas-importantes-por-desarrollador)
+2. [Arquitectura de Microservicios](#2-arquitectura-de-microservicios)
+3. [Estándares Generales para Todo el Equipo](#3-estándares-generales-para-todo-el-equipo)
+4. [Requerimientos por Microservicio](#4-requerimientos-por-microservicio)
+5. [Checklist de Validación de Código](#5-checklist-de-validación-de-código)
+6. [Herramientas de Validación](#6-herramientas-de-validación)
+7. [Proceso de Revisión de Código](#7-proceso-de-revisión-de-código)
+8. [Seguridad de APIs y Comunicación](#8-seguridad-de-apis-y-comunicación)
 9. [SonarQube - Análisis de Calidad y Seguridad](#9-sonarqube---análisis-de-calidad-y-seguridad)
 10. [Plan de Testing y Pruebas de Seguridad](#10-plan-de-testing-y-pruebas-de-seguridad)
+11. [Historial de Cambios](#11-historial-de-cambios)
 
 ---
 
 ## 1. Introducción
 
-Este documento establece los estándares de seguridad obligatorios para el desarrollo del backend de CAIL. **Cada desarrollador DEBE cumplir estos estándares antes de hacer merge a la rama principal.**
+Este documento establece los estándares de seguridad obligatorios para el desarrollo del backend de CAIL bajo arquitectura de **microservicios**. 
 
-El responsable de seguridad (Erick Gaona) validará el código de cada miembro del equipo usando las herramientas y checklists definidos en este documento.
+**Cada desarrollador DEBE cumplir estos estándares antes de hacer merge a la rama principal.**
+
+El responsable de seguridad y testing (Erick Gaona) validará el código de cada miembro del equipo usando las herramientas y checklists definidos en este documento.
+
+> **⚠️ IMPORTANTE:** El proyecto migró de monolito a microservicios. El código legacy en `cail/backend/` está deprecado. Todo nuevo desarrollo debe hacerse en `cail/functions/`.
 
 ---
 
-## 2. Estándares Generales para Todo el Equipo
+## 2. Arquitectura de Microservicios
+
+### 2.1 Estructura del Proyecto (ACTUAL)
+
+```
+cail/
+├── functions/                    ← MICROSERVICIOS (ACTUAL)
+│   ├── usuarios/                 ← Auth + Usuarios (Puerto 8080)
+│   │   ├── Dockerfile
+│   │   ├── jest.config.js        ← Configuración de tests
+│   │   ├── tests/
+│   │   │   ├── integration.test.ts
+│   │   │   └── setup.ts
+│   │   └── src/
+│   │       ├── index.ts
+│   │       ├── auth/             ← Login, Registro, JWT
+│   │       ├── users/            ← Perfiles
+│   │       └── shared/           ← Middleware, utils
+│   │
+│   ├── ofertas/                  ← Ofertas laborales (Puerto 8083)
+│   │   ├── Dockerfile
+│   │   ├── tests/
+│   │   │   └── integration.test.ts
+│   │   └── src/
+│   │       ├── index.ts
+│   │       ├── offers/           ← CRUD ofertas
+│   │       └── shared/
+│   │
+│   └── matching/                 ← Matching candidato-oferta (Puerto 8084)
+│       ├── Dockerfile
+│       ├── tests/
+│       │   └── integration.test.ts
+│       └── src/
+│           ├── index.ts
+│           ├── matching/         ← Algoritmo de matching
+│           └── shared/
+│
+├── shared/cail-common/           ← Código compartido entre microservicios
+├── infrastructure/               ← Docker Compose, WSO2
+├── backend/                      ← ⛔ DEPRECADO (monolito)
+└── wso2/api-definitions/         ← OpenAPI specs
+```
+
+### 2.2 Puertos y Servicios
+
+| Microservicio | Puerto | Endpoints Principales |
+|---------------|--------|----------------------|
+| **usuarios** | 8080 | `/auth/register`, `/auth/login`, `/users/profile` |
+| **ofertas** | 8083 | `/offers`, `/offers/:id` |
+| **matching** | 8084 | `/matching/apply`, `/matching/applications` |
+| **WSO2 Gateway** | 443 | Punto de entrada público |
+
+### 2.3 Flujo de Comunicación Segura
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   App Móvil     │────▶│  WSO2 Gateway   │────▶│ Cloud Functions │
+│   (React Native)│HTTPS│   (Puerto 443)  │JWT  │  (Microserv.)   │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                                                         │
+                                                         ▼
+                                                ┌─────────────────┐
+                                                │    Firestore    │
+                                                │  (Cifrado TLS)  │
+                                                └─────────────────┘
+```
+
+---
+
+## 3. Estándares Generales para Todo el Equipo
 
 ### 2.1 Reglas de Código Seguro (OBLIGATORIAS)
 
@@ -44,20 +141,30 @@ El responsable de seguridad (Erick Gaona) validará el código de cada miembro d
 | 6 | **Usar HTTPS siempre** | Todas las comunicaciones cifradas | `http://api.cail.ec` | `https://api.cail.ec` |
 | 7 | **Logs sin datos sensibles** | No loguear passwords, tokens o datos personales | `console.log('User:', user.password)` | `console.log('User login:', user.id)` |
 
-### 2.2 Estructura de Archivos Obligatoria
+### 3.2 Estructura de Archivos por Microservicio (OBLIGATORIA)
 
 ```
-src/
-├── config/
-│   └── env.ts              # Variables de entorno (NO hardcodear)
-├── middleware/
-│   ├── auth.middleware.ts   # Validación de JWT
-│   ├── validation.middleware.ts  # Validación de inputs
-│   └── error.middleware.ts  # Manejo centralizado de errores
-├── utils/
-│   ├── validators.ts        # Funciones de validación
-│   └── sanitizers.ts        # Funciones de sanitización
-└── ...
+functions/[microservicio]/
+├── Dockerfile              # Imagen Docker (usuario no-root)
+├── package.json            # Dependencias
+├── jest.config.js          # Configuración de tests
+├── tests/
+│   ├── integration.test.ts # Tests de integración
+│   └── setup.ts            # Setup de tests
+└── src/
+    ├── index.ts            # Punto de entrada
+    ├── config/
+    │   ├── env.config.ts   # Variables de entorno
+    │   └── firebase.config.ts
+    ├── [dominio]/          # auth/, offers/, matching/
+    │   ├── domain/
+    │   ├── application/
+    │   └── infrastructure/
+    └── shared/
+        ├── middleware/
+        │   ├── auth.middleware.ts
+        │   └── error.middleware.ts
+        └── utils/
 ```
 
 ### 2.3 Variables de Entorno Requeridas
@@ -1942,6 +2049,37 @@ Agregar al `package.json`:
 
 ---
 
-*Documento actualizado: 07 Enero 2026*  
-*Versión: 3.0*
+## 11. Historial de Cambios
+
+| Versión | Fecha | Cambios | Autor |
+|---------|-------|---------|-------|
+| 1.0 | 05 Ene 2026 | Documento inicial | Erick Gaona |
+| 2.0 | 06 Ene 2026 | Agregar sección de APIs y notas por desarrollador | Erick Gaona |
+| 3.0 | 07 Ene 2026 | Agregar SonarQube y Plan de Testing | Erick Gaona |
+| 4.0 | 08 Ene 2026 | **Migrar a arquitectura de microservicios** | Erick Gaona |
+
+### Cambios en Versión 4.0:
+
+1. **Arquitectura actualizada a microservicios:**
+   - `functions/usuarios/` (Puerto 8080) - Auth + Perfiles
+   - `functions/ofertas/` (Puerto 8083) - Ofertas laborales
+   - `functions/matching/` (Puerto 8084) - Matching candidato-oferta
+
+2. **Tests existentes integrados:**
+   - Cada microservicio tiene tests de integración
+   - Jest configurado en `functions/usuarios/jest.config.js`
+
+3. **Código deprecado:**
+   - `cail/backend/` (monolito) marcado como deprecado
+   - Nuevo desarrollo solo en `cail/functions/`
+
+4. **Integraciones realizadas:**
+   - Merge de rama `ALISrj-micro` (Alex)
+   - Merge de rama `cdm18` (Carlos)
+   - Frontend conectado a microservicios
+
+---
+
+*Documento actualizado: 08 Enero 2026*  
+*Versión: 4.0 - Arquitectura Microservicios*
 
