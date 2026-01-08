@@ -2049,7 +2049,156 @@ Agregar al `package.json`:
 
 ---
 
-## 11. Historial de Cambios
+## 11. Estado de Cumplimiento de Estándares
+
+### 11.1 Resumen General
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    ESTADO DE CUMPLIMIENTO DE SEGURIDAD                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  MICROSERVICIO USUARIOS (Alex - ALISrj)                                    │
+│  ───────────────────────────────────────────────────────────────────────   │
+│  ✅ Middleware de autenticación JWT                                        │
+│  ✅ Middleware de autorización por roles                                   │
+│  ✅ Manejo de errores centralizado (no expone stack traces)               │
+│  ✅ Dockerfile con usuario no-root                                         │
+│  ✅ Health check configurado                                               │
+│  ✅ Variables de entorno (no hardcodeadas)                                 │
+│  ✅ Bcrypt para hash de passwords (10 rounds)                              │
+│  ✅ Sistema de email para contraseñas temporales                           │
+│  ✅ CORS configurado                                                        │
+│  ⚠️  CORS permite todos los orígenes (origin: true) - REVISAR             │
+│  ⚠️  Rate limiting NO implementado                                         │
+│  ⚠️  Helmet NO implementado                                                │
+│  ⚠️  Validación de password (min 12 chars) NO implementada                 │
+│                                                                             │
+│  MICROSERVICIO OFERTAS (Erick Gaona)                                       │
+│  ───────────────────────────────────────────────────────────────────────   │
+│  ✅ Middleware de autenticación JWT                                        │
+│  ✅ Middleware de autorización (solo RECLUTADOR crea ofertas)              │
+│  ✅ Verificación de propiedad (solo dueño edita oferta)                    │
+│  ✅ Manejo de errores centralizado                                          │
+│  ✅ asyncHandler para errores en async                                      │
+│  ⚠️  Validación de inputs NO implementada (express-validator)              │
+│  ⚠️  Sanitización de descripción NO implementada                           │
+│  ⚠️  Paginación NO implementada (límite de resultados)                     │
+│  ⚠️  Rate limiting NO implementado                                         │
+│                                                                             │
+│  MICROSERVICIO MATCHING (Juan/Dara)                                        │
+│  ───────────────────────────────────────────────────────────────────────   │
+│  ✅ Middleware de autenticación JWT                                        │
+│  ✅ Manejo de errores centralizado                                          │
+│  ⚠️  Límite de postulaciones diarias NO implementado                       │
+│  ⚠️  Verificación de postulación duplicada NO implementada                 │
+│                                                                             │
+│  LEYENDA:  ✅ Implementado   ⚠️ Falta implementar   ❌ No cumple           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 11.2 Checklist Detallado por Desarrollador
+
+#### ALEX RAMÍREZ - Infraestructura y Auth
+
+| # | Requerimiento | Estado | Evidencia |
+|---|---------------|--------|-----------|
+| A1 | Configurar Helmet | ⚠️ **FALTA** | No está en index.ts |
+| A2 | Configurar CORS restrictivo | ⚠️ **PARCIAL** | `origin: true` permite TODOS |
+| A3 | Rate Limiting en Login | ⚠️ **FALTA** | No hay rate-limit configurado |
+| A4 | Validación de Password (12+ chars) | ⚠️ **FALTA** | No hay validación de longitud |
+| A5 | Validación de Email | ✅ **OK** | `Email.ts` value object valida formato |
+| A6 | No revelar si email existe | ⚠️ **FALTA** | Retorna "Email already registered" |
+| A7 | Dockerfile seguro (no-root) | ✅ **OK** | `USER nodejs` en Dockerfile |
+
+#### CARLOS MEJIA - JWT y WSO2
+
+| # | Requerimiento | Estado | Evidencia |
+|---|---------------|--------|-----------|
+| C1 | Algoritmo JWT seguro | ✅ **OK** | Usa HS256 (default jwt.sign) |
+| C2 | Expiración de tokens | ✅ **OK** | `expiresIn: '7d'` configurado |
+| C3 | Validar firma JWT | ✅ **OK** | `jwt.verify()` en middleware |
+| C4 | Validar claims (exp) | ✅ **OK** | TokenExpiredError manejado |
+| C5 | Middleware en rutas protegidas | ✅ **OK** | `authenticate` en rutas |
+| C6 | No exponer JWT en logs | ✅ **OK** | No se loguean tokens |
+| C7 | WSO2 JWT Policy | ⚠️ **PENDIENTE** | Configuración en wso2/ |
+
+#### ERICK GAONA - Ofertas
+
+| # | Requerimiento | Estado | Evidencia |
+|---|---------------|--------|-----------|
+| E1 | Solo reclutadores crean ofertas | ✅ **OK** | `authorize('RECLUTADOR')` |
+| E2 | Validar datos de oferta | ⚠️ **FALTA** | No hay express-validator |
+| E3 | Sanitizar descripción | ⚠️ **FALTA** | No hay sanitize-html |
+| E4 | Rate limiting en búsquedas | ⚠️ **FALTA** | No implementado |
+| E5 | Paginación obligatoria | ⚠️ **FALTA** | Solo hay `limit` opcional |
+| E6 | No inyección en búsquedas | ⚠️ **PARCIAL** | Firestore previene SQL injection |
+
+#### DARA VAN GIJSEL - Matching
+
+| # | Requerimiento | Estado | Evidencia |
+|---|---------------|--------|-----------|
+| D1 | Solo postulantes pueden postular | ⚠️ **VERIFICAR** | Revisar matching routes |
+| D2 | Una postulación por oferta | ⚠️ **FALTA** | No hay verificación |
+| D3 | Límite de 10 postulaciones/día | ⚠️ **FALTA** | No implementado |
+| D4 | Solo ofertas activas | ⚠️ **VERIFICAR** | Revisar matching service |
+| D5 | Proteger algoritmo matching | ✅ **OK** | Solo retorna score |
+| D6 | WSO2 todas rutas protegidas | ⚠️ **PENDIENTE** | En api-definitions/ |
+
+### 11.3 Resumen de Implementación
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         RESUMEN DE IMPLEMENTACIÓN                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  IMPLEMENTADO (Lo que SÍ está hecho):                                      │
+│  ────────────────────────────────────                                       │
+│  ✅ Arquitectura de microservicios (3 servicios)                           │
+│  ✅ Autenticación JWT en todos los microservicios                          │
+│  ✅ Autorización por roles (POSTULANTE, RECLUTADOR, ADMINISTRADOR)         │
+│  ✅ Manejo de errores centralizado (no expone stack traces)                │
+│  ✅ Dockerfiles seguros (usuario no-root, health checks)                   │
+│  ✅ Variables de entorno (no hardcodeadas)                                 │
+│  ✅ Bcrypt para hash de passwords                                          │
+│  ✅ Value Objects para Email y UserId                                      │
+│  ✅ Tests de integración en cada microservicio                             │
+│  ✅ Verificación de propiedad en ofertas                                   │
+│                                                                             │
+│  PENDIENTE (Lo que FALTA):                                                 │
+│  ─────────────────────────                                                  │
+│  ⚠️ Helmet (headers de seguridad)                                          │
+│  ⚠️ Rate Limiting (prevenir fuerza bruta)                                  │
+│  ⚠️ CORS restrictivo (solo dominios permitidos)                            │
+│  ⚠️ Validación de inputs con express-validator                             │
+│  ⚠️ Sanitización de HTML con sanitize-html                                 │
+│  ⚠️ Paginación obligatoria con límite máximo                               │
+│  ⚠️ Límite de postulaciones diarias                                        │
+│  ⚠️ Verificación de postulación duplicada                                  │
+│  ⚠️ Validación de password fuerte (12+ caracteres)                         │
+│                                                                             │
+│  PORCENTAJE DE CUMPLIMIENTO ESTIMADO: ~60%                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 11.4 Próximos Pasos Prioritarios
+
+| Prioridad | Tarea | Responsable | Esfuerzo |
+|-----------|-------|-------------|----------|
+| 🔴 CRÍTICA | Agregar Helmet | Alex | 30 min |
+| 🔴 CRÍTICA | Agregar Rate Limiting | Alex | 1 hora |
+| 🔴 CRÍTICA | Validación de password (12+ chars) | Alex | 30 min |
+| 🟠 ALTA | Restringir CORS | Alex | 15 min |
+| 🟠 ALTA | Agregar express-validator en ofertas | Erick | 2 horas |
+| 🟠 ALTA | Sanitizar descripción de ofertas | Erick | 1 hora |
+| 🟡 MEDIA | Paginación con límite máximo | Erick | 1 hora |
+| 🟡 MEDIA | Límite postulaciones diarias | Dara | 2 horas |
+
+---
+
+## 12. Historial de Cambios
 
 | Versión | Fecha | Cambios | Autor |
 |---------|-------|---------|-------|
@@ -2057,6 +2206,23 @@ Agregar al `package.json`:
 | 2.0 | 06 Ene 2026 | Agregar sección de APIs y notas por desarrollador | Erick Gaona |
 | 3.0 | 07 Ene 2026 | Agregar SonarQube y Plan de Testing | Erick Gaona |
 | 4.0 | 08 Ene 2026 | **Migrar a arquitectura de microservicios** | Erick Gaona |
+| 5.0 | 08 Ene 2026 | **Agregar Estado de Cumplimiento (Sección 11)** | Erick Gaona |
+
+### Cambios en Versión 5.0:
+
+1. **Nueva sección 11: Estado de Cumplimiento de Estándares**
+   - Análisis detallado de qué está implementado vs pendiente
+   - Checklist por desarrollador con estado actual
+   - Porcentaje de cumplimiento estimado: ~60%
+   - Próximos pasos prioritarios
+
+2. **Hallazgos principales:**
+   - ✅ Autenticación JWT implementada correctamente
+   - ✅ Dockerfiles seguros con usuario no-root
+   - ✅ Manejo de errores centralizado
+   - ⚠️ Falta Helmet (headers de seguridad)
+   - ⚠️ Falta Rate Limiting
+   - ⚠️ CORS permite todos los orígenes
 
 ### Cambios en Versión 4.0:
 
@@ -2081,5 +2247,5 @@ Agregar al `package.json`:
 ---
 
 *Documento actualizado: 08 Enero 2026*  
-*Versión: 4.0 - Arquitectura Microservicios*
+*Versión: 5.0 - Arquitectura Microservicios + Estado de Cumplimiento*
 
