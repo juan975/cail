@@ -4,7 +4,6 @@
 **Versión:** 1.0  
 **Fecha de Creación:** 06 de Enero de 2026  
 **Última Actualización:** 06 de Enero de 2026  
-**Responsable del Documento:** Erick Gaona (Test & Security)
 
 ---
 
