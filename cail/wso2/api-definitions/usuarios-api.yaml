@@ -1,0 +1,282 @@
+openapi: 3.0.3
+info:
+  title: CAIL Usuarios API
+  description: |
+    API de autenticación y gestión de usuarios para el Sistema de Reclutamiento CAIL.
+    
+    ## Funcionalidades
+    - Registro de usuarios (candidatos y reclutadores)
+    - Autenticación con JWT
+    - Gestión de perfiles
+  version: 1.0.0
+  contact:
+    name: CAIL Team
+    email: soporte@cail.com
+
+servers:
+  - url: http://localhost:8082
+    description: Development server
+  - url: https://usuarios-function-xxxxx.run.app
+    description: Production server (Cloud Functions)
+
+tags:
+  - name: Auth
+    description: Endpoints de autenticación
+  - name: Users
+    description: Endpoints de gestión de usuarios
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Registrar nuevo usuario
+      description: Crea una nueva cuenta de usuario (candidato o reclutador)
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Usuario registrado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '409':
+          description: Email ya registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Iniciar sesión
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Credenciales inválidas
+
+  /auth/change-password:
+    post:
+      tags:
+        - Auth
+      summary: Cambiar contraseña
+      operationId: changePassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Contraseña cambiada exitosamente
+        '401':
+          description: No autorizado
+
+  /users/profile:
+    get:
+      tags:
+        - Users
+      summary: Obtener perfil del usuario
+      operationId: getProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil del usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+    put:
+      tags:
+        - Users
+      summary: Actualizar perfil
+      operationId: updateProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Perfil actualizado
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Obtener usuario por ID
+      operationId: getUserById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usuario encontrado
+        '404':
+          description: Usuario no encontrado
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - nombreCompleto
+        - tipoUsuario
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        nombreCompleto:
+          type: string
+        telefono:
+          type: string
+        tipoUsuario:
+          type: string
+          enum: [POSTULANTE, RECLUTADOR]
+        candidateData:
+          $ref: '#/components/schemas/CandidateProfile'
+        employerData:
+          $ref: '#/components/schemas/EmployerProfile'
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 6
+
+    AuthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            idCuenta:
+              type: string
+            email:
+              type: string
+            nombreCompleto:
+              type: string
+            tipoUsuario:
+              type: string
+            token:
+              type: string
+
+    UserProfile:
+      type: object
+      properties:
+        idCuenta:
+          type: string
+        email:
+          type: string
+        nombreCompleto:
+          type: string
+        tipoUsuario:
+          type: string
+        candidateProfile:
+          $ref: '#/components/schemas/CandidateProfile'
+        employerProfile:
+          $ref: '#/components/schemas/EmployerProfile'
+
+    CandidateProfile:
+      type: object
+      properties:
+        cedula:
+          type: string
+        ciudad:
+          type: string
+        habilidadesTecnicas:
+          type: array
+          items:
+            type: string
+
+    EmployerProfile:
+      type: object
+      properties:
+        nombreEmpresa:
+          type: string
+        cargo:
+          type: string
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        nombreCompleto:
+          type: string
+        telefono:
+          type: string
+        candidateProfile:
+          $ref: '#/components/schemas/CandidateProfile'
+        employerProfile:
+          $ref: '#/components/schemas/EmployerProfile'
+
+    Error:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState, useEffect } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
@@ -10,14 +10,46 @@ import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { CandidateProfileForm } from '@/types';
 import { initialCandidateProfile } from '@/data/mockData';
 import { colors } from '@/theme/colors';
+import { userService } from '@/services/user.service';
 
 export function CandidateProfileScreen() {
   const { contentWidth } = useResponsiveLayout();
   const [form, setForm] = useState<CandidateProfileForm>(initialCandidateProfile);
+  const [loading, setLoading] = useState(true);
   const [newSkill, setNewSkill] = useState('');
   const [newSoftSkill, setNewSoftSkill] = useState('');
   const [newCompetency, setNewCompetency] = useState('');
   const [activeTab, setActiveTab] = useState<'personal' | 'professional' | 'experience'>('personal');
+  const [saving, setSaving] = useState(false);
+
+  // Load user profile data
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      const profile = await userService.getProfile();
+
+      if (profile.candidateProfile) {
+        setForm({
+          fullName: profile.nombreCompleto,
+          email: profile.email,
+          phone: profile.telefono || '',
+          city: profile.candidateProfile.ciudad,
+          address: profile.candidateProfile.direccion || '',
+          professionalSummary: profile.candidateProfile.resumenProfesional || '',
+          technicalSkills: profile.candidateProfile.habilidadesTecnicas || [],
+          softSkills: [],
+          competencies: profile.candidateProfile.competencias || [],
+        });
+      }
+    } catch (error: any) {
+      Alert.alert('Error', 'No se pudo cargar el perfil');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const completion = useMemo(() => {
     const fields = [
@@ -50,9 +82,37 @@ export function CandidateProfileScreen() {
     );
   };
 
-  const handleSave = () => {
-    Alert.alert('Perfil actualizado', 'Tus cambios se guardaron correctamente.');
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await userService.updateProfile({
+        nombreCompleto: form.fullName,
+        telefono: form.phone,
+        candidateProfile: {
+          ciudad: form.city,
+          direccion: form.address,
+          resumenProfesional: form.professionalSummary,
+          habilidadesTecnicas: form.technicalSkills,
+          competencias: form.competencies,
+          cedula: '', // Mantener valor existente
+        },
+      });
+      Alert.alert('Éxito', 'Tus cambios se guardaron correctamente.');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'No se pudieron guardar los cambios');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.screen, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#0B7A4D" />
+        <Text style={{ marginTop: 16, color: colors.textSecondary }}>Cargando perfil...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
@@ -101,23 +161,23 @@ export function CandidateProfileScreen() {
 
       {/* Tab Bar */}
       <View style={[styles.tabBar, { maxWidth: contentWidth }]}>
-        <TabButton 
-          label="Personal" 
+        <TabButton
+          label="Personal"
           icon="user"
-          active={activeTab === 'personal'} 
-          onPress={() => setActiveTab('personal')} 
+          active={activeTab === 'personal'}
+          onPress={() => setActiveTab('personal')}
         />
-        <TabButton 
-          label="Profesional" 
+        <TabButton
+          label="Profesional"
           icon="briefcase"
-          active={activeTab === 'professional'} 
-          onPress={() => setActiveTab('professional')} 
+          active={activeTab === 'professional'}
+          onPress={() => setActiveTab('professional')}
         />
-        <TabButton 
-          label="Experiencia" 
+        <TabButton
+          label="Experiencia"
           icon="award"
-          active={activeTab === 'experience'} 
-          onPress={() => setActiveTab('experience')} 
+          active={activeTab === 'experience'}
+          onPress={() => setActiveTab('experience')}
         />
       </View>
 
@@ -135,37 +195,37 @@ export function CandidateProfileScreen() {
           </View>
 
           <View style={styles.formSection}>
-            <InputField 
-              label="Nombre completo" 
-              value={form.fullName} 
-              onChangeText={(text) => updateField('fullName', text)} 
+            <InputField
+              label="Nombre completo"
+              value={form.fullName}
+              onChangeText={(text) => updateField('fullName', text)}
             />
-            <InputField 
-              label="Correo electrónico" 
-              value={form.email} 
-              onChangeText={(text) => updateField('email', text)} 
-              autoCapitalize="none" 
+            <InputField
+              label="Correo electrónico"
+              value={form.email}
+              readonly
+              autoCapitalize="none"
               keyboardType="email-address"
             />
-            <InputField 
-              label="Teléfono" 
-              value={form.phone} 
-              onChangeText={(text) => updateField('phone', text)} 
-              keyboardType="phone-pad" 
+            <InputField
+              label="Teléfono"
+              value={form.phone}
+              onChangeText={(text) => updateField('phone', text)}
+              keyboardType="phone-pad"
             />
             <View style={styles.formRow}>
               <View style={{ flex: 1 }}>
-                <InputField 
-                  label="Ciudad" 
-                  value={form.city} 
-                  onChangeText={(text) => updateField('city', text)} 
+                <InputField
+                  label="Ciudad"
+                  value={form.city}
+                  onChangeText={(text) => updateField('city', text)}
                 />
               </View>
             </View>
-            <InputField 
-              label="Dirección completa" 
-              value={form.address} 
-              onChangeText={(text) => updateField('address', text)} 
+            <InputField
+              label="Dirección completa"
+              value={form.address}
+              onChangeText={(text) => updateField('address', text)}
             />
           </View>
         </View>
@@ -214,7 +274,7 @@ export function CandidateProfileScreen() {
               {form.technicalSkills.length > 0 && (
                 <View style={styles.chipContainer}>
                   {form.technicalSkills.map((skill, index) => (
-                    <Pressable 
+                    <Pressable
                       key={skill + index}
                       style={styles.skillChip}
                       onPress={() => removeItem('technicalSkills', index)}
@@ -228,13 +288,13 @@ export function CandidateProfileScreen() {
 
               <View style={styles.addSkillRow}>
                 <View style={{ flex: 1 }}>
-                  <InputField 
-                    value={newSkill} 
-                    onChangeText={setNewSkill} 
-                    placeholder="Ej. React Native, Python, AWS..." 
+                  <InputField
+                    value={newSkill}
+                    onChangeText={setNewSkill}
+                    placeholder="Ej. React Native, Python, AWS..."
                   />
                 </View>
-                <Pressable 
+                <Pressable
                   style={styles.addButton}
                   onPress={() => {
                     addItem('technicalSkills', newSkill);
@@ -263,7 +323,7 @@ export function CandidateProfileScreen() {
               {form.softSkills.length > 0 && (
                 <View style={styles.chipContainer}>
                   {form.softSkills.map((skill, index) => (
-                    <Pressable 
+                    <Pressable
                       key={skill + index}
                       style={[styles.skillChip, styles.skillChipGreen]}
                       onPress={() => removeItem('softSkills', index)}
@@ -277,13 +337,13 @@ export function CandidateProfileScreen() {
 
               <View style={styles.addSkillRow}>
                 <View style={{ flex: 1 }}>
-                  <InputField 
-                    value={newSoftSkill} 
-                    onChangeText={setNewSoftSkill} 
-                    placeholder="Ej. Liderazgo, Comunicación..." 
+                  <InputField
+                    value={newSoftSkill}
+                    onChangeText={setNewSoftSkill}
+                    placeholder="Ej. Liderazgo, Comunicación..."
                   />
                 </View>
-                <Pressable 
+                <Pressable
                   style={[styles.addButton, styles.addButtonGreen]}
                   onPress={() => {
                     addItem('softSkills', newSoftSkill);
@@ -317,7 +377,7 @@ export function CandidateProfileScreen() {
               {form.competencies.length > 0 && (
                 <View style={styles.chipContainer}>
                   {form.competencies.map((skill, index) => (
-                    <Pressable 
+                    <Pressable
                       key={skill + index}
                       style={[styles.skillChip, styles.skillChipYellow]}
                       onPress={() => removeItem('competencies', index)}
@@ -331,13 +391,13 @@ export function CandidateProfileScreen() {
 
               <View style={styles.addSkillRow}>
                 <View style={{ flex: 1 }}>
-                  <InputField 
-                    value={newCompetency} 
-                    onChangeText={setNewCompetency} 
-                    placeholder="Ej. Gestión de proyectos, Análisis de datos..." 
+                  <InputField
+                    value={newCompetency}
+                    onChangeText={setNewCompetency}
+                    placeholder="Ej. Gestión de proyectos, Análisis de datos..."
                   />
                 </View>
-                <Pressable 
+                <Pressable
                   style={[styles.addButton, styles.addButtonYellow]}
                   onPress={() => {
                     addItem('competencies', newCompetency);
@@ -381,34 +441,36 @@ export function CandidateProfileScreen() {
 
       {/* Save Button */}
       <Button
-        label="Guardar cambios"
+        label={saving ? 'Guardando...' : 'Guardar cambios'}
         onPress={handleSave}
         style={[styles.saveButton, { maxWidth: contentWidth }]}
+        loading={saving}
+        disabled={saving}
       />
     </ScrollView>
   );
 }
 
-function TabButton({ 
-  label, 
+function TabButton({
+  label,
   icon,
-  active, 
-  onPress 
-}: { 
-  label: string; 
+  active,
+  onPress
+}: {
+  label: string;
   icon: keyof typeof Feather.glyphMap;
-  active: boolean; 
+  active: boolean;
   onPress: () => void;
 }) {
   return (
-    <Pressable 
-      onPress={onPress} 
+    <Pressable
+      onPress={onPress}
       style={[styles.tabButton, active && styles.tabButtonActive]}
     >
-      <Feather 
-        name={icon} 
-        size={16} 
-        color={active ? '#0B7A4D' : colors.textSecondary} 
+      <Feather
+        name={icon}
+        size={16}
+        color={active ? '#0B7A4D' : colors.textSecondary}
       />
       <Text style={[styles.tabButtonText, active && styles.tabButtonTextActive]}>
         {label}

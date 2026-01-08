@@ -1,0 +1,154 @@
+# GitHub Actions - CI/CD para Microservicios CAIL
+# Alternativa a Cloud Build para usuarios de GitHub
+
+name: Deploy Microservices
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'functions/**'
+      - 'shared/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'functions/**'
+      - 'shared/**'
+
+env:
+  PROJECT_ID: cail-backend-prod
+  REGION: us-central1
+  NODE_VERSION: '20'
+
+jobs:
+  # ============================================
+  # Job 1: Tests
+  # ============================================
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            shared/cail-common/package-lock.json
+            functions/*/package-lock.json
+
+      - name: Install & Build Shared Library
+        run: |
+          cd shared/cail-common
+          npm ci
+          npm run build
+
+      - name: Test Usuarios Function
+        run: |
+          cd functions/usuarios
+          npm ci
+          npm run build
+          # npm test # Descomentar cuando haya tests
+
+      - name: Test Ofertas Function
+        run: |
+          cd functions/ofertas
+          npm ci
+          npm run build
+
+      - name: Test Matching Function
+        run: |
+          cd functions/matching
+          npm ci
+          npm run build
+
+  # ============================================
+  # Job 2: Deploy (solo en push a main)
+  # ============================================
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build Shared Library
+        run: |
+          cd shared/cail-common
+          npm ci
+          npm run build
+
+      - name: Deploy Usuarios Function
+        run: |
+          cd functions/usuarios
+          npm ci
+          npm run build
+          gcloud functions deploy usuarios \
+            --gen2 \
+            --runtime=nodejs20 \
+            --region=${{ env.REGION }} \
+            --source=. \
+            --entry-point=usuarios \
+            --trigger-http \
+            --allow-unauthenticated \
+            --memory=256MB \
+            --set-secrets=FIREBASE_PROJECT_ID=FIREBASE_PROJECT_ID:latest,FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest,JWT_SECRET=JWT_SECRET:latest,RESEND_API_KEY=RESEND_API_KEY:latest
+
+      - name: Deploy Ofertas Function
+        run: |
+          cd functions/ofertas
+          npm ci
+          npm run build
+          gcloud functions deploy ofertas \
+            --gen2 \
+            --runtime=nodejs20 \
+            --region=${{ env.REGION }} \
+            --source=. \
+            --entry-point=ofertas \
+            --trigger-http \
+            --allow-unauthenticated \
+            --memory=256MB \
+            --set-secrets=FIREBASE_PROJECT_ID=FIREBASE_PROJECT_ID:latest,FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest,JWT_SECRET=JWT_SECRET:latest
+
+      - name: Deploy Matching Function
+        run: |
+          cd functions/matching
+          npm ci
+          npm run build
+          gcloud functions deploy matching \
+            --gen2 \
+            --runtime=nodejs20 \
+            --region=${{ env.REGION }} \
+            --source=. \
+            --entry-point=matching \
+            --trigger-http \
+            --allow-unauthenticated \
+            --memory=256MB \
+            --set-secrets=FIREBASE_PROJECT_ID=FIREBASE_PROJECT_ID:latest,FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest,JWT_SECRET=JWT_SECRET:latest
+
+      - name: Print Function URLs
+        run: |
+          echo "Deployed Functions:"
+          gcloud functions describe usuarios --region=${{ env.REGION }} --format='value(serviceConfig.uri)'
+          gcloud functions describe ofertas --region=${{ env.REGION }} --format='value(serviceConfig.uri)'
+          gcloud functions describe matching --region=${{ env.REGION }} --format='value(serviceConfig.uri)'

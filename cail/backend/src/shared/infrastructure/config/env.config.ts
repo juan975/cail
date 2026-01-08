@@ -17,6 +17,9 @@ interface EnvConfig {
     cors: {
         allowedOrigins: string[];
     };
+    email: {
+        apiKey: string;
+    };
 }
 
 const validateEnv = (): EnvConfig => {
@@ -25,6 +28,7 @@ const validateEnv = (): EnvConfig => {
         'FIREBASE_CLIENT_EMAIL',
         'FIREBASE_PRIVATE_KEY',
         'JWT_SECRET',
+        'RESEND_API_KEY',
     ];
 
     for (const envVar of requiredEnvVars) {
@@ -47,6 +51,9 @@ const validateEnv = (): EnvConfig => {
         },
         cors: {
             allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:8081'],
+        },
+        email: {
+            apiKey: process.env.RESEND_API_KEY as string,
         },
     };
 };

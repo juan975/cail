@@ -1,0 +1,138 @@
+# Cloud Build - Pipeline de CI/CD para Microservicios CAIL
+# Este archivo define el proceso de build y deploy a Google Cloud Functions
+
+substitutions:
+  _REGION: us-central1
+  _PROJECT_ID: cail-backend-prod
+
+steps:
+  # ============================================
+  # Paso 1: Instalar dependencias de librería compartida
+  # ============================================
+  - name: 'node:20'
+    id: 'install-shared'
+    entrypoint: 'npm'
+    args: ['ci']
+    dir: 'shared/cail-common'
+
+  - name: 'node:20'
+    id: 'build-shared'
+    entrypoint: 'npm'
+    args: ['run', 'build']
+    dir: 'shared/cail-common'
+    waitFor: ['install-shared']
+
+  # ============================================
+  # Paso 2: Build y Deploy - Función Usuarios
+  # ============================================
+  - name: 'node:20'
+    id: 'install-usuarios'
+    entrypoint: 'npm'
+    args: ['ci']
+    dir: 'functions/usuarios'
+    waitFor: ['build-shared']
+
+  - name: 'node:20'
+    id: 'build-usuarios'
+    entrypoint: 'npm'
+    args: ['run', 'build']
+    dir: 'functions/usuarios'
+    waitFor: ['install-usuarios']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-usuarios'
+    entrypoint: 'gcloud'
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'usuarios'
+      - '--gen2'
+      - '--runtime=nodejs20'
+      - '--region=${_REGION}'
+      - '--source=functions/usuarios'
+      - '--entry-point=usuarios'
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--memory=256MB'
+      - '--timeout=60s'
+      - '--set-secrets=FIREBASE_PROJECT_ID=FIREBASE_PROJECT_ID:latest,FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest,JWT_SECRET=JWT_SECRET:latest,RESEND_API_KEY=RESEND_API_KEY:latest'
+    waitFor: ['build-usuarios']
+
+  # ============================================
+  # Paso 3: Build y Deploy - Función Ofertas
+  # ============================================
+  - name: 'node:20'
+    id: 'install-ofertas'
+    entrypoint: 'npm'
+    args: ['ci']
+    dir: 'functions/ofertas'
+    waitFor: ['build-shared']
+
+  - name: 'node:20'
+    id: 'build-ofertas'
+    entrypoint: 'npm'
+    args: ['run', 'build']
+    dir: 'functions/ofertas'
+    waitFor: ['install-ofertas']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-ofertas'
+    entrypoint: 'gcloud'
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'ofertas'
+      - '--gen2'
+      - '--runtime=nodejs20'
+      - '--region=${_REGION}'
+      - '--source=functions/ofertas'
+      - '--entry-point=ofertas'
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--memory=256MB'
+      - '--timeout=60s'
+      - '--set-secrets=FIREBASE_PROJECT_ID=FIREBASE_PROJECT_ID:latest,FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest,JWT_SECRET=JWT_SECRET:latest'
+    waitFor: ['build-ofertas']
+
+  # ============================================
+  # Paso 4: Build y Deploy - Función Matching
+  # ============================================
+  - name: 'node:20'
+    id: 'install-matching'
+    entrypoint: 'npm'
+    args: ['ci']
+    dir: 'functions/matching'
+    waitFor: ['build-shared']
+
+  - name: 'node:20'
+    id: 'build-matching'
+    entrypoint: 'npm'
+    args: ['run', 'build']
+    dir: 'functions/matching'
+    waitFor: ['install-matching']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-matching'
+    entrypoint: 'gcloud'
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'matching'
+      - '--gen2'
+      - '--runtime=nodejs20'
+      - '--region=${_REGION}'
+      - '--source=functions/matching'
+      - '--entry-point=matching'
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--memory=256MB'
+      - '--timeout=60s'
+      - '--set-secrets=FIREBASE_PROJECT_ID=FIREBASE_PROJECT_ID:latest,FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest,JWT_SECRET=JWT_SECRET:latest'
+    waitFor: ['build-matching']
+
+# Configuración de logs
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+# Timeout global (15 minutos)
+timeout: '900s'

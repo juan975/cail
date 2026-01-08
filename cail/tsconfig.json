@@ -4,16 +4,40 @@
     "strict": true,
     "baseUrl": "./",
     "paths": {
-      "@/components/*": ["src/components/*"],
-      "@/theme/*": ["src/theme/*"],
-      "@/hooks/*": ["src/hooks/*"],
-      "@/types": ["src/types/index"],
-      "@/types/*": ["src/types/*"],
-      "@/screens/*": ["src/screens/*"],
-      "@/data/*": ["src/data/*"],
-      "@/assets/*": ["src/assets/*"]
+      "@/components/*": [
+        "src/components/*"
+      ],
+      "@/theme/*": [
+        "src/theme/*"
+      ],
+      "@/hooks/*": [
+        "src/hooks/*"
+      ],
+      "@/types": [
+        "src/types/index"
+      ],
+      "@/types/*": [
+        "src/types/*"
+      ],
+      "@/screens/*": [
+        "src/screens/*"
+      ],
+      "@/data/*": [
+        "src/data/*"
+      ],
+      "@/assets/*": [
+        "src/assets/*"
+      ],
+      "@/services/*": [
+        "src/services/*"
+      ]
     }
   },
-  "include": ["src", "App.tsx"],
-  "exclude": ["node_modules"]
+  "include": [
+    "src",
+    "App.tsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

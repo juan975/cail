@@ -1,15 +1,22 @@
 # Node modules (Frontend y Backend)
 node_modules/
+**/node_modules/
 npm-debug.log*
 
 # Build
 dist/
 build/
+**/lib/
+**/dist/
 
 # Archivos secretos
 .env
-backend/.env
+**/.env
+**/.env.local
+**/.env.*.local
 backend/serviceAccountKey.json
+**/*serviceAccountKey.json
+**/credentials.json
 
 # IDEs
 .idea/

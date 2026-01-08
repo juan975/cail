@@ -1,0 +1,125 @@
+openapi: 3.0.3
+info:
+  title: CAIL Matching API
+  description: API de matching candidato-oferta para CAIL
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8084
+    description: Development server
+  - url: https://matching-function-xxxxx.run.app
+    description: Production server
+
+tags:
+  - name: Matching
+    description: Endpoints de matching y aplicaciones
+
+paths:
+  /matching/oferta/{idOferta}:
+    get:
+      tags:
+        - Matching
+      summary: Obtener candidatos rankeados para una oferta
+      parameters:
+        - name: idOferta
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Candidatos rankeados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchingResponse'
+
+  /matching/oferta/{idOferta}/applications:
+    get:
+      tags:
+        - Matching
+      summary: Listar aplicaciones para una oferta
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: idOferta
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de aplicaciones
+
+  /matching/apply:
+    post:
+      tags:
+        - Matching
+      summary: Aplicar a una oferta
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyRequest'
+      responses:
+        '201':
+          description: Aplicación enviada
+        '409':
+          description: Ya aplicó a esta oferta
+
+  /matching/applications:
+    get:
+      tags:
+        - Matching
+      summary: Listar mis aplicaciones
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de aplicaciones del usuario
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ApplyRequest:
+      type: object
+      required:
+        - idOferta
+      properties:
+        idOferta:
+          type: string
+
+    MatchingResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        data:
+          type: object
+          properties:
+            oferta:
+              type: object
+              properties:
+                idOferta:
+                  type: string
+                titulo:
+                  type: string
+            candidatos:
+              type: array
+              items:
+                type: object
+                properties:
+                  postulante:
+                    type: object
+                  score:
+                    type: integer
+                  detalles:
+                    type: object

@@ -3,7 +3,9 @@ import { Alert, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { InputField } from '@/components/ui/InputField';
+import { LoadingSplash } from '@/components/ui/LoadingSplash';
 import { UserRole } from '@/types';
+import { authService } from '@/services/auth.service';
 
 interface LoginFormProps {
   role: UserRole;
@@ -17,33 +19,55 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: Login
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
+  const [splashSuccess, setSplashSuccess] = useState(false);
+  const [pendingData, setPendingData] = useState<any>(null);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!email || !password) {
       Alert.alert('Campos incompletos', 'Ingresa tu correo y contraseña.');
       return;
     }
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      if (role === 'candidate') {
-        onSuccess({
-          id: 'candidate-1',
-          name: 'María Fernanda Calle',
-          email,
-          progress: 0.82,
-        });
-      } else {
-        onSuccess({
-          id: 'employer-1',
-          company: 'TechSolutions Loja',
-          contactName: 'Patricia Ludeña',
-          email,
+    setShowSplash(true);
+
+    try {
+      const response = await authService.login(email, password);
+
+      const userData = role === 'candidate'
+        ? {
+          id: response.idCuenta,
+          name: response.nombreCompleto,
+          email: response.email,
+          progress: 0.5,
+        }
+        : {
+          id: response.idCuenta,
+          company: 'Empresa',
+          contactName: response.nombreCompleto,
+          email: response.email,
           needsPasswordChange: false,
           isEmailVerified: true,
-        });
-      }
-    }, 700);
+        };
+
+      setPendingData(userData);
+      setSplashSuccess(true);
+    } catch (error: any) {
+      setShowSplash(false);
+      setSplashSuccess(false);
+      Alert.alert('Error', error.message || 'Error al iniciar sesión');
+      setLoading(false);
+    }
+  };
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+    setSplashSuccess(false);
+    setLoading(false);
+    if (pendingData) {
+      onSuccess(pendingData);
+    }
   };
 
   const accentColor = role === 'candidate' ? '#0B7A4D' : '#F59E0B';
@@ -73,8 +97,8 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: Login
       {/* Title */}
       <Text style={styles.title}>Bienvenido de nuevo</Text>
       <Text style={styles.subtitle}>
-        {role === 'candidate' 
-          ? 'Accede como Candidato' 
+        {role === 'candidate'
+          ? 'Accede como Candidato'
           : 'Accede como Empleador'}
       </Text>
 
@@ -111,14 +135,14 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: Login
                 placeholder="Ingresa tu contraseña"
                 secureTextEntry={!showPassword}
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.passwordToggle}
               >
-                <Feather 
-                  name={showPassword ? 'eye-off' : 'eye'} 
-                  size={18} 
-                  color="#9CA3AF" 
+                <Feather
+                  name={showPassword ? 'eye-off' : 'eye'}
+                  size={18}
+                  color="#9CA3AF"
                 />
               </TouchableOpacity>
             </View>
@@ -133,7 +157,7 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: Login
         </TouchableOpacity>
 
         {/* Submit Button */}
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={handleSubmit}
           style={[styles.submitButton, { backgroundColor: accentColor }]}
           activeOpacity={0.8}
@@ -158,7 +182,7 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: Login
         </View>
 
         {/* Register Link */}
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={onSwitchToRegister}
           style={styles.registerButton}
         >
@@ -176,6 +200,15 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: Login
           Al continuar, aceptas los términos y condiciones de uso
         </Text>
       </View>
+
+      {/* Loading Splash */}
+      <LoadingSplash
+        visible={showSplash}
+        message="Iniciando sesión..."
+        variant={role}
+        showSuccess={splashSuccess}
+        onSuccessComplete={handleSplashComplete}
+      />
     </View>
   );
 }

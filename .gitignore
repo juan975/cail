@@ -1,0 +1,9 @@
+# Ignorar node_modules del subdirectorio cail
+cail/node_modules/
+cail/backend/node_modules/
+cail/backend/dist/
+.env
+cail/.env
+cail/backend/.env
+cail/backend/serviceAccountKey.json
+*.log

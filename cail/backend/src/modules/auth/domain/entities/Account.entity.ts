@@ -7,6 +7,33 @@ export enum TipoUsuario {
     ADMINISTRADOR = 'ADMINISTRADOR',
 }
 
+// Perfil del candidato
+export interface CandidateProfile {
+    cedula: string;
+    fechaNacimiento?: string;
+    direccion?: string;
+    ciudad: string;
+    resumenProfesional?: string;
+    habilidadesTecnicas?: string[];
+    nivelEducacion?: string;
+    titulo?: string;
+    competencias?: string[];
+    anosExperiencia?: string;
+    resumenExperiencia?: string;
+}
+
+// Perfil del empleador
+export interface EmployerProfile {
+    nombreEmpresa: string;
+    cargo: string;
+    nombreContacto: string;
+    industry?: string;
+    numberOfEmployees?: string;
+    description?: string;
+    website?: string;
+    address?: string;
+}
+
 export interface AccountProps {
     idCuenta: UserId;
     email: Email;
@@ -15,6 +42,10 @@ export interface AccountProps {
     telefono?: string;
     tipoUsuario: TipoUsuario;
     fechaRegistro: Date;
+    needsPasswordChange?: boolean;
+    // Perfiles adicionales según tipo de usuario
+    candidateProfile?: CandidateProfile;
+    employerProfile?: EmployerProfile;
 }
 
 export class Account {
@@ -36,12 +67,24 @@ export class Account {
         return this.props.passwordHash;
     }
 
+    set passwordHash(value: string) {
+        this.props.passwordHash = value;
+    }
+
     get nombreCompleto(): string {
         return this.props.nombreCompleto;
     }
 
+    set nombreCompleto(value: string) {
+        this.props.nombreCompleto = value;
+    }
+
     get telefono(): string | undefined {
         return this.props.telefono;
+    }
+
+    set telefono(value: string | undefined) {
+        this.props.telefono = value;
     }
 
     get tipoUsuario(): TipoUsuario {
@@ -52,6 +95,30 @@ export class Account {
         return this.props.fechaRegistro;
     }
 
+    get needsPasswordChange(): boolean | undefined {
+        return this.props.needsPasswordChange;
+    }
+
+    set needsPasswordChange(value: boolean | undefined) {
+        this.props.needsPasswordChange = value;
+    }
+
+    get candidateProfile(): CandidateProfile | undefined {
+        return this.props.candidateProfile;
+    }
+
+    set candidateProfile(value: CandidateProfile | undefined) {
+        this.props.candidateProfile = value;
+    }
+
+    get employerProfile(): EmployerProfile | undefined {
+        return this.props.employerProfile;
+    }
+
+    set employerProfile(value: EmployerProfile | undefined) {
+        this.props.employerProfile = value;
+    }
+
     toJSON() {
         return {
             idCuenta: this.idCuenta.getValue(),
@@ -60,6 +127,8 @@ export class Account {
             telefono: this.telefono,
             tipoUsuario: this.tipoUsuario,
             fechaRegistro: this.fechaRegistro,
+            candidateProfile: this.candidateProfile,
+            employerProfile: this.employerProfile,
         };
     }
 }

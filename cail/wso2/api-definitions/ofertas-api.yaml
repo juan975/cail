@@ -1,0 +1,175 @@
+openapi: 3.0.3
+info:
+  title: CAIL Ofertas API
+  description: API de gestión de ofertas laborales para CAIL
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8083
+    description: Development server
+  - url: https://ofertas-function-xxxxx.run.app
+    description: Production server
+
+tags:
+  - name: Offers
+    description: Endpoints de ofertas laborales
+
+paths:
+  /offers:
+    get:
+      tags:
+        - Offers
+      summary: Listar ofertas
+      operationId: getOffers
+      parameters:
+        - name: estado
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVA, CERRADA, PAUSADA]
+        - name: ciudad
+          in: query
+          schema:
+            type: string
+        - name: modalidad
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de ofertas
+    post:
+      tags:
+        - Offers
+      summary: Crear oferta
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOfferRequest'
+      responses:
+        '201':
+          description: Oferta creada
+
+  /offers/my-offers:
+    get:
+      tags:
+        - Offers
+      summary: Mis ofertas (reclutador)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ofertas del reclutador
+
+  /offers/{id}:
+    get:
+      tags:
+        - Offers
+      summary: Obtener oferta por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Oferta encontrada
+        '404':
+          description: Oferta no encontrada
+    put:
+      tags:
+        - Offers
+      summary: Actualizar oferta
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOfferRequest'
+      responses:
+        '200':
+          description: Oferta actualizada
+    delete:
+      tags:
+        - Offers
+      summary: Eliminar oferta
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Oferta eliminada
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CreateOfferRequest:
+      type: object
+      required:
+        - titulo
+        - descripcion
+        - empresa
+        - ciudad
+      properties:
+        titulo:
+          type: string
+        descripcion:
+          type: string
+        empresa:
+          type: string
+        ciudad:
+          type: string
+        modalidad:
+          type: string
+        tipoContrato:
+          type: string
+        salarioMin:
+          type: number
+        salarioMax:
+          type: number
+        experiencia_requerida:
+          type: string
+        formacion_requerida:
+          type: string
+        competencias_requeridas:
+          type: array
+          items:
+            type: string
+
+    UpdateOfferRequest:
+      type: object
+      properties:
+        titulo:
+          type: string
+        descripcion:
+          type: string
+        estado:
+          type: string
+          enum: [ACTIVA, CERRADA, PAUSADA]

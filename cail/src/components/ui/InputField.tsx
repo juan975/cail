@@ -6,28 +6,47 @@ interface InputFieldProps extends TextInputProps {
   label?: string;
   helperText?: string;
   tone?: 'default' | 'employer' | 'candidate';
+  readonly?: boolean;
 }
 
 export const InputField = forwardRef<TextInput, InputFieldProps>(
-  ({ label, helperText, multiline, tone = 'default', style, onFocus, onBlur, ...rest }, ref) => {
+  ({ label, helperText, multiline, tone = 'default', readonly = false, style, onFocus, onBlur, editable, ...rest }, ref) => {
     const [focused, setFocused] = useState(false);
     const accent =
       tone === 'employer' ? colors.employer : tone === 'candidate' ? colors.candidate : colors.accent;
 
+    const isReadonly = readonly || editable === false;
+
     return (
       <View style={styles.container}>
-        {label && <Text style={styles.label}>{label}</Text>}
+        {label && (
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>{label}</Text>
+            {isReadonly && (
+              <View style={styles.readonlyBadge}>
+                <Text style={styles.readonlyBadgeText}>Solo lectura</Text>
+              </View>
+            )}
+          </View>
+        )}
         <View
           style={[
             styles.inputWrapper,
-            focused && [styles.inputWrapperFocused, { borderColor: accent, shadowOpacity: 0.08 }],
+            focused && !isReadonly && [styles.inputWrapperFocused, { borderColor: accent, shadowOpacity: 0.08 }],
+            isReadonly && styles.inputWrapperReadonly,
           ]}
         >
           <TextInput
             ref={ref}
-            style={[styles.input, multiline && styles.multiline, style]}
+            style={[
+              styles.input,
+              multiline && styles.multiline,
+              isReadonly && styles.inputReadonly,
+              style
+            ]}
             placeholderTextColor={colors.muted}
             multiline={multiline}
+            editable={!isReadonly}
             onFocus={(event) => {
               setFocused(true);
               onFocus?.(event);
@@ -49,11 +68,28 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
   label: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.textSecondary,
-    marginBottom: 6,
+  },
+  readonlyBadge: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  readonlyBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
   },
   inputWrapper: {
     borderWidth: 1,
@@ -69,11 +105,18 @@ const styles = StyleSheet.create({
   inputWrapperFocused: {
     borderColor: colors.accent,
   },
+  inputWrapperReadonly: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
+  },
   input: {
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
     color: colors.textPrimary,
+  },
+  inputReadonly: {
+    color: colors.textSecondary,
   },
   helper: {
     fontSize: 12,
@@ -85,3 +128,4 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
 });
+

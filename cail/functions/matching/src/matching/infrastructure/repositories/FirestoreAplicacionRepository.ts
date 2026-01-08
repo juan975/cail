@@ -1,0 +1,59 @@
+import { getFirestore } from '../../../config/firebase.config';
+import { Aplicacion } from '../../domain/types';
+
+/**
+ * Repositorio de Aplicaciones usando Firestore
+ * Colección: aplicaciones (Esquema Matching según el diagrama)
+ */
+export class FirestoreAplicacionRepository {
+    private getCollection() {
+        return getFirestore().collection('aplicaciones');
+    }
+
+    async save(aplicacion: Aplicacion): Promise<Aplicacion> {
+        await this.getCollection().doc(aplicacion.idAplicacion).set({
+            ...aplicacion,
+            updatedAt: new Date(),
+        });
+        return aplicacion;
+    }
+
+    async findByPostulante(idPostulante: string): Promise<Aplicacion[]> {
+        const snapshot = await this.getCollection()
+            .where('idPostulante', '==', idPostulante)
+            .orderBy('fechaAplicacion', 'desc')
+            .get();
+
+        return snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+    }
+
+    async findByOferta(idOferta: string): Promise<Aplicacion[]> {
+        const snapshot = await this.getCollection()
+            .where('idOferta', '==', idOferta)
+            .orderBy('fechaAplicacion', 'desc')
+            .get();
+
+        return snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+    }
+
+    async exists(idPostulante: string, idOferta: string): Promise<boolean> {
+        const snapshot = await this.getCollection()
+            .where('idPostulante', '==', idPostulante)
+            .where('idOferta', '==', idOferta)
+            .limit(1)
+            .get();
+
+        return !snapshot.empty;
+    }
+
+    private mapToEntity(data: any): Aplicacion {
+        return {
+            idAplicacion: data.idAplicacion,
+            idPostulante: data.idPostulante,
+            idOferta: data.idOferta,
+            fechaAplicacion: data.fechaAplicacion?.toDate?.() || new Date(data.fechaAplicacion),
+            estado: data.estado,
+            matchScore: data.matchScore,
+        };
+    }
+}

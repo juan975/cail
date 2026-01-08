@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState, useEffect } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { InputField } from '@/components/ui/InputField';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -8,13 +8,78 @@ import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { EmployerProfileForm } from '@/types';
 import { initialEmployerProfile } from '@/data/mockData';
 import { colors } from '@/theme/colors';
+import { userService } from '@/services/user.service';
 
 export function EmployerProfileScreen() {
   const { isDesktop, contentWidth, horizontalGutter } = useResponsiveLayout();
   const [form, setForm] = useState<EmployerProfileForm>(initialEmployerProfile);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      const profile = await userService.getProfile();
+
+      if (profile.employerProfile) {
+        setForm({
+          companyName: profile.employerProfile.nombreEmpresa || '',
+          contactName: profile.employerProfile.nombreContacto || '',
+          email: profile.email,
+          phone: profile.telefono || '',
+          industry: profile.employerProfile.industry || '',
+          numberOfEmployees: profile.employerProfile.numberOfEmployees || '',
+          description: profile.employerProfile.description || '',
+          website: profile.employerProfile.website || '',
+          address: profile.employerProfile.address || '',
+        });
+      }
+    } catch (error: any) {
+      Alert.alert('Error', 'No se pudo cargar el perfil');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const updateField = (key: keyof EmployerProfileForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.employer} />
+        <Text style={{ marginTop: 16, color: colors.textSecondary }}>Cargando perfil...</Text>
+      </View>
+    );
+  }
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await userService.updateProfile({
+        nombreCompleto: form.contactName,
+        telefono: form.phone,
+        employerProfile: {
+          nombreEmpresa: form.companyName,
+          cargo: '', // Mantener valor existente
+          nombreContacto: form.contactName,
+          industry: form.industry,
+          numberOfEmployees: form.numberOfEmployees,
+          description: form.description,
+          website: form.website,
+          address: form.address,
+        },
+      });
+      Alert.alert('Éxito', 'Perfil actualizado correctamente');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'No se pudieron guardar los cambios');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -127,7 +192,7 @@ export function EmployerProfileScreen() {
                 tone="employer"
                 label="Correo"
                 value={form.email}
-                onChangeText={(text) => updateField('email', text)}
+                readonly
                 autoCapitalize="none"
               />
             </View>
@@ -161,7 +226,14 @@ export function EmployerProfileScreen() {
         </View>
 
         <View style={styles.actionRow}>
-          <Button label="Guardar perfil" onPress={() => Alert.alert('Perfil actualizado')} fullWidth tone="employer" />
+          <Button
+            label={saving ? 'Guardando...' : 'Guardar perfil'}
+            onPress={handleSave}
+            fullWidth
+            tone="employer"
+            loading={saving}
+            disabled={saving}
+          />
         </View>
       </View>
     </ScrollView>

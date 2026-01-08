@@ -1,0 +1,56 @@
+import { TipoUsuario } from '../../domain/entities/Account.entity';
+
+/**
+ * Datos específicos del candidato para registro
+ */
+export interface CandidateProfileData {
+    cedula: string;
+    fechaNacimiento?: string;
+    direccion?: string;
+    ciudad: string;
+    resumenProfesional?: string;
+    habilidadesTecnicas?: string[];
+    nivelEducacion?: string;
+    titulo?: string;
+    competencias?: string[];
+    anosExperiencia?: string;
+    resumenExperiencia?: string;
+}
+
+/**
+ * Datos específicos del empleador para registro
+ */
+export interface EmployerProfileData {
+    nombreEmpresa: string;
+    cargo: string;
+    nombreContacto: string;
+    industry?: string;
+    numberOfEmployees?: string;
+    description?: string;
+    website?: string;
+    address?: string;
+}
+
+/**
+ * DTO de solicitud de registro
+ */
+export interface RegisterRequestDto {
+    email: string;
+    password: string;
+    nombreCompleto: string;
+    telefono?: string;
+    tipoUsuario: TipoUsuario;
+    candidateData?: CandidateProfileData;
+    employerData?: EmployerProfileData;
+}
+
+/**
+ * DTO de respuesta de registro
+ */
+export interface RegisterResponseDto {
+    idCuenta: string;
+    email: string;
+    nombreCompleto: string;
+    tipoUsuario: string;
+    token: string;
+}

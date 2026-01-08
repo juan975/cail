@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
+import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, View, TextInput, TouchableOpacity, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
+import { LoadingSplash } from '@/components/ui/LoadingSplash';
+import { PasswordStrength, validatePassword } from '@/components/ui/PasswordStrength';
+import { authService } from '@/services/auth.service';
 
 interface ChangePasswordScreenProps {
   userData: any;
@@ -18,27 +21,51 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
   const [showTempPassword, setShowTempPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
+  const [splashSuccess, setSplashSuccess] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(userData?.showWelcomeModal || false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!tempPassword) {
       Alert.alert('Campo requerido', 'Ingresa tu contraseña temporal.');
       return;
     }
-    if (newPassword.length < 6) {
-      Alert.alert('Contraseña débil', 'Usa al menos 6 caracteres.');
+
+    // Validate password strength
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+      Alert.alert('Contraseña inválida', passwordValidation.errors[0]);
       return;
     }
+
     if (newPassword !== confirmPassword) {
       Alert.alert('Validación', 'Las contraseñas no coinciden.');
       return;
     }
+
+    setLoading(true);
+    try {
+      await authService.changePassword(tempPassword, newPassword);
+      setShowSplash(true);
+      setSplashSuccess(true);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'No se pudo cambiar la contraseña');
+      setLoading(false);
+    }
+  };
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+    setSplashSuccess(false);
+    setLoading(false);
     onPasswordChanged();
   };
 
   return (
     <LinearGradient colors={['#F59E0B', '#D97706']} style={styles.gradient}>
       <SafeAreaView style={styles.safe}>
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={[styles.container, { paddingHorizontal: horizontalGutter }]}
           showsVerticalScrollIndicator={false}
         >
@@ -75,8 +102,8 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
             </View>
 
             {/* Form Content */}
-            <ScrollView 
-              style={styles.formScroll} 
+            <ScrollView
+              style={styles.formScroll}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.formContent}
             >
@@ -99,14 +126,14 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
                         placeholderTextColor="#9CA3AF"
                         secureTextEntry={!showTempPassword}
                       />
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         onPress={() => setShowTempPassword(!showTempPassword)}
                         style={styles.passwordToggle}
                       >
-                        <Feather 
-                          name={showTempPassword ? 'eye-off' : 'eye'} 
-                          size={18} 
-                          color="#9CA3AF" 
+                        <Feather
+                          name={showTempPassword ? 'eye-off' : 'eye'}
+                          size={18}
+                          color="#9CA3AF"
                         />
                       </TouchableOpacity>
                     </View>
@@ -127,21 +154,22 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
                         style={styles.passwordInput}
                         value={newPassword}
                         onChangeText={setNewPassword}
-                        placeholder="Mínimo 6 caracteres"
+                        placeholder="Mínimo 12 caracteres"
                         placeholderTextColor="#9CA3AF"
                         secureTextEntry={!showNewPassword}
                       />
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         onPress={() => setShowNewPassword(!showNewPassword)}
                         style={styles.passwordToggle}
                       >
-                        <Feather 
-                          name={showNewPassword ? 'eye-off' : 'eye'} 
-                          size={18} 
-                          color="#9CA3AF" 
+                        <Feather
+                          name={showNewPassword ? 'eye-off' : 'eye'}
+                          size={18}
+                          color="#9CA3AF"
                         />
                       </TouchableOpacity>
                     </View>
+                    <PasswordStrength password={newPassword} variant="employer" />
                   </View>
 
                   <View style={styles.inputGroup}>
@@ -155,14 +183,14 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
                         placeholderTextColor="#9CA3AF"
                         secureTextEntry={!showConfirmPassword}
                       />
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                         style={styles.passwordToggle}
                       >
-                        <Feather 
-                          name={showConfirmPassword ? 'eye-off' : 'eye'} 
-                          size={18} 
-                          color="#9CA3AF" 
+                        <Feather
+                          name={showConfirmPassword ? 'eye-off' : 'eye'}
+                          size={18}
+                          color="#9CA3AF"
                         />
                       </TouchableOpacity>
                     </View>
@@ -174,7 +202,7 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
                   <Feather name="shield" size={16} color="#3B82F6" />
                   <Text style={styles.infoText}>
                     <Text style={styles.infoBold}>Seguridad: </Text>
-                    Tu nueva contraseña debe tener al menos 6 caracteres. Te recomendamos usar una combinación de letras, números y símbolos.
+                    Tu nueva contraseña debe tener al menos 12 caracteres, una mayúscula, un número y un carácter especial.
                   </Text>
                 </View>
               </View>
@@ -182,16 +210,19 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
 
             {/* Action Buttons */}
             <View style={styles.actions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleSubmit}
-                style={styles.submitButton}
+                style={[styles.submitButton, loading && styles.submitButtonDisabled]}
                 activeOpacity={0.8}
+                disabled={loading}
               >
-                <Text style={styles.submitText}>Cambiar contraseña</Text>
+                <Text style={styles.submitText}>
+                  {loading ? 'Cambiando...' : 'Cambiar contraseña'}
+                </Text>
                 <Feather name="arrow-right" size={20} color="#FFFFFF" />
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={onLogout}
                 style={styles.logoutButton}
               >
@@ -207,6 +238,61 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
           </Text>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Loading Splash */}
+      <LoadingSplash
+        visible={showSplash}
+        message="Actualizando contraseña..."
+        variant="employer"
+        showSuccess={splashSuccess}
+        onSuccessComplete={handleSplashComplete}
+      />
+
+      {/* Welcome Modal for new employer registration */}
+      <Modal
+        visible={showWelcomeModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowWelcomeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={() => setShowWelcomeModal(false)}
+            >
+              <Feather name="x" size={20} color="#6B7280" />
+            </TouchableOpacity>
+
+            <View style={styles.successIcon}>
+              <Feather name="check" size={40} color="#fff" />
+            </View>
+
+            <Text style={styles.modalTitle}>¡Registro Exitoso!</Text>
+
+            <View style={styles.successBadge}>
+              <Feather name="check-square" size={16} color="#059669" />
+              <Text style={styles.successText}>Empresa registrada con éxito</Text>
+            </View>
+
+            <Text style={styles.modalEmpresa}>{userData?.company}</Text>
+
+            <View style={styles.modalInfoBox}>
+              <Feather name="mail" size={16} color="#3B82F6" />
+              <Text style={styles.modalInfoText}>
+                Te hemos enviado un correo con tu contraseña temporal. Ingrésala a continuación para establecer tu nueva contraseña.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setShowWelcomeModal(false)}
+            >
+              <Text style={styles.modalButtonText}>Entendido</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -404,6 +490,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
   submitText: {
     color: '#FFFFFF',
     fontSize: 16,
@@ -429,5 +518,102 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     fontWeight: '500',
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 32,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  modalClose: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 16,
+  },
+  successIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 16,
+  },
+  successBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#D1FAE5',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    marginBottom: 16,
+  },
+  successText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#059669',
+  },
+  modalEmpresa: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalInfoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#EFF6FF',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+    marginBottom: 16,
+    width: '100%',
+  },
+  modalInfoText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#1E40AF',
+    lineHeight: 18,
+  },
+  modalButton: {
+    backgroundColor: '#F59E0B',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

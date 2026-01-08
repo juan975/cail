@@ -3,6 +3,9 @@ import { Alert, StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput 
 import { Feather } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { InputField } from '@/components/ui/InputField';
+import { LoadingSplash } from '@/components/ui/LoadingSplash';
+import { PasswordStrength, validatePassword } from '@/components/ui/PasswordStrength';
+import { authService } from '@/services/auth.service';
 
 interface RegisterCandidateFormProps {
   onSuccess: (data: any) => void;
@@ -14,7 +17,7 @@ type TabType = 'personal' | 'profesional';
 
 export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: RegisterCandidateFormProps) {
   const [activeTab, setActiveTab] = useState<TabType>('personal');
-  
+
   // Información Personal
   const [fullName, setFullName] = useState('');
   const [cedula, setCedula] = useState('');
@@ -27,7 +30,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Información Profesional
   const [professionalSummary, setProfessionalSummary] = useState('');
   const [technicalSkills, setTechnicalSkills] = useState<string[]>([]);
@@ -40,12 +43,26 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
   const [yearsExperience, setYearsExperience] = useState('');
   const [experienceSummary, setExperienceSummary] = useState('');
 
-  const handleSubmit = () => {
+  // Loading states
+  const [loading, setLoading] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
+  const [splashSuccess, setSplashSuccess] = useState(false);
+  const [pendingData, setPendingData] = useState<any>(null);
+
+  const handleSubmit = async () => {
     if (activeTab === 'personal') {
       if (!fullName || !cedula || !email || !password || !confirmPassword) {
         Alert.alert('Campos incompletos', 'Completa todos los campos requeridos.');
         return;
       }
+
+      // Validate password strength
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isValid) {
+        Alert.alert('Contraseña inválida', passwordValidation.errors[0]);
+        return;
+      }
+
       if (password !== confirmPassword) {
         Alert.alert('Error', 'Las contraseñas no coinciden.');
         return;
@@ -54,13 +71,53 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
       return;
     }
 
-    // Submit final
-    onSuccess({
-      id: 'candidate-2',
-      name: fullName,
-      email,
-      progress: 0.4,
-    });
+    setLoading(true);
+    setShowSplash(true);
+
+    try {
+      const response = await authService.register({
+        email,
+        password,
+        nombreCompleto: fullName,
+        telefono: phone,
+        tipoUsuario: 'POSTULANTE',
+        candidateData: {
+          cedula,
+          fechaNacimiento: birthDate,
+          direccion: address,
+          ciudad: city,
+          resumenProfesional: professionalSummary,
+          habilidadesTecnicas: technicalSkills,
+          nivelEducacion: educationLevel,
+          titulo: degree,
+          competencias: competencies,
+          anosExperiencia: yearsExperience,
+          resumenExperiencia: experienceSummary,
+        },
+      });
+
+      setPendingData({
+        id: response.idCuenta,
+        name: response.nombreCompleto,
+        email: response.email,
+        progress: 0.4,
+      });
+      setSplashSuccess(true);
+    } catch (error: any) {
+      setShowSplash(false);
+      setSplashSuccess(false);
+      setLoading(false);
+      Alert.alert('Error', error.message || 'Error al crear la cuenta');
+    }
+  };
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+    setSplashSuccess(false);
+    setLoading(false);
+    if (pendingData) {
+      onSuccess(pendingData);
+    }
   };
 
   const addSkill = () => {
@@ -125,10 +182,10 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
             style={[styles.tab, activeTab === 'personal' && styles.tabActive]}
             onPress={() => setActiveTab('personal')}
           >
-            <Feather 
-              name="user" 
-              size={16} 
-              color={activeTab === 'personal' ? '#0B7A4D' : '#9CA3AF'} 
+            <Feather
+              name="user"
+              size={16}
+              color={activeTab === 'personal' ? '#0B7A4D' : '#9CA3AF'}
             />
             <Text style={[styles.tabText, activeTab === 'personal' && styles.tabTextActive]}>
               Personal
@@ -138,10 +195,10 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
             style={[styles.tab, activeTab === 'profesional' && styles.tabActive]}
             onPress={() => setActiveTab('profesional')}
           >
-            <Feather 
-              name="briefcase" 
-              size={16} 
-              color={activeTab === 'profesional' ? '#0B7A4D' : '#9CA3AF'} 
+            <Feather
+              name="briefcase"
+              size={16}
+              color={activeTab === 'profesional' ? '#0B7A4D' : '#9CA3AF'}
             />
             <Text style={[styles.tabText, activeTab === 'profesional' && styles.tabTextActive]}>
               Profesional
@@ -150,8 +207,8 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
         </View>
 
         {/* Form Content */}
-        <ScrollView 
-          style={styles.formScroll} 
+        <ScrollView
+          style={styles.formScroll}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.formContent}
         >
@@ -270,21 +327,22 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                       style={styles.passwordInput}
                       value={password}
                       onChangeText={setPassword}
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo 12 caracteres"
                       secureTextEntry={!showPassword}
                       placeholderTextColor="#9CA3AF"
                     />
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={() => setShowPassword(!showPassword)}
                       style={styles.passwordToggle}
                     >
-                      <Feather 
-                        name={showPassword ? 'eye-off' : 'eye'} 
-                        size={18} 
-                        color="#9CA3AF" 
+                      <Feather
+                        name={showPassword ? 'eye-off' : 'eye'}
+                        size={18}
+                        color="#9CA3AF"
                       />
                     </TouchableOpacity>
                   </View>
+                  <PasswordStrength password={password} variant="candidate" />
                 </View>
 
                 <View style={styles.inputGroup}>
@@ -298,14 +356,14 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                       secureTextEntry={!showConfirmPassword}
                       placeholderTextColor="#9CA3AF"
                     />
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                       style={styles.passwordToggle}
                     >
-                      <Feather 
-                        name={showConfirmPassword ? 'eye-off' : 'eye'} 
-                        size={18} 
-                        color="#9CA3AF" 
+                      <Feather
+                        name={showConfirmPassword ? 'eye-off' : 'eye'}
+                        size={18}
+                        color="#9CA3AF"
                       />
                     </TouchableOpacity>
                   </View>
@@ -482,15 +540,20 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
 
         {/* Action Buttons */}
         <View style={styles.actions}>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={handleSubmit}
-            style={styles.submitButton}
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
             activeOpacity={0.8}
+            disabled={loading}
           >
             <Text style={styles.submitText}>
-              {activeTab === 'personal' ? 'Continuar' : 'Crear cuenta'}
+              {loading
+                ? 'Registrando...'
+                : activeTab === 'personal'
+                  ? 'Continuar'
+                  : 'Crear cuenta'}
             </Text>
-            <Feather name="arrow-right" size={20} color="#FFFFFF" />
+            {!loading && <Feather name="arrow-right" size={20} color="#FFFFFF" />}
           </TouchableOpacity>
 
           <View style={styles.loginRow}>
@@ -501,6 +564,15 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
           </View>
         </View>
       </View>
+
+      {/* Loading Splash */}
+      <LoadingSplash
+        visible={showSplash}
+        message="Registrando cuenta..."
+        variant="candidate"
+        showSuccess={splashSuccess}
+        onSuccessComplete={handleSplashComplete}
+      />
     </View>
   );
 }
@@ -807,6 +879,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  submitButtonDisabled: {
+    opacity: 0.7,
   },
   submitText: {
     color: '#FFFFFF',

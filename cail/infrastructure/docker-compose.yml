@@ -1,0 +1,120 @@
+version: '3.8'
+
+# Docker Compose para desarrollo local de microservicios CAIL
+# Incluye WSO2 API Manager y las Cloud Functions simuladas
+
+services:
+  # ============================================
+  # WSO2 API Manager (All-in-One para desarrollo)
+  # ============================================
+  wso2-apim:
+    image: wso2/wso2am:4.2.0
+    container_name: wso2-api-manager
+    hostname: wso2-apim
+    ports:
+      - "9443:9443"   # Publisher/Admin Portal (HTTPS)
+      - "8280:8280"   # HTTP Gateway
+      - "8243:8243"   # HTTPS Gateway
+      - "9763:9763"   # HTTP Management
+    environment:
+      - PROFILE_NAME=default
+    volumes:
+      - ./wso2/deployment.toml:/home/wso2carbon/wso2am-4.2.0/repository/conf/deployment.toml:ro
+      - wso2-apim-data:/home/wso2carbon/wso2am-4.2.0/repository/database
+    networks:
+      - cail-network
+    healthcheck:
+      test: ["CMD", "curl", "-k", "-f", "https://localhost:9443/carbon/admin/login.jsp"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # ============================================
+  # Función Usuarios (Auth + Profiles)
+  # ============================================
+  usuarios-function:
+    build:
+      context: ../functions/usuarios
+      dockerfile: Dockerfile
+    container_name: cail-usuarios
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - FUNCTION_NAME=usuarios
+    env_file:
+      - .env
+    networks:
+      - cail-network
+    depends_on:
+      - wso2-apim
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================
+  # Función Ofertas
+  # ============================================
+  ofertas-function:
+    build:
+      context: ../functions/ofertas
+      dockerfile: Dockerfile
+    container_name: cail-ofertas
+    ports:
+      - "8083:8083"
+    environment:
+      - NODE_ENV=development
+      - PORT=8083
+      - FUNCTION_NAME=ofertas
+    env_file:
+      - .env
+    networks:
+      - cail-network
+    depends_on:
+      - wso2-apim
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================
+  # Función Matching
+  # ============================================
+  matching-function:
+    build:
+      context: ../functions/matching
+      dockerfile: Dockerfile
+    container_name: cail-matching
+    ports:
+      - "8084:8084"
+    environment:
+      - NODE_ENV=development
+      - PORT=8084
+      - FUNCTION_NAME=matching
+    env_file:
+      - .env
+    networks:
+      - cail-network
+    depends_on:
+      - wso2-apim
+      - usuarios-function
+      - ofertas-function
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  cail-network:
+    driver: bridge
+    name: cail-microservices-network
+
+volumes:
+  wso2-apim-data:
+    name: cail-wso2-data

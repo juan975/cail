@@ -16,6 +16,9 @@ export class FirestoreAccountRepository implements IAccountRepository {
             telefono: account.telefono || null,
             tipoUsuario: account.tipoUsuario,
             fechaRegistro: account.fechaRegistro,
+            // Guardar perfiles adicionales
+            candidateProfile: account.candidateProfile || null,
+            employerProfile: account.employerProfile || null,
         };
 
         await this.collection.doc(account.idCuenta.getValue()).set(data);
@@ -57,6 +60,9 @@ export class FirestoreAccountRepository implements IAccountRepository {
             telefono: data.telefono,
             tipoUsuario: data.tipoUsuario as TipoUsuario,
             fechaRegistro: data.fechaRegistro.toDate(),
+            // Mapear perfiles adicionales
+            candidateProfile: data.candidateProfile || undefined,
+            employerProfile: data.employerProfile || undefined,
         });
     }
 }
