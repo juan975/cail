@@ -27,34 +27,69 @@ export class FirestoreOfertaRepository implements IOfertaRepository {
     }
 
     async findAll(filters?: OfertaFilters): Promise<Oferta[]> {
-        let query: FirebaseFirestore.Query = this.getCollection();
+        try {
+            let query: FirebaseFirestore.Query = this.getCollection();
+            let needsInMemorySort = false;
 
-        if (filters?.estado) {
-            query = query.where('estado', '==', filters.estado);
-        }
-        if (filters?.ciudad) {
-            query = query.where('ciudad', '==', filters.ciudad);
-        }
-        if (filters?.modalidad) {
-            query = query.where('modalidad', '==', filters.modalidad);
-        }
+            // Aplicar filtros si existen
+            if (filters?.estado) {
+                query = query.where('estado', '==', filters.estado);
+                needsInMemorySort = true; // Evitar índice compuesto
+            }
+            if (filters?.ciudad) {
+                query = query.where('ciudad', '==', filters.ciudad);
+                needsInMemorySort = true;
+            }
+            if (filters?.modalidad) {
+                query = query.where('modalidad', '==', filters.modalidad);
+                needsInMemorySort = true;
+            }
 
-        query = query.orderBy('fechaPublicacion', 'desc');
+            // Solo ordenar en Firestore si no hay filtros (evita necesidad de índice compuesto)
+            if (!needsInMemorySort) {
+                query = query.orderBy('fechaPublicacion', 'desc');
+            }
 
-        if (filters?.limit) {
-            query = query.limit(filters.limit);
+            if (filters?.limit) {
+                query = query.limit(filters.limit);
+            }
+
+            const snapshot = await query.get();
+            let ofertas = snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+
+            // Ordenar en memoria si se usaron filtros
+            if (needsInMemorySort) {
+                ofertas = ofertas.sort((a, b) => {
+                    const dateA = a.fechaPublicacion instanceof Date ? a.fechaPublicacion : new Date(a.fechaPublicacion);
+                    const dateB = b.fechaPublicacion instanceof Date ? b.fechaPublicacion : new Date(b.fechaPublicacion);
+                    return dateB.getTime() - dateA.getTime();
+                });
+            }
+
+            return ofertas;
+        } catch (error: any) {
+            console.error('Error in findAll:', error.message || error);
+            throw error;
         }
-
-        const snapshot = await query.get();
-        return snapshot.docs.map(doc => this.mapToEntity(doc.data()));
     }
 
     async findByReclutador(idReclutador: string): Promise<Oferta[]> {
-        const snapshot = await this.getCollection()
-            .where('idReclutador', '==', idReclutador)
-            .orderBy('fechaPublicacion', 'desc')
-            .get();
-        return snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+        try {
+            const snapshot = await this.getCollection()
+                .where('idReclutador', '==', idReclutador)
+                .get();
+
+            // Ordenar en memoria para evitar necesidad de índice compuesto
+            const ofertas = snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+            return ofertas.sort((a, b) => {
+                const dateA = a.fechaPublicacion instanceof Date ? a.fechaPublicacion : new Date(a.fechaPublicacion);
+                const dateB = b.fechaPublicacion instanceof Date ? b.fechaPublicacion : new Date(b.fechaPublicacion);
+                return dateB.getTime() - dateA.getTime();
+            });
+        } catch (error: any) {
+            console.error('Error in findByReclutador:', error.message || error);
+            throw error;
+        }
     }
 
     async delete(id: string): Promise<void> {

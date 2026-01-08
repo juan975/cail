@@ -30,11 +30,16 @@ initializeFirebase();
 
 const app: Application = express();
 
-// Middleware
+// Middleware - CORS permitir todos los orígenes
 app.use(cors({
-    origin: config.cors.allowedOrigins,
+    origin: true, // Refleja el origen de la solicitud (permite cualquier origen)
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 }));
+
+// Manejar preflight requests explícitamente
+app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

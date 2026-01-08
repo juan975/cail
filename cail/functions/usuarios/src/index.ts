@@ -39,11 +39,16 @@ initializeFirebase();
 // Crear aplicación Express
 const app: Application = express();
 
-// Configurar CORS
+// Configurar CORS - permitir todos los orígenes para desarrollo y producción
 app.use(cors({
-    origin: config.cors.allowedOrigins,
+    origin: true, // Refleja el origen de la solicitud (permite cualquier origen)
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 }));
+
+// Manejar preflight requests explícitamente
+app.options('*', cors());
 
 // Parseo de JSON
 app.use(express.json());

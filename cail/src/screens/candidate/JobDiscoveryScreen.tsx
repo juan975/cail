@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -20,7 +22,8 @@ import { InputField } from '@/components/ui/InputField';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { JobOffer } from '@/types';
-import { JOB_OFFERS } from '@/data/mockData';
+import { offersService } from '@/services/offers.service';
+import { Offer } from '@/types/offers.types';
 import { colors } from '@/theme/colors';
 
 interface FilterState {
@@ -28,6 +31,53 @@ interface FilterState {
   modality: 'Todos' | JobOffer['modality'];
   industry: 'Todos' | string;
 }
+
+// Mapeo de oferta API a tipo JobOffer del frontend
+const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
+  const fechaPub = offer.fechaPublicacion instanceof Date
+    ? offer.fechaPublicacion
+    : new Date(offer.fechaPublicacion);
+
+  // Mapeo de modalidad
+  const modalityMap: Record<string, JobOffer['modality']> = {
+    'Presencial': 'Presencial',
+    'Remoto': 'Remoto',
+    'Híbrido': 'Híbrido',
+    'Hibrido': 'Híbrido',
+  };
+
+  // Mapeo de tipo de contrato
+  const employmentTypeMap: Record<string, JobOffer['employmentType']> = {
+    'Tiempo Completo': 'Tiempo completo',
+    'Tiempo completo': 'Tiempo completo',
+    'Medio tiempo': 'Medio tiempo',
+    'Contrato': 'Contrato',
+  };
+
+  return {
+    id: offer.idOferta,
+    title: offer.titulo,
+    company: offer.empresa,
+    description: offer.descripcion,
+    location: offer.ciudad,
+    modality: modalityMap[offer.modalidad] || 'Presencial',
+    salaryRange: offer.salarioMin && offer.salarioMax
+      ? `$${offer.salarioMin} - $${offer.salarioMax}`
+      : offer.salarioMin
+        ? `$${offer.salarioMin}+`
+        : 'A convenir',
+    employmentType: employmentTypeMap[offer.tipoContrato] || 'Tiempo completo',
+    industry: offer.empresa || 'General',
+    hierarchyLevel: 'Semi-Senior',
+    requiredCompetencies: offer.competencias_requeridas || [],
+    requiredExperience: offer.experiencia_requerida || 'No especificada',
+    requiredEducation: offer.formacion_requerida || 'No especificada',
+    professionalArea: offer.empresa || 'General',
+    economicSector: offer.empresa || 'General',
+    experienceLevel: offer.experiencia_requerida || 'No especificada',
+    postedDate: fechaPub.toLocaleDateString('es-EC'),
+  };
+};
 
 export function JobDiscoveryScreen() {
   const { contentWidth } = useResponsiveLayout();
@@ -40,23 +90,60 @@ export function JobDiscoveryScreen() {
   const [cvLink, setCvLink] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Estados de carga y datos
+  const [offers, setOffers] = useState<JobOffer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Cargar ofertas del API
+  const loadOffers = useCallback(async (showRefresh = false) => {
+    try {
+      if (showRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+      setError(null);
+
+      // Obtener solo ofertas ACTIVAS
+      const apiOffers = await offersService.getOffers({ estado: 'ACTIVA' });
+      const mappedOffers = apiOffers.map(mapApiOfferToJobOffer);
+      setOffers(mappedOffers);
+    } catch (err: any) {
+      console.error('Error loading offers:', err);
+      setError(err.message || 'Error al cargar las ofertas');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOffers();
+  }, [loadOffers]);
+
+  const handleRefresh = () => {
+    loadOffers(true);
+  };
+
   const summary = useMemo(() => {
     const industryMap = new Map<string, number>();
     const locationMap = new Map<string, number>();
-    JOB_OFFERS.forEach((offer) => {
+    offers.forEach((offer) => {
       industryMap.set(offer.industry, (industryMap.get(offer.industry) ?? 0) + 1);
       locationMap.set(offer.location, (locationMap.get(offer.location) ?? 0) + 1);
     });
     return {
-      totalVacancies: JOB_OFFERS.length,
+      totalVacancies: offers.length,
       industries: industryMap.size,
       sectorBreakdown: Array.from(industryMap.entries()),
       locationBreakdown: Array.from(locationMap.entries()),
     };
-  }, []);
+  }, [offers]);
 
   const filteredOffers = useMemo(() => {
-    return JOB_OFFERS.filter((offer) => {
+    return offers.filter((offer) => {
       const matchesSearch =
         filters.search.length === 0 ||
         offer.title.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -65,7 +152,7 @@ export function JobDiscoveryScreen() {
       const matchesIndustry = filters.industry === 'Todos' || offer.industry === filters.industry;
       return matchesSearch && matchesModality && matchesIndustry;
     });
-  }, [filters]);
+  }, [filters, offers]);
 
   const widthLimiter = useMemo<ViewStyle>(
     () => ({
@@ -101,7 +188,7 @@ export function JobDiscoveryScreen() {
           </View>
         </View>
       </View>
-      
+
       <Text style={styles.offerDescription} numberOfLines={2}>
         {item.description}
       </Text>
@@ -124,15 +211,39 @@ export function JobDiscoveryScreen() {
         <RequirementItem icon="trending-up" text={item.requiredExperience} />
       </View>
 
-      <Button 
-        label="Postular a Oferta" 
-        onPress={() => setSelectedOffer(item)} 
+      <Button
+        label="Postular a Oferta"
+        onPress={() => setSelectedOffer(item)}
         style={styles.applyButton}
       />
-      
+
       <Text style={styles.publishDate}>Publicado: {item.postedDate || '24/10/2025'}</Text>
     </Card>
   );
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#0B7A4D" />
+        <Text style={styles.loadingText}>Cargando ofertas...</Text>
+      </View>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Feather name="alert-circle" size={48} color="#EF4444" />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => loadOffers()}>
+          <Feather name="refresh-cw" size={16} color="#fff" />
+          <Text style={styles.retryText}>Reintentar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -141,6 +252,14 @@ export function JobDiscoveryScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderOffer}
         contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={['#0B7A4D']}
+            tintColor="#0B7A4D"
+          />
+        }
         ListHeaderComponent={
           <View style={[styles.headerArea, widthLimiter]}>
             {/* Hero Card */}
@@ -156,62 +275,13 @@ export function JobDiscoveryScreen() {
               </View>
             </Card>
 
-            {/* Indicators Card
-            <Card spacing="md" style={styles.indicatorsCard}>
-              <View style={styles.indicatorsHeader}>
-                <Feather name="bar-chart-2" size={20} color={colors.warning} />
-                <Text style={styles.indicatorsTitle}>Indicadores - Monitorear Demanda</Text>
-              </View>
-              
-              <View style={styles.statsRow}>
-                <View style={styles.statBox}>
-                  <Feather name="trending-up" size={20} color={colors.candidate} />
-                  <Text style={styles.statNumber}>{summary.totalVacancies}</Text>
-                  <Text style={styles.statLabel}>Vacantes Activas</Text>
-                </View>
-                <View style={styles.statBox}>
-                  <Feather name="briefcase" size={20} color={colors.warning} />
-                  <Text style={styles.statNumber}>{summary.industries}</Text>
-                  <Text style={styles.statLabel}>Industrias</Text>
-                </View>
-              </View>
-
-              <View style={styles.breakdownSection}>
-                <View style={styles.breakdownHeader}>
-                  <Feather name="trending-up" size={16} color={colors.textSecondary} />
-                  <Text style={styles.breakdownTitle}>Demanda por sector:</Text>
-                </View>
-                <View style={styles.breakdownTags}>
-                  {summary.sectorBreakdown.slice(0, 3).map(([sector, count]) => (
-                    <View key={sector} style={styles.breakdownTag}>
-                      <Text style={styles.breakdownTagText}>{sector}: {count}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.breakdownSection}>
-                <View style={styles.breakdownHeader}>
-                  <Feather name="map-pin" size={16} color={colors.textSecondary} />
-                  <Text style={styles.breakdownTitle}>Demanda por ubicación:</Text>
-                </View>
-                <View style={styles.breakdownTags}>
-                  {summary.locationBreakdown.slice(0, 2).map(([location, count]) => (
-                    <View key={location} style={styles.breakdownTag}>
-                      <Text style={styles.breakdownTagText}>{location}: {count}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            </Card> */}
-
             {/* Filters Card */}
             <Card spacing="md" style={styles.filtersCard}>
               <Text style={styles.filtersTitle}>Filtrar Ofertas</Text>
               <Text style={styles.filtersSubtitle}>
                 Busca por competencias, experiencia, formación y ubicación
               </Text>
-              
+
               <InputField
                 tone="candidate"
                 label=""
@@ -241,17 +311,15 @@ export function JobDiscoveryScreen() {
                 ))}
               </View>
 
-              {/* <View style={styles.filterRow}>
-                <TouchableOpacity style={styles.filterButton}>
-                  <Text style={styles.filterButtonText}>Por experiencia</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.filterButton}>
-                  <Text style={styles.filterButtonText}>Por formación</Text>
-                </TouchableOpacity>
-              </View> */}
-
               <Text style={styles.resultsText}>{filteredOffers.length} ofertas encontradas</Text>
             </Card>
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={[styles.emptyState, widthLimiter]}>
+            <Feather name="inbox" size={48} color="#D1D5DB" />
+            <Text style={styles.emptyText}>No hay ofertas disponibles</Text>
+            <Text style={styles.emptySubtext}>Vuelve más tarde o ajusta tus filtros</Text>
           </View>
         }
       />
@@ -316,8 +384,8 @@ export function JobDiscoveryScreen() {
                   </View>
                 )}
 
-                <Button 
-                  label="Enviar Postulación" 
+                <Button
+                  label="Enviar Postulación"
                   onPress={handleApply}
                   style={styles.submitButton}
                 />
@@ -355,6 +423,37 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F7FA',
   },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  errorText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#EF4444',
+    textAlign: 'center',
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+    backgroundColor: '#0B7A4D',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  retryText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
   listContent: {
     paddingVertical: 16,
     paddingBottom: 100,
@@ -364,7 +463,26 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     gap: 12,
   },
-  
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginTop: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 12,
+    fontWeight: '600',
+  },
+  emptySubtext: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    marginTop: 4,
+  },
+
   // Hero Card
   heroCard: {
     backgroundColor: '#0B7A4D',
@@ -402,84 +520,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: 'rgba(255,255,255,0.9)',
     lineHeight: 18,
-  },
-
-  // Indicators Card
-  indicatorsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  indicatorsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
-  },
-  indicatorsTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: '#F8FAFB',
-    borderRadius: 12,
-    padding: 14,
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: '#E8ECF0',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  breakdownSection: {
-    marginTop: 12,
-  },
-  breakdownHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  breakdownTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  breakdownTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  breakdownTag: {
-    backgroundColor: '#F0F2F5',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  breakdownTagText: {
-    fontSize: 12,
-    color: colors.textPrimary,
-    fontWeight: '500',
   },
 
   // Filters Card
@@ -534,21 +574,6 @@ const styles = StyleSheet.create({
   filterChipTextActive: {
     color: '#FFFFFF',
   },
-  filterButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFB',
-    borderWidth: 1,
-    borderColor: '#E0E4E9',
-    alignItems: 'center',
-  },
-  filterButtonText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
   resultsText: {
     fontSize: 13,
     color: colors.textSecondary,
@@ -584,10 +609,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
     flex: 1,
-  },
-  offerCompany: {
-    fontSize: 14,
-    color: colors.textSecondary,
   },
   offerDescription: {
     fontSize: 13,
