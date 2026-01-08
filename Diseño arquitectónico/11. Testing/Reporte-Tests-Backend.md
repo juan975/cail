@@ -225,7 +225,9 @@
 
 ## 4. Tests del Módulo Ofertas
 
-**Ubicación:** `cail/cail/functions/ofertas/tests/`
+**Ubicación:** `cail/cail/functions/ofertas/tests/`  
+**Responsables del código:** Carlos Mejía + Erick Gaona  
+**Responsable de tests:** Erick Gaona
 
 ### 4.1 Tests de Seguridad - Autorización
 
@@ -363,14 +365,16 @@ taskkill /PID <numero> /F
 │                    ESTADO DEL TESTING - 08/01/2026                          │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  TESTS POR MÓDULO                                                           │
-│  ════════════════                                                           │
+│  TESTS POR MÓDULO                          Creados    Total    Progreso    │
+│  ════════════════════════════════════════════════════════════════════════   │
 │                                                                             │
-│  Usuarios:  ████████░░░░░░░░░░░░  13/33 creados  (39%)                     │
-│  Ofertas:   ░░░░░░░░░░░░░░░░░░░░   0/15 creados  ( 0%)                     │
-│  Matching:  ░░░░░░░░░░░░░░░░░░░░   0/13 creados  ( 0%)                     │
+│  Usuarios (Auth)      ██████████░░░░░░░░░░   13        25       52%        │
+│  Usuarios (Perfiles)  ░░░░░░░░░░░░░░░░░░░░    0         8        0%        │
+│  Ofertas (Carlos+Erick)░░░░░░░░░░░░░░░░░░░░   0        15        0%        │
+│  Matching (Dara)      ░░░░░░░░░░░░░░░░░░░░    0        13        0%        │
 │                                                                             │
-│  TOTAL:     ████░░░░░░░░░░░░░░░░  13/61 creados  (21%)                     │
+│  ════════════════════════════════════════════════════════════════════════   │
+│  TOTAL:               ████░░░░░░░░░░░░░░░░   13        61       21%        │
 │                                                                             │
 │  ═══════════════════════════════════════════════════════════════════════    │
 │                                                                             │

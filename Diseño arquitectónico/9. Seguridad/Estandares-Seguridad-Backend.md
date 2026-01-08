@@ -11,7 +11,7 @@
 ```
 cail/functions/
 ├── usuarios/     (Puerto 8080) → Alex Ramírez + Carlos + Juan + Sebastián
-├── ofertas/      (Puerto 8083) → Erick Gaona  
+├── ofertas/      (Puerto 8083) → Carlos Mejía + Erick Gaona  
 └── matching/     (Puerto 8084) → Dara Van Gijsel
 ```
 
@@ -22,27 +22,27 @@ cail/functions/
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                    TESTS REQUERIDOS POR MÓDULO                              │
-│                    (Responsable de tests: Erick Gaona)                      │
+│                    (Responsable de crear tests: Erick Gaona)                │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  MÓDULO USUARIOS (Alex + Carlos + Juan + Sebastián)                         │
 │  └── Total: 33 tests                                                        │
-│      ├── Seguridad Auth:     20 tests                                       │
-│      ├── Integración Auth:    7 tests                                       │
-│      └── Perfiles:            6 tests                                       │
+│      ├── Seguridad Auth:     20 tests  ──► 13 CREADOS ✅                    │
+│      ├── Integración Auth:    5 tests  ──►  0 creados ⏳                    │
+│      └── Perfiles:            8 tests  ──►  0 creados ⏳                    │
 │                                                                             │
-│  MÓDULO OFERTAS (Erick)                                                     │
+│  MÓDULO OFERTAS (Carlos + Erick)                                            │
 │  └── Total: 15 tests                                                        │
-│      ├── Seguridad:          10 tests                                       │
-│      └── Integración:         5 tests                                       │
+│      ├── Seguridad:          10 tests  ──►  0 creados ⏳                    │
+│      └── Integración:         5 tests  ──►  0 creados ⏳                    │
 │                                                                             │
 │  MÓDULO MATCHING (Dara)                                                     │
 │  └── Total: 13 tests                                                        │
-│      ├── Seguridad:           6 tests                                       │
-│      └── Integración:         7 tests                                       │
+│      ├── Seguridad:           6 tests  ──►  0 creados ⏳                    │
+│      └── Integración:         7 tests  ──►  0 creados ⏳                    │
 │                                                                             │
 │  ═══════════════════════════════════════════════════════════════════════    │
-│  TOTAL PROYECTO: 61 tests                                                   │
+│  TOTAL PROYECTO: 61 tests requeridos | 13 creados (21%)                     │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -264,9 +264,10 @@ const validarCedulaEC = (cedula: string): boolean => {
 
 ---
 
-## 5. Erick Gaona - Microservicio Ofertas
+## 5. Carlos Mejía + Erick Gaona - Microservicio Ofertas
 
-**Módulo:** `functions/ofertas/`
+**Módulo:** `functions/ofertas/`  
+**Responsables:** Carlos Mejía (código) + Erick Gaona (código + tests)
 
 ### Checklist de Seguridad
 
@@ -394,19 +395,25 @@ if (countHoy.data().count >= 10) {
 │               PORCENTAJE DE CUMPLIMIENTO + TESTS                              │
 ├───────────────────────────────────────────────────────────────────────────────┤
 │                                                                               │
-│  Contribuidor        Código Impl.    Tests Req.    Tests Creados             │
+│  MÓDULO              Código Impl.    Tests Req.    Tests Creados             │
 │  ═══════════════════════════════════════════════════════════════════════════  │
-│  Alex (Usuarios)     ████░░░░  43%      9 tests      1 creado  (11%)         │
-│  Carlos (JWT)        █████████ 83%      6 tests      4 creados (67%)         │
-│  Juan (Firestore)    ██░░░░░░  25%      4 tests      3 creados (75%)         │
-│  Sebastián (Perfiles)░░░░░░░░   0%      6 tests      0 creados ( 0%)         │
-│  Erick (Ofertas)     ████░░░░  40%     10 tests      0 creados ( 0%)         │
-│  Dara (Matching)     ██░░░░░░  20%      7 tests      0 creados ( 0%)         │
+│  Usuarios (Auth)     ████████  60%     25 tests     13 creados (52%)         │
+│  Usuarios (Perfiles) ░░░░░░░░   0%      8 tests      0 creados ( 0%)         │
+│  Ofertas             ████░░░░  40%     15 tests      0 creados ( 0%)         │
+│  Matching            ██░░░░░░  20%     13 tests      0 creados ( 0%)         │
 │                                                                               │
 │  ═══════════════════════════════════════════════════════════════════════════  │
 │                                                                               │
 │  TOTAL CÓDIGO:     ~55% implementado                                          │
 │  TOTAL TESTS:      13/61 creados (21%)                                        │
+│                                                                               │
+│  Por Contribuidor (Código):                                                   │
+│  • Alex (Usuarios Auth):     43% implementado                                 │
+│  • Carlos (JWT + Ofertas):   70% implementado                                 │
+│  • Juan (Firestore):         25% implementado                                 │
+│  • Sebastián (Perfiles):      0% implementado                                 │
+│  • Erick (Ofertas + Tests):  40% implementado                                 │
+│  • Dara (Matching):          20% implementado                                 │
 │                                                                               │
 │  🔴 BLOQUEADORES CRÍTICOS:                                                    │
 │  • A3 Rate Limiting - SIN IMPLEMENTAR (vulnerable a brute force)             │
