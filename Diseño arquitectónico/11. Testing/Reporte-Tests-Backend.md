@@ -1,6 +1,6 @@
 # Reporte de Tests - Backend CAIL
 
-**Versión:** 1.0  
+**Versión:** 2.0  
 **Fecha de Creación:** 08 de Enero de 2026  
 **Última Actualización:** 08 de Enero de 2026  
 **Responsable:** Erick Gaona (Test & Security)
@@ -10,13 +10,12 @@
 ## Tabla de Contenidos
 
 1. [Resumen Ejecutivo](#1-resumen-ejecutivo)
-2. [Estado General de Tests](#2-estado-general-de-tests)
-3. [Tests por Módulo](#3-tests-por-módulo)
-4. [Detalle de Tests Ejecutados](#4-detalle-de-tests-ejecutados)
-5. [Tests Pendientes](#5-tests-pendientes)
-6. [Hallazgos de Seguridad](#6-hallazgos-de-seguridad)
-7. [Plan de Tests Futuros](#7-plan-de-tests-futuros)
-8. [Comandos de Ejecución](#8-comandos-de-ejecución)
+2. [Matriz de Tests por Contribuidor](#2-matriz-de-tests-por-contribuidor)
+3. [Tests del Módulo Usuarios](#3-tests-del-módulo-usuarios)
+4. [Tests del Módulo Ofertas](#4-tests-del-módulo-ofertas)
+5. [Tests del Módulo Matching](#5-tests-del-módulo-matching)
+6. [Resumen de Hallazgos](#6-resumen-de-hallazgos)
+7. [Comandos de Ejecución](#7-comandos-de-ejecución)
 
 ---
 
@@ -26,398 +25,365 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    RESUMEN DE TESTS - BACKEND CAIL                          │
+│                    RESUMEN GENERAL DE TESTS                                 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  ╔═══════════════════════════════════════════════════════════════════════╗  │
-│  ║                    TESTS EJECUTADOS: 13 ✅                            ║  │
-│  ║                    TESTS PASADOS:    13 ✅                            ║  │
-│  ║                    TESTS FALLIDOS:    0 ❌                            ║  │
-│  ║                    COBERTURA:        ~59%                             ║  │
-│  ╚═══════════════════════════════════════════════════════════════════════╝  │
+│  TESTS TOTALES REQUERIDOS (según estándares):     61 tests                  │
+│  TESTS CREADOS:                                   13 tests                  │
+│  TESTS QUE PASAN:                                 13 tests ✅               │
+│  TESTS QUE FALLAN:                                 0 tests                  │
+│  TESTS PENDIENTES DE CREAR:                       48 tests ⏳               │
 │                                                                             │
-│  Módulos Testeados:                                                         │
-│  ├── Usuarios (Auth + Users)     ████████████████████  13/13 tests ✅      │
-│  ├── Ofertas                     ░░░░░░░░░░░░░░░░░░░░   0/13 tests ⏳      │
-│  └── Matching                    ░░░░░░░░░░░░░░░░░░░░   0/13 tests ⏳      │
+│  ═══════════════════════════════════════════════════════════════════════    │
+│                                                                             │
+│  Por Microservicio:                                                         │
+│  ├── Usuarios    13/33 tests creados  ████████░░░░░░░░░░░░  39%            │
+│  ├── Ofertas      0/15 tests creados  ░░░░░░░░░░░░░░░░░░░░   0%            │
+│  └── Matching     0/13 tests creados  ░░░░░░░░░░░░░░░░░░░░   0%            │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 Métricas de Cobertura (Módulo Usuarios)
+### 1.2 Leyenda de Estados
 
-| Área | Statements | Branches | Functions | Lines |
-|------|------------|----------|-----------|-------|
-| **auth/application** | 60.65% | 11.11% | 85.71% | 60.65% |
-| **auth/domain** | 69.56% | 100% | 63.15% | 69.56% |
-| **auth/infrastructure** | 77.77% | 18.66% | 75.55% | 77.77% |
-| **shared/middleware** | 78.57% | 66.66% | 71.42% | 76.31% |
-| **shared/utils** | 42.10% | 0% | 28.57% | 43.75% |
-| **users/infrastructure** | 17.39% | 0% | 0% | 17.39% |
-| **TOTAL** | **58.87%** | **43.26%** | **57.74%** | **58.23%** |
+| Símbolo | Significado |
+|---------|-------------|
+| ✅ | Test creado Y pasa (código implementado correctamente) |
+| ❌ | Test creado pero FALLA (código NO implementado o tiene bug) |
+| ⏳ | Test NO creado aún |
+| 🔄 | Test creado, resultado parcial |
 
 ---
 
-## 2. Estado General de Tests
+## 2. Matriz de Tests por Contribuidor
 
-### 2.1 Matriz de Tests por Microservicio
+### 2.1 Alex Ramírez - Microservicio Usuarios (Auth + Perfiles)
 
-| Microservicio | Seguridad | Integración | Unitarios | Total | Estado |
-|---------------|-----------|-------------|-----------|-------|--------|
-| **usuarios** | ✅ 13/13 | ⚠️ 5/8 fallidos | ⏳ 0% | 13 | 🔄 En progreso |
-| **ofertas** | ⏳ Creado | ⏳ Creado | ⏳ 0% | 0 | ⏳ Pendiente |
-| **matching** | ⏳ Creado | ⏳ Creado | ⏳ 0% | 0 | ⏳ Pendiente |
+| # | Estándar | Descripción | Código Implementado | Test Creado | Resultado |
+|---|----------|-------------|---------------------|-------------|-----------|
+| A1 | Helmet | Headers de seguridad | ❌ NO | ⏳ NO | - |
+| A2 | CORS restrictivo | Solo dominios permitidos | ⚠️ PARCIAL (acepta todo) | ⏳ NO | - |
+| A3 | Rate Limiting Login | 5 intentos / 15 min | ❌ NO | ⏳ NO | - |
+| A4 | Password 12+ chars | Validación de fortaleza | ❌ NO | ✅ SÍ | 🔄 Pasa pero no valida |
+| A5 | Validación Email | Formato correcto | ✅ SÍ | ✅ SÍ | 🔄 Pasa pero retorna 500 |
+| A6 | Dockerfile no-root | Usuario nodejs | ✅ SÍ | ⏳ NO | - |
+| A7 | Hash bcrypt | 10+ rounds | ✅ SÍ | ⏳ NO | - |
 
-### 2.2 Alineación con Plan del Backend
-
-| Fase | Módulo | Responsable | Tests Requeridos | Tests Completados | % |
-|------|--------|-------------|------------------|-------------------|---|
-| **Fase 2** | Auth (Registro/Login) | Carlos Mejia | 8 | 13 | 162% ✅ |
-| **Fase 2** | Auth (JWT/Token) | Carlos Mejia | 5 | 4 | 80% 🔄 |
-| **Fase 3** | Usuarios CRUD | Juan + Sebastián | 10 | 0 | 0% ⏳ |
-| **Fase 3** | Ofertas CRUD | Erick Gaona | 12 | 0 | 0% ⏳ |
-| **Fase 3** | Ofertas Búsqueda | Erick Gaona | 8 | 0 | 0% ⏳ |
-| **Fase 3** | Matching Algoritmo | Dara Van Gijsel | 10 | 0 | 0% ⏳ |
-| **Fase 3** | Postulaciones | Dara Van Gijsel | 8 | 0 | 0% ⏳ |
+**Resumen Alex:** 3/7 implementados, 2/7 tests creados
 
 ---
 
-## 3. Tests por Módulo
+### 2.2 Carlos Mejía - JWT y WSO2
 
-### 3.1 Módulo USUARIOS (Auth + Users)
+| # | Estándar | Descripción | Código Implementado | Test Creado | Resultado |
+|---|----------|-------------|---------------------|-------------|-----------|
+| C1 | Algoritmo JWT seguro | HS256 | ✅ SÍ | ⏳ NO | - |
+| C2 | Expiración tokens | 7 días | ✅ SÍ | ⏳ NO | - |
+| C3 | Validar firma JWT | jwt.verify() | ✅ SÍ | ✅ SÍ | ✅ PASA |
+| C4 | Manejar TokenExpired | Error handling | ✅ SÍ | ✅ SÍ | ✅ PASA |
+| C5 | No loguear tokens | Sin console.log | ✅ SÍ | ⏳ NO | - |
+| C6 | WSO2 JWT Policy | Gateway config | ❌ NO | ⏳ NO | - |
+
+**Resumen Carlos:** 5/6 implementados, 2/6 tests creados
+
+---
+
+### 2.3 Juan Espinosa - Firestore y Datos
+
+| # | Estándar | Descripción | Código Implementado | Test Creado | Resultado |
+|---|----------|-------------|---------------------|-------------|-----------|
+| J1 | Firestore Rules | Reglas de seguridad | ❌ NO verificado | ⏳ NO | - |
+| J2 | Sanitizar datos | sanitize-html | ❌ NO | ⏳ NO | - |
+| J3 | No IDs secuenciales | UUIDs | ✅ SÍ | ⏳ NO | - |
+| J4 | Logs de auditoría | Registro cambios | ❌ NO | ⏳ NO | - |
+
+**Resumen Juan:** 1/4 implementados, 0/4 tests creados
+
+---
+
+### 2.4 Sebastián Calderón - Perfiles de Usuario
+
+| # | Estándar | Descripción | Código Implementado | Test Creado | Resultado |
+|---|----------|-------------|---------------------|-------------|-----------|
+| S1 | Upload CV solo PDF | Validar mimetype | ❌ NO verificado | ⏳ NO | - |
+| S2 | CV máximo 5MB | Límite tamaño | ❌ NO verificado | ⏳ NO | - |
+| S3 | Validar cédula EC | Algoritmo módulo 10 | ❌ NO | ⏳ NO | - |
+| S4 | No exponer cédula | Mostrar 4 dígitos | ❌ NO | ⏳ NO | - |
+
+**Resumen Sebastián:** 0/4 implementados, 0/4 tests creados
+
+---
+
+### 2.5 Erick Gaona - Microservicio Ofertas
+
+| # | Estándar | Descripción | Código Implementado | Test Creado | Resultado |
+|---|----------|-------------|---------------------|-------------|-----------|
+| E1 | Solo RECLUTADOR crea | authorize() | ✅ SÍ | ⏳ NO | - |
+| E2 | Verificar propiedad | idReclutador | ✅ SÍ | ⏳ NO | - |
+| E3 | Validar inputs | express-validator | ❌ NO | ⏳ NO | - |
+| E4 | Sanitizar descripción | sanitize-html | ❌ NO | ⏳ NO | - |
+| E5 | Paginación límite | Máx 50 resultados | ❌ NO | ⏳ NO | - |
+
+**Resumen Erick:** 2/5 implementados, 0/5 tests creados
+
+---
+
+### 2.6 Dara Van Gijsel - Microservicio Matching
+
+| # | Estándar | Descripción | Código Implementado | Test Creado | Resultado |
+|---|----------|-------------|---------------------|-------------|-----------|
+| D1 | Solo POSTULANTE postula | authorize() | ❌ NO verificado | ⏳ NO | - |
+| D2 | Una postulación/oferta | Verificar duplicados | ❌ NO | ⏳ NO | - |
+| D3 | Límite 10 postulaciones/día | Contador diario | ❌ NO | ⏳ NO | - |
+| D4 | Solo ofertas activas | Validar estado | ❌ NO verificado | ⏳ NO | - |
+| D5 | No exponer algoritmo | Solo score | ✅ SÍ | ⏳ NO | - |
+
+**Resumen Dara:** 1/5 implementados, 0/5 tests creados
+
+---
+
+## 3. Tests del Módulo Usuarios
 
 **Ubicación:** `cail/cail/functions/usuarios/tests/`
 
-#### 3.1.1 Tests de Seguridad (`security.test.ts`) ✅ VALIDADOS
+### 3.1 Tests de Seguridad - Auth Bypass
 
-| # | Test | Categoría | Descripción | Estado | Fecha |
-|---|------|-----------|-------------|--------|-------|
-| 1 | GET /users/profile sin token | Auth Bypass | Verifica que rutas protegidas rechacen peticiones sin token | ✅ Pasó | 08/01/2026 |
-| 2 | Token malformado | Auth Bypass | Verifica rechazo de tokens con formato inválido | ✅ Pasó | 08/01/2026 |
-| 3 | Token sin Bearer prefix | Auth Bypass | Verifica que se requiera el prefijo "Bearer" | ✅ Pasó | 08/01/2026 |
-| 4 | Header Authorization vacío | Auth Bypass | Verifica rechazo de header vacío | ✅ Pasó | 08/01/2026 |
-| 5 | Registro con email inválido | Input Validation | Verifica manejo de emails mal formateados | ✅ Pasó | 08/01/2026 |
-| 6 | Registro con password vacío | Input Validation | Verifica manejo de passwords vacíos | ✅ Pasó | 08/01/2026 |
-| 7 | Login con campos vacíos | Input Validation | Verifica manejo de credenciales vacías | ✅ Pasó | 08/01/2026 |
-| 8 | SQL Injection | Injection Prevention | Payload: `'; DROP TABLE users; --` | ✅ Pasó | 08/01/2026 |
-| 9 | NoSQL Injection | Injection Prevention | Payload: `{"$gt": ""}` | ✅ Pasó | 08/01/2026 |
-| 10 | XSS | Injection Prevention | Payload: `<script>alert("xss")</script>` | ✅ Pasó | 08/01/2026 |
-| 11 | Template Injection | Injection Prevention | Payload: `{{7*7}}` | ✅ Pasó | 08/01/2026 |
-| 12 | No exponer stack trace | Error Handling | Errores no revelan información interna | ✅ Pasó | 08/01/2026 |
-| 13 | No exponer rutas internas | Error Handling | Errores no revelan rutas del servidor | ✅ Pasó | 08/01/2026 |
+| # | Test | Qué Verifica | Estándar | Estado Test | Resultado |
+|---|------|--------------|----------|-------------|-----------|
+| 1 | GET /users/profile sin token | Rutas protegidas rechazan sin auth | C3 | ✅ Creado | ✅ PASA |
+| 2 | Token malformado → 401 | Tokens inválidos rechazados | C3 | ✅ Creado | ✅ PASA |
+| 3 | Token sin "Bearer" → 401 | Formato correcto requerido | C3 | ✅ Creado | ✅ PASA |
+| 4 | Header vacío → 401 | No acepta vacío | C3 | ✅ Creado | ✅ PASA |
+| 5 | Token expirado → 401 | Expiración funciona | C4 | ⏳ Pendiente | - |
 
-#### 3.1.2 Tests de Integración (`integration.test.ts`) ⚠️ PARCIAL
+### 3.2 Tests de Seguridad - Validación de Inputs
 
-| # | Test | Categoría | Descripción | Estado | Razón |
-|---|------|-----------|-------------|--------|-------|
-| 1 | GET /health | Health Check | Verifica endpoint de salud | ⚠️ Falló | Conflicto puerto 8080 |
-| 2 | POST /auth/register | Auth | Registro de usuario nuevo | ✅ Pasó | - |
-| 3 | POST /auth/login | Auth | Autenticación de usuario | ❌ Falló | Necesita Firebase real |
-| 4 | GET /users/profile | Users | Obtener perfil de usuario | ❌ Falló | Depende de login |
-| 5 | GET /users/profile sin token | Users | Rechazar sin autenticación | ❌ Falló | Depende de login |
-| 6 | PUT /users/profile | Users | Actualizar perfil | ❌ Falló | Depende de login |
+| # | Test | Qué Verifica | Estándar | Estado Test | Resultado |
+|---|------|--------------|----------|-------------|-----------|
+| 6 | Email inválido → 400 | Validación de formato | A5 | ✅ Creado | 🔄 Pasa (retorna 500) |
+| 7 | Password vacío → 400 | No acepta vacío | A4 | ✅ Creado | 🔄 Pasa (no valida) |
+| 8 | Password < 12 chars → 400 | Mínimo 12 caracteres | A4 | ⏳ Pendiente | - |
+| 9 | Password sin mayúscula → 400 | Requiere mayúscula | A4 | ⏳ Pendiente | - |
+| 10 | Password sin número → 400 | Requiere número | A4 | ⏳ Pendiente | - |
+| 11 | Login campos vacíos → 400 | Validar login | A4 | ✅ Creado | ✅ PASA |
 
-**Nota:** Los tests de integración requieren Firebase real conectado. Actualmente usan mocks.
+### 3.3 Tests de Seguridad - Rate Limiting
+
+| # | Test | Qué Verifica | Estándar | Estado Test | Resultado |
+|---|------|--------------|----------|-------------|-----------|
+| 12 | 5 intentos login OK | Permite 5 intentos | A3 | ⏳ Pendiente | - |
+| 13 | 6to intento → 429 | Bloquea después de 5 | A3 | ⏳ Pendiente | - |
+| 14 | Después 15 min → OK | Se desbloquea | A3 | ⏳ Pendiente | - |
+
+### 3.4 Tests de Seguridad - Inyección
+
+| # | Test | Qué Verifica | Estándar | Estado Test | Resultado |
+|---|------|--------------|----------|-------------|-----------|
+| 15 | SQL Injection | No ejecuta SQL | General | ✅ Creado | ✅ PASA |
+| 16 | NoSQL Injection | No ejecuta NoSQL | General | ✅ Creado | ✅ PASA |
+| 17 | XSS en registro | Escapa HTML | General | ✅ Creado | ✅ PASA |
+| 18 | Template Injection | No ejecuta templates | General | ✅ Creado | ✅ PASA |
+
+### 3.5 Tests de Seguridad - Error Handling
+
+| # | Test | Qué Verifica | Estándar | Estado Test | Resultado |
+|---|------|--------------|----------|-------------|-----------|
+| 19 | No exponer stack trace | Sin detalles internos | General | ✅ Creado | ✅ PASA |
+| 20 | No exponer rutas | Sin paths internos | General | ✅ Creado | ✅ PASA |
+
+### 3.6 Tests de Seguridad - Headers (Helmet)
+
+| # | Test | Qué Verifica | Estándar | Estado Test | Resultado |
+|---|------|--------------|----------|-------------|-----------|
+| 21 | X-Frame-Options presente | Previene clickjacking | A1 | ⏳ Pendiente | - |
+| 22 | X-Content-Type-Options | Previene MIME sniffing | A1 | ⏳ Pendiente | - |
+| 23 | X-XSS-Protection | Previene XSS | A1 | ⏳ Pendiente | - |
+
+### 3.7 Tests de Integración - Auth
+
+| # | Test | Qué Verifica | Estado Test | Resultado |
+|---|------|--------------|-------------|-----------|
+| 24 | POST /auth/register | Registro exitoso | 🔄 Creado | 🔄 Parcial |
+| 25 | POST /auth/login | Login exitoso | 🔄 Creado | ❌ Falla (Firebase) |
+| 26 | POST /auth/change-password | Cambio de password | ⏳ Pendiente | - |
+| 27 | GET /health | Health check | 🔄 Creado | 🔄 Puerto ocupado |
+
+### 3.8 Tests de Integración - Users
+
+| # | Test | Qué Verifica | Estado Test | Resultado |
+|---|------|--------------|-------------|-----------|
+| 28 | GET /users/profile | Obtener perfil | 🔄 Creado | ❌ Falla |
+| 29 | PUT /users/profile | Actualizar perfil | 🔄 Creado | ❌ Falla |
+| 30 | Validar cédula EC | Cédula válida | ⏳ Pendiente | - |
+| 31 | Upload CV solo PDF | Solo PDF aceptado | ⏳ Pendiente | - |
+| 32 | CV máximo 5MB | Límite tamaño | ⏳ Pendiente | - |
+| 33 | No exponer cédula completa | Solo 4 dígitos | ⏳ Pendiente | - |
+
+**Total Módulo Usuarios:** 13/33 tests creados (39%)
 
 ---
 
-### 3.2 Módulo OFERTAS
+## 4. Tests del Módulo Ofertas
 
 **Ubicación:** `cail/cail/functions/ofertas/tests/`
 
-#### 3.2.1 Tests de Seguridad (`security.test.ts`) ⏳ PENDIENTE
+### 4.1 Tests de Seguridad - Autorización
 
-| # | Test | Categoría | Descripción | Estado |
-|---|------|-----------|-------------|--------|
-| 1 | GET /offers sin token | Auth Bypass | Listar ofertas (público) | ⏳ Pendiente |
-| 2 | POST /offers sin token | Auth Bypass | Crear oferta (requiere auth) | ⏳ Pendiente |
-| 3 | PUT /offers/:id sin token | Auth Bypass | Actualizar oferta | ⏳ Pendiente |
-| 4 | DELETE /offers/:id sin token | Auth Bypass | Eliminar oferta | ⏳ Pendiente |
-| 5 | Crear oferta como POSTULANTE | Authorization | Solo RECLUTADOR puede crear | ⏳ Pendiente |
-| 6 | SQL Injection en búsqueda | Injection | Búsqueda de ofertas | ⏳ Pendiente |
-| 7 | XSS en descripción | Injection | Descripción de oferta | ⏳ Pendiente |
-| 8-13 | ... | ... | Más tests planeados | ⏳ Pendiente |
+| # | Test | Qué Verifica | Estándar | Estado Test | Resultado |
+|---|------|--------------|----------|-------------|-----------|
+| 1 | POST /offers sin token → 401 | Requiere auth | E1 | ⏳ Pendiente | - |
+| 2 | POST /offers como POSTULANTE → 403 | Solo RECLUTADOR | E1 | ⏳ Pendiente | - |
+| 3 | PUT /offers sin ser dueño → 403 | Verificar propiedad | E2 | ⏳ Pendiente | - |
+| 4 | DELETE /offers sin ser dueño → 403 | Verificar propiedad | E2 | ⏳ Pendiente | - |
+| 5 | GET /offers sin token → 200 | Público para leer | - | ⏳ Pendiente | - |
 
-#### 3.2.2 Tests de Integración (`integration.test.ts`) ⏳ PENDIENTE
+### 4.2 Tests de Seguridad - Validación
 
-| # | Test | Descripción | Estado |
-|---|------|-------------|--------|
-| 1 | CRUD Ofertas | Crear, leer, actualizar, eliminar | ⏳ Pendiente |
-| 2 | Búsqueda con filtros | Filtrar por ubicación, salario, etc. | ⏳ Pendiente |
-| 3 | Paginación | Máximo 50 resultados por página | ⏳ Pendiente |
-| 4 | Validación de campos | Campos requeridos y formatos | ⏳ Pendiente |
+| # | Test | Qué Verifica | Estándar | Estado Test | Resultado |
+|---|------|--------------|----------|-------------|-----------|
+| 6 | Título < 5 chars → 400 | Mínimo caracteres | E3 | ⏳ Pendiente | - |
+| 7 | Descripción < 50 chars → 400 | Mínimo caracteres | E3 | ⏳ Pendiente | - |
+| 8 | Salario negativo → 400 | Validar número | E3 | ⏳ Pendiente | - |
+| 9 | XSS en descripción sanitizado | HTML escapado | E4 | ⏳ Pendiente | - |
+| 10 | SQL Injection en búsqueda | No ejecuta SQL | General | ⏳ Pendiente | - |
+
+### 4.3 Tests de Integración - CRUD
+
+| # | Test | Qué Verifica | Estado Test | Resultado |
+|---|------|--------------|-------------|-----------|
+| 11 | POST /offers crear oferta | Crear exitoso | ⏳ Pendiente | - |
+| 12 | GET /offers/:id | Obtener oferta | ⏳ Pendiente | - |
+| 13 | PUT /offers/:id | Actualizar oferta | ⏳ Pendiente | - |
+| 14 | DELETE /offers/:id | Eliminar oferta | ⏳ Pendiente | - |
+| 15 | GET /offers con paginación | Máx 50 resultados | ⏳ Pendiente | - |
+
+**Total Módulo Ofertas:** 0/15 tests creados (0%)
 
 ---
 
-### 3.3 Módulo MATCHING
+## 5. Tests del Módulo Matching
 
 **Ubicación:** `cail/cail/functions/matching/tests/`
 
-#### 3.3.1 Tests de Seguridad (`security.test.ts`) ⏳ PENDIENTE
+### 5.1 Tests de Seguridad - Autorización
 
-| # | Test | Descripción | Estado |
-|---|------|-------------|--------|
-| 1 | POST /apply sin token | Postular sin autenticación | ⏳ Pendiente |
-| 2 | Postular como RECLUTADOR | Solo POSTULANTE puede postular | ⏳ Pendiente |
-| 3 | Postulación duplicada | No permitir doble postulación | ⏳ Pendiente |
-| 4 | Límite de postulaciones | Máximo 10 por día | ⏳ Pendiente |
+| # | Test | Qué Verifica | Estándar | Estado Test | Resultado |
+|---|------|--------------|----------|-------------|-----------|
+| 1 | POST /apply sin token → 401 | Requiere auth | D1 | ⏳ Pendiente | - |
+| 2 | POST /apply como RECLUTADOR → 403 | Solo POSTULANTE | D1 | ⏳ Pendiente | - |
+| 3 | Postular a oferta inactiva → 400 | Solo activas | D4 | ⏳ Pendiente | - |
 
-#### 3.3.2 Tests de Integración (`integration.test.ts`) ⏳ PENDIENTE
+### 5.2 Tests de Seguridad - Límites
 
-| # | Test | Descripción | Estado |
-|---|------|-------------|--------|
-| 1 | Algoritmo de matching | Score de compatibilidad | ⏳ Pendiente |
-| 2 | Postulación a oferta | Proceso completo | ⏳ Pendiente |
-| 3 | Historial de postulaciones | Listar postulaciones del usuario | ⏳ Pendiente |
+| # | Test | Qué Verifica | Estándar | Estado Test | Resultado |
+|---|------|--------------|----------|-------------|-----------|
+| 4 | Postulación duplicada → 409 | No duplicados | D2 | ⏳ Pendiente | - |
+| 5 | 10 postulaciones/día OK | Permite hasta 10 | D3 | ⏳ Pendiente | - |
+| 6 | 11va postulación → 429 | Bloquea | D3 | ⏳ Pendiente | - |
 
----
+### 5.3 Tests de Integración - Matching
 
-## 4. Detalle de Tests Ejecutados
+| # | Test | Qué Verifica | Estado Test | Resultado |
+|---|------|--------------|-------------|-----------|
+| 7 | POST /apply crear postulación | Postular exitoso | ⏳ Pendiente | - |
+| 8 | GET /applications/:userId | Historial postulaciones | ⏳ Pendiente | - |
+| 9 | GET /match/:ofertaId | Obtener candidatos | ⏳ Pendiente | - |
+| 10 | Algoritmo retorna score | Solo número | ⏳ Pendiente | - |
 
-### 4.1 Última Ejecución (08/01/2026)
+### 5.4 Tests de Integración - Algoritmo
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    RESULTADO DE EJECUCIÓN                                   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  Comando: npx jest security --forceExit --testTimeout=10000                 │
-│  Fecha:   08 de Enero de 2026                                               │
-│  Duración: 3.4 segundos                                                     │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │  PASS  tests/security.test.ts                                       │    │
-│  │                                                                     │    │
-│  │  Usuarios - Security Tests                                          │    │
-│  │    Auth Bypass Prevention                                           │    │
-│  │      ✓ GET /users/profile sin token debe retornar 401 (33 ms)       │    │
-│  │      ✓ Token malformado debe retornar 401 (11 ms)                   │    │
-│  │      ✓ Token sin Bearer prefix debe retornar 401 (8 ms)             │    │
-│  │      ✓ Header Authorization vacío debe retornar 401 (9 ms)          │    │
-│  │    Input Validation                                                 │    │
-│  │      ✓ Registro con email inválido debe ser manejado (27 ms)        │    │
-│  │      ✓ Registro con password vacío debe ser manejado (137 ms)       │    │
-│  │      ✓ Login con campos vacíos debe fallar (4 ms)                   │    │
-│  │    Injection Prevention                                             │    │
-│  │      ✓ debe manejar payload: '; DROP TABLE users;... (4 ms)         │    │
-│  │      ✓ debe manejar payload: {"$gt": ""}... (4 ms)                  │    │
-│  │      ✓ debe manejar payload: <script>alert("xss")... (5 ms)         │    │
-│  │      ✓ debe manejar payload: {{7*7}}... (4 ms)                      │    │
-│  │    Error Handling                                                   │    │
-│  │      ✓ Errores no deben exponer stack trace (3 ms)                  │    │
-│  │      ✓ Errores no deben exponer rutas internas (5 ms)               │    │
-│  │                                                                     │    │
-│  │  Test Suites: 1 passed, 1 total                                     │    │
-│  │  Tests:       13 passed, 13 total                                   │    │
-│  │  Time:        3.4 s                                                 │    │
-│  └─────────────────────────────────────────────────────────────────────┘    │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+| # | Test | Qué Verifica | Estado Test | Resultado |
+|---|------|--------------|-------------|-----------|
+| 11 | Score 100% match perfecto | Cálculo correcto | ⏳ Pendiente | - |
+| 12 | Score 0% sin match | Cálculo correcto | ⏳ Pendiente | - |
+| 13 | No exponer detalles algoritmo | Solo score final | ⏳ Pendiente | - |
 
-### 4.2 Cómo Funcionan los Tests
-
-#### Auth Bypass Prevention
-
-Estos tests verifican que las rutas protegidas rechacen correctamente las peticiones sin autenticación válida:
-
-```typescript
-// Ejemplo: Test de ruta protegida sin token
-it('GET /users/profile sin token debe retornar 401', async () => {
-    const response = await request(app)
-        .get('/users/profile');
-    
-    expect(response.status).toBe(401);
-});
-```
-
-**Flujo del test:**
-1. Envía petición GET a `/users/profile` SIN header Authorization
-2. El middleware `authMiddleware` intercepta la petición
-3. Verifica si existe token → No existe
-4. Retorna 401 Unauthorized
-5. Test verifica que el status sea 401 ✅
-
-#### Injection Prevention
-
-Estos tests envían payloads maliciosos para verificar que la aplicación los maneje correctamente:
-
-```typescript
-// Ejemplo: Test de SQL Injection
-it('debe manejar payload SQL Injection', async () => {
-    const response = await request(app)
-        .post('/auth/register')
-        .send({
-            email: "'; DROP TABLE users; --",
-            password: 'TestPassword123!',
-            nombreCompleto: "'; DROP TABLE users; --"
-        });
-    
-    // No debe causar crash - cualquier respuesta es válida
-    expect(response.status).toBeDefined();
-});
-```
-
-**Flujo del test:**
-1. Envía payload malicioso en campos de registro
-2. La aplicación procesa la petición
-3. Firestore escapa automáticamente los caracteres especiales
-4. La petición falla por email inválido (no por inyección)
-5. Test verifica que no hubo crash del servidor ✅
+**Total Módulo Matching:** 0/13 tests creados (0%)
 
 ---
 
-## 5. Tests Pendientes
+## 6. Resumen de Hallazgos
 
-### 5.1 Corto Plazo (Enero 2026)
+### 6.1 Código NO Implementado (Bloqueadores)
 
-| Prioridad | Módulo | Test | Responsable | Fecha Límite |
-|-----------|--------|------|-------------|--------------|
-| 🔴 Alta | Usuarios | Validación de password (12+ chars) | Erick | 15/01/2026 |
-| 🔴 Alta | Usuarios | Rate limiting en login | Erick | 15/01/2026 |
-| 🟡 Media | Usuarios | Tests unitarios de entidades | Erick | 20/01/2026 |
-| 🟡 Media | Usuarios | Tests de value objects | Erick | 20/01/2026 |
-| 🟢 Baja | Usuarios | Tests de integración completos | Erick | 25/01/2026 |
+| # | Módulo | Falta | Responsable | Impacto |
+|---|--------|-------|-------------|---------|
+| 1 | Usuarios | Rate Limiting (A3) | Alex | 🔴 CRÍTICO - Vulnerable a brute force |
+| 2 | Usuarios | Validación Password (A4) | Alex | 🔴 CRÍTICO - Passwords débiles |
+| 3 | Usuarios | Helmet (A1) | Alex | 🟡 MEDIO - Sin headers seguridad |
+| 4 | Ofertas | Validación inputs (E3) | Erick | 🟡 MEDIO - Sin validación |
+| 5 | Matching | Límite postulaciones (D3) | Dara | 🟡 MEDIO - Sin límite |
 
-### 5.2 Mediano Plazo (Febrero 2026)
+### 6.2 Tests que Revelan Problemas
 
-| Prioridad | Módulo | Test | Responsable | Fecha Límite |
-|-----------|--------|------|-------------|--------------|
-| 🔴 Alta | Ofertas | Tests de seguridad completos | Erick | 07/02/2026 |
-| 🔴 Alta | Ofertas | Tests de autorización por rol | Erick | 10/02/2026 |
-| 🔴 Alta | Ofertas | Tests de sanitización XSS | Erick | 10/02/2026 |
-| 🟡 Media | Ofertas | Tests de integración CRUD | Erick | 14/02/2026 |
-| 🟡 Media | Ofertas | Tests de búsqueda y filtros | Erick | 14/02/2026 |
-
-### 5.3 Largo Plazo (Marzo 2026)
-
-| Prioridad | Módulo | Test | Responsable | Fecha Límite |
-|-----------|--------|------|-------------|--------------|
-| 🔴 Alta | Matching | Tests de seguridad | Dara + Erick | 01/03/2026 |
-| 🔴 Alta | Matching | Tests de límite de postulaciones | Dara + Erick | 05/03/2026 |
-| 🟡 Media | Matching | Tests de algoritmo de scoring | Dara | 08/03/2026 |
-| 🟡 Media | Todos | Tests de rendimiento (k6) | Carlos | 10/03/2026 |
-| 🟢 Baja | Todos | Tests E2E completos | Equipo | 15/03/2026 |
+| Test | Resultado Esperado | Resultado Actual | Problema |
+|------|-------------------|------------------|----------|
+| Email inválido | 400 Bad Request | 500 Internal Error | No hay validación |
+| Password corto | 400 Bad Request | 201 Created | No valida longitud |
+| SQL Injection | 400 Bad Request | 500 Internal Error | No valida inputs |
 
 ---
 
-## 6. Hallazgos de Seguridad
+## 7. Comandos de Ejecución
 
-### 6.1 Hallazgos Durante Testing
-
-| # | Hallazgo | Severidad | Módulo | Estado | Acción Requerida |
-|---|----------|-----------|--------|--------|------------------|
-| 1 | Emails inválidos retornan 500 en vez de 400 | 🟡 Media | Auth | ⚠️ Abierto | Agregar express-validator |
-| 2 | Payloads de inyección causan error 500 | 🟡 Media | Auth | ⚠️ Abierto | Validar inputs antes de procesar |
-| 3 | No hay validación de fortaleza de password | 🔴 Alta | Auth | ⚠️ Abierto | Implementar validación 12+ chars |
-| 4 | Rate limiting no implementado | 🔴 Alta | Auth | ⚠️ Abierto | Agregar express-rate-limit |
-| 5 | Headers de seguridad no configurados | 🟡 Media | Todos | ⚠️ Abierto | Agregar Helmet |
-
-### 6.2 Hallazgos Resueltos
-
-| # | Hallazgo | Severidad | Módulo | Fecha Resolución |
-|---|----------|-----------|--------|------------------|
-| 1 | Rutas protegidas expuestas sin auth | 🔴 Alta | Users | 05/01/2026 ✅ |
-| 2 | JWT expira correctamente | 🟡 Media | Auth | 05/01/2026 ✅ |
-| 3 | Dockerfile usa usuario no-root | 🟡 Media | Infra | 05/01/2026 ✅ |
-
----
-
-## 7. Plan de Tests Futuros
-
-### 7.1 Roadmap de Testing
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    ROADMAP DE TESTING - Q1 2026                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ENERO 2026                                                                 │
-│  ├── Semana 2: Completar tests de seguridad Usuarios                       │
-│  ├── Semana 3: Agregar validaciones (express-validator)                    │
-│  └── Semana 4: Tests unitarios de entidades y value objects                │
-│                                                                             │
-│  FEBRERO 2026                                                               │
-│  ├── Semana 1: Tests de seguridad Ofertas                                  │
-│  ├── Semana 2: Tests de integración Ofertas                                │
-│  ├── Semana 3: Tests de seguridad Matching                                 │
-│  └── Semana 4: Tests de integración Matching                               │
-│                                                                             │
-│  MARZO 2026                                                                 │
-│  ├── Semana 1: Tests de integración WSO2                                   │
-│  ├── Semana 2: Tests de rendimiento (k6)                                   │
-│  ├── Semana 3: OWASP ZAP scan completo                                     │
-│  └── Semana 4: Tests E2E pre-producción                                    │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 7.2 Cobertura Objetivo
-
-| Fase | Fecha | Cobertura Actual | Objetivo | Meta |
-|------|-------|------------------|----------|------|
-| Fase 2 | 15/01/2026 | 58% | 70% | Tests seguridad completos |
-| Fase 3 | 28/02/2026 | - | 80% | Todos los módulos testeados |
-| Fase 4 | 15/03/2026 | - | 85% | Tests de integración completos |
-| Go-Live | 31/03/2026 | - | 90% | Producción ready |
-
----
-
-## 8. Comandos de Ejecución
-
-### 8.1 Ejecución de Tests
+### 7.1 Ejecutar Tests
 
 ```powershell
-# Navegar al microservicio
+# === MÓDULO USUARIOS ===
 cd "C:\Users\barce\Documents\mi brach\cail\cail\functions\usuarios"
+npm install                              # Primera vez
+npx jest security --forceExit           # Tests seguridad
+npx jest integration --forceExit        # Tests integración
+npm test                                # Todos + cobertura
 
-# Instalar dependencias (primera vez)
+# === MÓDULO OFERTAS ===
+cd "C:\Users\barce\Documents\mi brach\cail\cail\functions\ofertas"
 npm install
-
-# Ejecutar TODOS los tests con cobertura
-npm test
-
-# Ejecutar solo tests de seguridad
 npx jest security --forceExit
 
-# Ejecutar solo tests de integración
-npx jest integration --forceExit
-
-# Ejecutar en modo watch (desarrollo)
-npm run test:watch
-
-# Ejecutar con timeout personalizado
-npx jest --forceExit --testTimeout=10000
+# === MÓDULO MATCHING ===
+cd "C:\Users\barce\Documents\mi brach\cail\cail\functions\matching"
+npm install
+npx jest security --forceExit
 ```
 
-### 8.2 Solución de Problemas Comunes
-
-| Problema | Causa | Solución |
-|----------|-------|----------|
-| `EADDRINUSE: address already in use :::8080` | Puerto ocupado | `taskkill /PID <num> /F` |
-| `Service account must contain project_id` | Firebase no mockeado | Verificar `tests/setup.ts` |
-| Tests colgados | Conexiones no cerradas | Usar `--forceExit` |
-| Timeout | Tests muy lentos | Usar `--testTimeout=15000` |
-
-### 8.3 Ver Cobertura HTML
+### 7.2 Resolver Puerto Ocupado
 
 ```powershell
-# Después de ejecutar npm test, abrir:
-start coverage/lcov-report/index.html
+netstat -ano | findstr :8080
+taskkill /PID <numero> /F
 ```
 
 ---
 
-## Firmas de Aprobación
+## Resumen Final
 
-| Rol | Nombre | Firma | Fecha |
-|-----|--------|-------|-------|
-| Test & Security | Erick Gaona | _________________ | 08/01/2026 |
-| Líder Técnico | Juan Espinosa | _________________ | ___/___/2026 |
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    ESTADO DEL TESTING - 08/01/2026                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  TESTS POR MÓDULO                                                           │
+│  ════════════════                                                           │
+│                                                                             │
+│  Usuarios:  ████████░░░░░░░░░░░░  13/33 creados  (39%)                     │
+│  Ofertas:   ░░░░░░░░░░░░░░░░░░░░   0/15 creados  ( 0%)                     │
+│  Matching:  ░░░░░░░░░░░░░░░░░░░░   0/13 creados  ( 0%)                     │
+│                                                                             │
+│  TOTAL:     ████░░░░░░░░░░░░░░░░  13/61 creados  (21%)                     │
+│                                                                             │
+│  ═══════════════════════════════════════════════════════════════════════    │
+│                                                                             │
+│  PRÓXIMOS PASOS:                                                            │
+│  1. Crear tests de Rate Limiting (A3) - CRÍTICO                             │
+│  2. Crear tests de Password validation (A4) - CRÍTICO                       │
+│  3. Ejecutar tests módulo Ofertas                                           │
+│  4. Notificar a contribuidores sobre lo que falta implementar               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-*Documento generado el 08 de Enero de 2026*  
-*Proyecto CAIL - Bolsa de Empleo*  
-*Universidad Técnica Particular de Loja*
-
+*Documento actualizado el 08 de Enero de 2026*  
+*Responsable: Erick Gaona (Test & Security)*
