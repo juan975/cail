@@ -53,18 +53,23 @@ class ApiService {
         return client;
     }
 
-    private getClientForPath(url: string): AxiosInstance {
+    private getClientForPath(url: string): { client: AxiosInstance; cleanUrl: string } {
         if (url.startsWith('/auth') || url.startsWith('/users')) {
-            return this.usuariosClient;
+            return { client: this.usuariosClient, cleanUrl: url };
         }
         if (url.startsWith('/offers')) {
-            return this.ofertasClient;
+            return { client: this.ofertasClient, cleanUrl: url };
         }
         if (url.startsWith('/matching')) {
-            return this.matchingClient;
+            // El matchingClient tiene baseURL que ya incluye /matching
+            // Pero el backend tiene rutas montadas bajo /matching también
+            // Por lo tanto NO hacemos strip del prefijo - la URL queda como /matching/*
+            // Resultado: baseURL(/matching) + url(/matching/apply) = /matching/matching/apply
+            // Esto es correcto según la estructura del backend
+            return { client: this.matchingClient, cleanUrl: url };
         }
         // Default to usuarios for unknown paths (could be legacy or general)
-        return this.usuariosClient;
+        return { client: this.usuariosClient, cleanUrl: url };
     }
 
     private getErrorMessage(error: AxiosError): string {
@@ -85,26 +90,26 @@ class ApiService {
     }
 
     async get<T>(url: string): Promise<T> {
-        const client = this.getClientForPath(url);
-        const response = await client.get<T>(url);
+        const { client, cleanUrl } = this.getClientForPath(url);
+        const response = await client.get<T>(cleanUrl);
         return response.data;
     }
 
     async post<T>(url: string, data?: any): Promise<T> {
-        const client = this.getClientForPath(url);
-        const response = await client.post<T>(url, data);
+        const { client, cleanUrl } = this.getClientForPath(url);
+        const response = await client.post<T>(cleanUrl, data);
         return response.data;
     }
 
     async put<T>(url: string, data?: any): Promise<T> {
-        const client = this.getClientForPath(url);
-        const response = await client.put<T>(url, data);
+        const { client, cleanUrl } = this.getClientForPath(url);
+        const response = await client.put<T>(cleanUrl, data);
         return response.data;
     }
 
     async delete<T>(url: string): Promise<T> {
-        const client = this.getClientForPath(url);
-        const response = await client.delete<T>(url);
+        const { client, cleanUrl } = this.getClientForPath(url);
+        const response = await client.delete<T>(cleanUrl);
         return response.data;
     }
 
