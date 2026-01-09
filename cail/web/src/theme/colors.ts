@@ -1,0 +1,33 @@
+export const colors = {
+  background: '#E9EFFB',
+  backgroundAlt: '#DCE7FF',
+  surface: '#FFFFFF',
+  surfaceMuted: '#F6F8FD',
+  border: '#DFE7F5',
+  borderStrong: '#C7D0E2',
+  textPrimary: '#0F172A',
+  textSecondary: '#4C5672',
+  muted: '#94A3B8',
+  candidate: '#1A936F',
+  candidateDark: '#0B6E4F',
+  candidateSurface: '#E1F4EB',
+  employer: '#F1842D',
+  employerDark: '#C45C12',
+  employerSurface: '#FFE6D6',
+  accent: '#4F46E5',
+  accentSoft: '#C7D2FE',
+  danger: '#EF476F',
+  success: '#16A34A',
+  info: '#2F80ED',
+  warning: '#FBBF24',
+  shadow: 'rgba(15, 23, 42, 0.12)'
+  ,
+};
+
+export const gradients = {
+  candidate: ['#0F7A4F', '#20C997'],
+  employer: ['#C05621', '#FDB07F'],
+  night: ['#0F172A', '#1D2939'],
+  aurora: ['#C7D2FE', '#DEF7EC'],
+  sunrise: ['#FFE0B2', '#F7C6FF'],
+};

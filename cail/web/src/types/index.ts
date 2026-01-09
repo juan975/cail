@@ -1,0 +1,120 @@
+export type UserRole = 'candidate' | 'employer';
+
+export interface CandidateUserData {
+  id: string;
+  name: string;
+  email: string;
+  progress?: number;
+}
+
+export interface EmployerUserData {
+  id: string;
+  company: string;
+  contactName: string;
+  email: string;
+  needsPasswordChange?: boolean;
+  isEmailVerified?: boolean;
+}
+
+export type UserData = CandidateUserData | EmployerUserData;
+
+export interface UserSession {
+  role: UserRole;
+  userData: UserData;
+  needsPasswordChange?: boolean;
+  isEmailVerified?: boolean;
+}
+
+export interface JobOffer {
+  id: string;
+  title: string;
+  company: string;
+  description: string;
+  location: string;
+  modality: 'Presencial' | 'Remoto' | 'Híbrido';
+  salaryRange: string;
+  employmentType: 'Tiempo completo' | 'Medio tiempo' | 'Contrato';
+  industry: string;
+  hierarchyLevel: 'Junior' | 'Semi-Senior' | 'Senior' | 'Gerencial';
+  requiredCompetencies: string[];
+  requiredExperience: string;
+  requiredEducation: string;
+  professionalArea: string;
+  economicSector: string;
+  experienceLevel: string;
+  postedDate: string;
+}
+
+export type ApplicationStatus = 'Postulado' | 'En revisión' | 'Entrevista' | 'Oferta' | 'Finalizado';
+
+export interface CandidateApplication {
+  id: string;
+  title: string;
+  company: string;
+  status: ApplicationStatus;
+  stage: string;
+  submittedAt: string;
+  priority: 'Alta' | 'Media' | 'Baja';
+  score: number;
+  notes?: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  category: 'Proceso' | 'Sugerencia' | 'Alerta';
+  unread?: boolean;
+}
+
+export interface NotificationPreference {
+  id: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+}
+
+export interface EmployerOffer extends JobOffer {
+  applicants: number;
+  views: number;
+  active: boolean;
+  deadline: string;
+  tags: string[];
+}
+
+export interface EmployerApplication {
+  id: string;
+  candidateName: string;
+  position: string;
+  experienceYears: number;
+  matchScore: number;
+  status: 'Nuevo' | 'En entrevista' | 'Descartado' | 'Contratado';
+  submittedAt: string;
+  channel: 'Web' | 'Recomendado' | 'Referencia';
+  notes?: string;
+}
+
+export interface CandidateProfileForm {
+  fullName: string;
+  email: string;
+  phone: string;
+  city: string;
+  address: string;
+  professionalSummary: string;
+  technicalSkills: string[];
+  softSkills: string[];
+  competencies: string[];
+}
+
+export interface EmployerProfileForm {
+  companyName: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  industry: string;
+  numberOfEmployees: string;
+  description: string;
+  website: string;
+  address: string;
+}
