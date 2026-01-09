@@ -19,21 +19,59 @@ export class FirestoreAplicacionRepository {
     }
 
     async findByPostulante(idPostulante: string): Promise<Aplicacion[]> {
-        const snapshot = await this.getCollection()
-            .where('idPostulante', '==', idPostulante)
-            .orderBy('fechaAplicacion', 'desc')
-            .get();
+        try {
+            // Intentar con orderBy (requiere índice compuesto)
+            const snapshot = await this.getCollection()
+                .where('idPostulante', '==', idPostulante)
+                .orderBy('fechaAplicacion', 'desc')
+                .get();
 
-        return snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+            return snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+        } catch (error: any) {
+            console.error('Error in findByPostulante:', error.message);
+
+            // Si falla por índice, intentar sin orderBy
+            if (error.code === 9 || error.message?.includes('index')) {
+                console.log('Fallback: fetching without orderBy due to missing index');
+                const snapshot = await this.getCollection()
+                    .where('idPostulante', '==', idPostulante)
+                    .get();
+
+                const results = snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+                // Ordenar manualmente
+                return results.sort((a, b) =>
+                    new Date(b.fechaAplicacion).getTime() - new Date(a.fechaAplicacion).getTime()
+                );
+            }
+            throw error;
+        }
     }
 
     async findByOferta(idOferta: string): Promise<Aplicacion[]> {
-        const snapshot = await this.getCollection()
-            .where('idOferta', '==', idOferta)
-            .orderBy('fechaAplicacion', 'desc')
-            .get();
+        try {
+            const snapshot = await this.getCollection()
+                .where('idOferta', '==', idOferta)
+                .orderBy('fechaAplicacion', 'desc')
+                .get();
 
-        return snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+            return snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+        } catch (error: any) {
+            console.error('Error in findByOferta:', error.message);
+
+            // Si falla por índice, intentar sin orderBy
+            if (error.code === 9 || error.message?.includes('index')) {
+                console.log('Fallback: fetching without orderBy due to missing index');
+                const snapshot = await this.getCollection()
+                    .where('idOferta', '==', idOferta)
+                    .get();
+
+                const results = snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+                return results.sort((a, b) =>
+                    new Date(b.fechaAplicacion).getTime() - new Date(a.fechaAplicacion).getTime()
+                );
+            }
+            throw error;
+        }
     }
 
     async exists(idPostulante: string, idOferta: string): Promise<boolean> {
@@ -57,3 +95,4 @@ export class FirestoreAplicacionRepository {
         };
     }
 }
+

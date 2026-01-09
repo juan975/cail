@@ -1,0 +1,33 @@
+{
+    "indexes": [
+        {
+            "collectionGroup": "aplicaciones",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "idPostulante",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "fechaAplicacion",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "aplicaciones",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "idOferta",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "fechaAplicacion",
+                    "order": "DESCENDING"
+                }
+            ]
+        }
+    ],
+    "fieldOverrides": []
+}
