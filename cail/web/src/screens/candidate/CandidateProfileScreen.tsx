@@ -129,7 +129,7 @@ export function CandidateProfileScreen() {
         </div>
         <div style={{ marginTop: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={{ fontSize: 13 }}>🎯 Progreso del perfil</div>
+            <div style={{ fontSize: 13 }}>Progreso del perfil</div>
             <div style={{ fontWeight: 700 }}>{Math.round(completion * 100)}%</div>
           </div>
           <div style={{ height: 8, background: 'rgba(255,255,255,0.2)', borderRadius: 999, overflow: 'hidden' }}>
@@ -154,7 +154,7 @@ export function CandidateProfileScreen() {
               fontWeight: 600,
             }}
           >
-            👁️ Perfil visible
+            Perfil visible
           </span>
           <span
             style={{

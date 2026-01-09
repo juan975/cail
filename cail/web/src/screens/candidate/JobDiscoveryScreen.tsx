@@ -269,9 +269,25 @@ export function JobDiscoveryScreen() {
               </div>
               <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 8 }}>{offer.description}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 12, color: colors.textSecondary, marginBottom: 8 }}>
-                <span>📍 {offer.location}</span>
-                <span>💼 {offer.modality}</span>
-                <span>💰 {offer.salaryRange}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {offer.location}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  {offer.modality}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {offer.salaryRange}
+                </span>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                 <Chip label={offer.employmentType} />
@@ -348,7 +364,7 @@ export function JobDiscoveryScreen() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
-              <div style={{ fontSize: 24, marginBottom: 8 }}>📨</div>
+
               <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Confirmar postulación</div>
               <div style={{ fontSize: 14, color: colors.textSecondary }}>
                 ¿Deseas postularte a {selectedOffer.title}?

@@ -1,17 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FiAlertCircle, FiBriefcase, FiEdit, FiEye, FiPlusCircle, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
-import { useResponsiveLayout } from '../../hooks/useResponsive';
+import { useCallback, useEffect, useState } from 'react';
 import { offersService } from '../../services/offers.service';
 import { applicationsService } from '../../services/applications.service';
 import { Offer, CreateOfferDTO, OfferStatus as ApiOfferStatus } from '../../types/offers.types';
 import { Application, ApplicationStatusColors } from '../../types/applications.types';
 import { colors } from '../../theme/colors';
-import { Card } from '../../components/ui/Card';
 import { InputField } from '../../components/ui/InputField';
 import { Button } from '../../components/ui/Button';
 
 type OfferStatus = 'active' | 'archived' | 'deleted';
-
 type OfferAction = 'archive' | 'restore' | 'delete';
 
 interface JobOffer {
@@ -46,19 +42,6 @@ const mapApiStatusToUI = (estado: ApiOfferStatus): OfferStatus => {
   }
 };
 
-const mapUIStatusToApi = (status: OfferStatus): ApiOfferStatus => {
-  switch (status) {
-    case 'active':
-      return 'ACTIVA';
-    case 'archived':
-      return 'PAUSADA';
-    case 'deleted':
-      return 'CERRADA';
-    default:
-      return 'ACTIVA';
-  }
-};
-
 const mapApiOfferToUI = (offer: Offer): JobOffer => {
   const fechaPub = offer.fechaPublicacion instanceof Date ? offer.fechaPublicacion : new Date(offer.fechaPublicacion);
 
@@ -89,21 +72,19 @@ const mapApiOfferToUI = (offer: Offer): JobOffer => {
 };
 
 export function OffersManagementScreen() {
-  const { contentWidth } = useResponsiveLayout();
   const [selectedTab, setSelectedTab] = useState<OfferStatus>('active');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<JobOffer | null>(null);
   const [offers, setOffers] = useState<JobOffer[]>([]);
   const [pendingAction, setPendingAction] = useState<{ type: OfferAction; offer: JobOffer } | null>(null);
-
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
   const [selectedOfferApplications, setSelectedOfferApplications] = useState<Application[]>([]);
   const [loadingApplications, setLoadingApplications] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [applicationsOffer, setApplicationsOffer] = useState<JobOffer | null>(null);
 
   const [title, setTitle] = useState('');
@@ -181,13 +162,12 @@ export function OffersManagementScreen() {
 
   const handleCreateOffer = async () => {
     if (!title.trim() || !description.trim()) {
-      window.alert('El título y la descripción son obligatorios');
       return;
     }
 
     try {
       setIsSubmitting(true);
-        const createData: CreateOfferDTO = {
+      const createData: CreateOfferDTO = {
         titulo: title,
         descripcion: description,
         empresa: department,
@@ -203,9 +183,13 @@ export function OffersManagementScreen() {
 
       await offersService.createOffer(createData);
       setShowCreateModal(false);
+      setToast({ message: 'Oferta creada exitosamente', type: 'success' });
+      setTimeout(() => setToast(null), 3000);
       loadOffers();
     } catch (error: any) {
-      window.alert(error.message || 'No se pudo crear la oferta');
+      console.error('Error creating offer:', error);
+      setToast({ message: error.message || 'Error al crear la oferta', type: 'error' });
+      setTimeout(() => setToast(null), 5000);
     } finally {
       setIsSubmitting(false);
     }
@@ -227,9 +211,13 @@ export function OffersManagementScreen() {
         experiencia_requerida: experiencia,
       });
       setShowEditModal(false);
+      setToast({ message: 'Oferta actualizada exitosamente', type: 'success' });
+      setTimeout(() => setToast(null), 3000);
       loadOffers();
     } catch (error: any) {
-      window.alert(error.message || 'No se pudo actualizar la oferta');
+      console.error('Error updating offer:', error);
+      setToast({ message: error.message || 'Error al actualizar la oferta', type: 'error' });
+      setTimeout(() => setToast(null), 5000);
     } finally {
       setIsSubmitting(false);
     }
@@ -248,9 +236,13 @@ export function OffersManagementScreen() {
         await offersService.closeOffer(offer.apiId);
       }
       setPendingAction(null);
+      setToast({ message: 'Acción realizada exitosamente', type: 'success' });
+      setTimeout(() => setToast(null), 3000);
       loadOffers();
     } catch (error: any) {
-      window.alert(error.message || 'No se pudo actualizar la oferta');
+      console.error('Error updating offer:', error);
+      setToast({ message: error.message || 'Error al realizar la acción', type: 'error' });
+      setTimeout(() => setToast(null), 5000);
     } finally {
       setIsSubmitting(false);
     }
@@ -265,7 +257,7 @@ export function OffersManagementScreen() {
       setSelectedOfferApplications(data);
       setShowApplicationsModal(true);
     } catch (error: any) {
-      window.alert(error.message || 'No se pudieron cargar las postulaciones');
+      console.error('Error loading applications:', error);
     } finally {
       setLoadingApplications(false);
     }
@@ -288,17 +280,21 @@ export function OffersManagementScreen() {
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(15, 23, 42, 0.45)',
+        background: 'rgba(0,0,0,0.5)',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 40,
+        zIndex: 9999,
+      }}
+      onClick={() => {
+        setShowCreateModal(false);
+        setShowEditModal(false);
       }}
     >
       <div
         style={{
           background: '#fff',
-          borderRadius: 20,
+          borderRadius: 16,
           padding: 24,
           width: 'min(720px, 92%)',
           maxHeight: '90vh',
@@ -306,8 +302,9 @@ export function OffersManagementScreen() {
           display: 'grid',
           gap: 12,
         }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <h3 style={{ margin: 0 }}>{titleLabel}</h3>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{titleLabel}</h3>
         <InputField label="Título" value={title} onChange={(e) => setTitle(e.target.value)} />
         <InputField label="Descripción" value={description} onChange={(e) => setDescription(e.target.value)} multiline />
         <InputField label="Empresa" value={department} onChange={(e) => setDepartment(e.target.value)} />
@@ -324,27 +321,40 @@ export function OffersManagementScreen() {
         <div>
           <label style={{ fontSize: 13, fontWeight: 600 }}>Competencias</label>
           <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-            <InputField value={newCompetency} onChange={(e) => setNewCompetency(e.target.value)} />
-            <Button label="Agregar" onPress={addCompetency} />
+            <input
+              value={newCompetency}
+              onChange={(e) => setNewCompetency(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && addCompetency()}
+              style={{
+                flex: 1,
+                padding: '10px 12px',
+                borderRadius: 10,
+                border: '1px solid #E5E7EB',
+                fontSize: 14,
+                outline: 'none',
+              }}
+            />
+            <button
+              type="button"
+              onClick={addCompetency}
+              style={{
+                padding: '10px 16px',
+                borderRadius: 10,
+                border: 'none',
+                background: '#F1842D',
+                color: '#fff',
+                cursor: 'pointer',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Agregar
+            </button>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
             {competencies.map((comp) => (
               <span key={comp} style={{ background: '#F3F4F6', padding: '6px 10px', borderRadius: 8, fontSize: 12 }}>
                 {comp}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label style={{ fontSize: 13, fontWeight: 600 }}>Formación requerida</label>
-          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-            <InputField value={newEducation} onChange={(e) => setNewEducation(e.target.value)} />
-            <Button label="Agregar" onPress={addEducation} />
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-            {education.map((edu) => (
-              <span key={edu} style={{ background: '#F3F4F6', padding: '6px 10px', borderRadius: 8, fontSize: 12 }}>
-                {edu}
               </span>
             ))}
           </div>
@@ -356,7 +366,14 @@ export function OffersManagementScreen() {
               setShowCreateModal(false);
               setShowEditModal(false);
             }}
-            style={{ padding: '10px 16px', borderRadius: 10, border: '1px solid #E5E7EB', background: '#fff' }}
+            style={{
+              padding: '10px 16px',
+              borderRadius: 12,
+              border: '1px solid #E5E7EB',
+              background: '#fff',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
           >
             Cancelar
           </button>
@@ -364,7 +381,15 @@ export function OffersManagementScreen() {
             type="button"
             onClick={onSubmit}
             disabled={isSubmitting}
-            style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#F59E0B', color: '#fff' }}
+            style={{
+              padding: '10px 16px',
+              borderRadius: 12,
+              border: 'none',
+              background: isSubmitting ? '#9CA3AF' : '#F1842D',
+              color: '#fff',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              fontWeight: 600,
+            }}
           >
             {isSubmitting ? 'Guardando...' : 'Guardar'}
           </button>
@@ -381,57 +406,98 @@ export function OffersManagementScreen() {
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: 40 }}>
-        <FiBriefcase size={32} color="#F59E0B" />
-        <div style={{ color: '#6B7280', marginTop: 12 }}>Cargando ofertas...</div>
+      <div style={{ textAlign: 'center', padding: '40px' }}>
+        <div style={{ color: '#6B7280' }}>Cargando ofertas...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ textAlign: 'center', padding: 40 }}>
-        <FiAlertCircle size={36} color="#EF4444" />
-        <div style={{ marginTop: 12, color: '#EF4444' }}>{error}</div>
+      <div style={{ textAlign: 'center', padding: '40px' }}>
+        <div style={{ color: '#EF4444', marginBottom: 12 }}>{error}</div>
         <button
           type="button"
           onClick={loadOffers}
-          style={{ marginTop: 16, padding: '10px 16px', borderRadius: 10, border: 'none', background: '#F59E0B', color: '#fff' }}
+          style={{
+            padding: '10px 16px',
+            borderRadius: 12,
+            border: 'none',
+            background: '#F1842D',
+            color: '#fff',
+            cursor: 'pointer',
+          }}
         >
-          <FiRefreshCw /> Reintentar
+          Reintentar
         </button>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'grid', gap: 16, maxWidth: contentWidth, margin: '0 auto' }}>
-      <Card spacing="lg" style={{ background: '#FFF7ED', border: '1px solid #FDE68A' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>Gestión de ofertas</div>
-            <div style={{ fontSize: 13, color: colors.textSecondary }}>Controla tus publicaciones activas</div>
-          </div>
-          <button
-            type="button"
-            onClick={openCreateModal}
+    <div style={{ display: 'grid', gap: 16, padding: '32px' }}>
+      {/* Header */}
+      <div
+        style={{
+          background: '#F1842D',
+          borderRadius: 16,
+          padding: 20,
+          color: '#fff',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 16,
+        }}
+      >
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <div
             style={{
-              border: 'none',
-              background: '#F59E0B',
-              color: '#fff',
-              padding: '10px 14px',
+              width: 48,
+              height: 48,
               borderRadius: 12,
-              cursor: 'pointer',
-              display: 'flex',
-              gap: 8,
-              alignItems: 'center',
+              background: 'rgba(255,255,255,0.2)',
+              display: 'grid',
+              placeItems: 'center',
             }}
           >
-            <FiPlusCircle /> Nueva oferta
-          </button>
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 700 }}>Gestión de ofertas</div>
+            <div style={{ fontSize: 13, opacity: 0.9 }}>Controla tus publicaciones activas</div>
+          </div>
         </div>
-      </Card>
+        <button
+          type="button"
+          onClick={openCreateModal}
+          style={{
+            border: 'none',
+            background: '#FFFFFF',
+            color: '#F1842D',
+            padding: '10px 16px',
+            borderRadius: 12,
+            cursor: 'pointer',
+            display: 'flex',
+            gap: 8,
+            alignItems: 'center',
+            fontWeight: 600,
+          }}
+        >
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Nueva oferta
+        </button>
+      </div>
 
+      {/* Tabs */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {statusTabs.map((tab) => (
           <button
@@ -441,10 +507,11 @@ export function OffersManagementScreen() {
             style={{
               padding: '8px 14px',
               borderRadius: 999,
-              border: `1px solid ${selectedTab === tab.id ? '#F59E0B' : '#E5E7EB'}`,
+              border: `1px solid ${selectedTab === tab.id ? '#F1842D' : '#E5E7EB'}`,
               background: selectedTab === tab.id ? '#FFF7ED' : '#fff',
               cursor: 'pointer',
               fontWeight: 600,
+              fontSize: 13,
             }}
           >
             {tab.label} ({tab.count})
@@ -452,27 +519,44 @@ export function OffersManagementScreen() {
         ))}
       </div>
 
+      {/* Offers */}
       {filteredOffers.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, background: '#fff', borderRadius: 12 }}>
+        <div style={{ textAlign: 'center', padding: 40, background: '#fff', borderRadius: 14, border: '1px solid #E5E7EB' }}>
           No hay ofertas para este estado.
         </div>
       ) : (
         filteredOffers.map((offer) => (
-          <Card key={offer.id} style={{ display: 'grid', gap: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+          <div key={offer.id} style={{ background: '#fff', borderRadius: 14, padding: 16, border: '1px solid #E5E7EB' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
               <div>
                 <div style={{ fontWeight: 700 }}>{offer.title}</div>
                 <div style={{ fontSize: 13, color: colors.textSecondary }}>{offer.department}</div>
               </div>
               <div style={{ fontSize: 12, color: colors.textSecondary }}>{offer.publishedDate}</div>
             </div>
-            <div style={{ fontSize: 13, color: colors.textSecondary }}>{offer.description}</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 12 }}>
-              <span>{offer.location}</span>
-              <span>{offer.modality}</span>
-              <span>{offer.salary}</span>
+            <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 8 }}>{offer.description}</div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12, marginBottom: 8 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {offer.location}
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                {offer.modality}
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {offer.salary}
+              </span>
             </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
               {offer.requiredCompetencies.slice(0, 3).map((comp) => (
                 <span key={comp} style={{ background: '#F3F4F6', padding: '4px 8px', borderRadius: 8, fontSize: 12 }}>
                   {comp}
@@ -483,23 +567,63 @@ export function OffersManagementScreen() {
               <button
                 type="button"
                 onClick={() => loadApplications(offer)}
-                style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer' }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 10,
+                  border: '1px solid #E5E7EB',
+                  background: '#fff',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
               >
-                <FiEye /> Ver postulaciones
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Ver postulaciones
               </button>
               <button
                 type="button"
                 onClick={() => openEditModal(offer)}
-                style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer' }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 10,
+                  border: '1px solid #E5E7EB',
+                  background: '#fff',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
               >
-                <FiEdit /> Editar
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Editar
               </button>
               {offer.status === 'active' && (
                 <button
                   type="button"
                   onClick={() => setPendingAction({ type: 'archive', offer })}
-                  style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #F59E0B', background: '#FFF7ED', cursor: 'pointer' }}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 10,
+                    border: '1px solid #F59E0B',
+                    background: '#FFF7ED',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
                 >
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   Pausar
                 </button>
               )}
@@ -507,20 +631,47 @@ export function OffersManagementScreen() {
                 <button
                   type="button"
                   onClick={() => setPendingAction({ type: 'restore', offer })}
-                  style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #10B981', background: '#ECFDF5', cursor: 'pointer' }}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 10,
+                    border: '1px solid #10B981',
+                    background: '#ECFDF5',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
                 >
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   Reactivar
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setPendingAction({ type: 'delete', offer })}
-                style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #FCA5A5', background: '#FEF2F2', cursor: 'pointer' }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 10,
+                  border: '1px solid #FCA5A5',
+                  background: '#FEF2F2',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
               >
-                <FiTrash2 /> Cerrar
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Cerrar
               </button>
             </div>
-          </Card>
+          </div>
         ))
       )}
 
@@ -532,32 +683,51 @@ export function OffersManagementScreen() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(15, 23, 42, 0.45)',
+            background: 'rgba(0,0,0,0.5)',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            zIndex: 40,
+            zIndex: 9999,
           }}
+          onClick={() => setPendingAction(null)}
         >
-          <div style={{ background: '#fff', borderRadius: 16, padding: 20, width: 'min(420px, 90%)' }}>
+          <div
+            style={{ background: '#fff', borderRadius: 16, padding: 20, width: 'min(420px, 90%)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <h4 style={{ marginTop: 0 }}>Confirmar acción</h4>
             <div style={{ fontSize: 13, color: colors.textSecondary }}>
-              ¿Deseas {pendingAction.type === 'archive' ? 'pausar' : pendingAction.type === 'restore' ? 'reactivar' : 'cerrar'} la oferta {pendingAction.offer.title}?
+              ¿Deseas {pendingAction.type === 'archive' ? 'pausar' : pendingAction.type === 'restore' ? 'reactivar' : 'cerrar'} la
+              oferta {pendingAction.offer.title}?
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
               <button
                 type="button"
                 onClick={() => setPendingAction(null)}
-                style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid #E5E7EB', background: '#fff' }}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 10,
+                  border: '1px solid #E5E7EB',
+                  background: '#fff',
+                  cursor: 'pointer',
+                }}
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={() => handleOfferAction(pendingAction.type, pendingAction.offer)}
-                style={{ padding: '8px 14px', borderRadius: 10, border: 'none', background: '#F59E0B', color: '#fff' }}
+                disabled={isSubmitting}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 10,
+                  border: 'none',
+                  background: isSubmitting ? '#9CA3AF' : '#F1842D',
+                  color: '#fff',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                }}
               >
-                Confirmar
+                {isSubmitting ? 'Procesando...' : 'Confirmar'}
               </button>
             </div>
           </div>
@@ -569,14 +739,25 @@ export function OffersManagementScreen() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(15, 23, 42, 0.45)',
+            background: 'rgba(0,0,0,0.5)',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            zIndex: 40,
+            zIndex: 9999,
           }}
+          onClick={() => setShowApplicationsModal(false)}
         >
-          <div style={{ background: '#fff', borderRadius: 20, padding: 24, width: 'min(720px, 92%)', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 20,
+              padding: 24,
+              width: 'min(720px, 92%)',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 style={{ marginTop: 0 }}>Postulaciones - {applicationsOffer.title}</h3>
             {loadingApplications ? (
               <div>Cargando postulaciones...</div>
@@ -587,15 +768,37 @@ export function OffersManagementScreen() {
                 {selectedOfferApplications.map((app) => {
                   const statusInfo = ApplicationStatusColors[app.estado];
                   return (
-                    <Card key={app.idAplicacion} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div
+                      key={app.idAplicacion}
+                      style={{
+                        background: '#fff',
+                        borderRadius: 14,
+                        padding: 14,
+                        border: '1px solid #E5E7EB',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
                       <div>
                         <div style={{ fontWeight: 700 }}>{app.idPostulante}</div>
-                        <div style={{ fontSize: 12, color: colors.textSecondary }}>Aplicado: {new Date(app.fechaAplicacion).toLocaleDateString('es-EC')}</div>
+                        <div style={{ fontSize: 12, color: colors.textSecondary }}>
+                          Aplicado: {new Date(app.fechaAplicacion).toLocaleDateString('es-EC')}
+                        </div>
                       </div>
-                      <span style={{ padding: '4px 8px', borderRadius: 12, background: statusInfo.bg, color: statusInfo.text, fontSize: 11, fontWeight: 600 }}>
+                      <span
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: 12,
+                          background: statusInfo.bg,
+                          color: statusInfo.text,
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}
+                      >
                         {statusInfo.label}
                       </span>
-                    </Card>
+                    </div>
                   );
                 })}
               </div>
@@ -604,12 +807,50 @@ export function OffersManagementScreen() {
               <button
                 type="button"
                 onClick={() => setShowApplicationsModal(false)}
-                style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid #E5E7EB', background: '#fff' }}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 10,
+                  border: '1px solid #E5E7EB',
+                  background: '#fff',
+                  cursor: 'pointer',
+                }}
               >
                 Cerrar
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast Notifications */}
+      {toast && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            background: toast.type === 'success' ? '#ECFDF5' : '#FEF2F2',
+            border: `1px solid ${toast.type === 'success' ? '#10B981' : '#EF4444'}`,
+            borderRadius: 12,
+            padding: '12px 16px',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            zIndex: 10000,
+            maxWidth: '400px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke={toast.type === 'success' ? '#10B981' : '#EF4444'}>
+            {toast.type === 'success' ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            )}
+          </svg>
+          <span style={{ color: toast.type === 'success' ? '#065F46' : '#991B1B', fontWeight: 600, fontSize: 14 }}>
+            {toast.message}
+          </span>
         </div>
       )}
     </div>
