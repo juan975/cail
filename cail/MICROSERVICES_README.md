@@ -8,7 +8,7 @@ Arquitectura de microservicios para el Sistema de Reclutamiento CAIL.
 cail/
 ├── backend/                   # Monolito original (deprecated)
 ├── functions/                 # Microservicios (Cloud Functions)
-│   ├── usuarios/             # Auth + Profiles (puerto 8080)
+│   ├── usuarios/             # Auth + Profiles (puerto 8082)
 │   ├── ofertas/              # Ofertas laborales (puerto 8083)
 │   └── matching/             # Matching candidato-oferta (puerto 8084)
 ├── shared/
@@ -79,14 +79,14 @@ docker-compose up
 ### 4. Verificar servicios
 
 ```bash
-curl http://localhost:8080/health  # Usuarios
+curl http://localhost:8082/health  # Usuarios
 curl http://localhost:8083/health  # Ofertas
 curl http://localhost:8084/health  # Matching
 ```
 
 ## Endpoints
 
-### Usuarios (Puerto 8080)
+### Usuarios (Puerto 8082)
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
