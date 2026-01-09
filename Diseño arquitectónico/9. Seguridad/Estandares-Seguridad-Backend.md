@@ -450,6 +450,92 @@ if (countHoy.data().count >= 10) {
 
 ---
 
+## 7. Sebastián Calderón - Frontend (React Native + Web)
+
+**Módulo:** `cail/src/` y `cail/web/`
+
+### ✅ Lo que YA implementó correctamente:
+
+| # | Requerimiento | Estado | Evidencia |
+|---|---------------|--------|-----------|
+| F1 | HTTPS para APIs | ✅ OK | `config.ts` usa `https://` |
+| F2 | Token Bearer automático | ✅ OK | `api.service.ts` interceptor |
+| F3 | Validación Password 12+ chars | ✅ OK | `PasswordStrength.tsx` |
+| F4 | Validación Password mayúscula | ✅ OK | `PasswordStrength.tsx` |
+| F5 | Validación Password número | ✅ OK | `PasswordStrength.tsx` |
+| F6 | Validación Password especial | ✅ OK | **Mejor de lo pedido** |
+| F7 | Timeout en requests | ✅ OK | 15 segundos |
+| F8 | Manejo centralizado errores | ✅ OK | `api.service.ts` |
+
+### ⚠️ Lo que FALTA implementar:
+
+| # | Requerimiento | Estado | Cómo Implementar |
+|---|---------------|--------|------------------|
+| F9 | SecureStore para tokens | ⚠️ MEJORABLE | Cambiar `AsyncStorage` → `expo-secure-store` |
+| F10 | No console.log sensibles | ⚠️ VERIFICAR | Revisar y eliminar logs con datos |
+| F11 | Validar cédula EC | ❌ FALTA | Algoritmo módulo 10 en frontend |
+| F12 | Ocultar cédula en pantalla | ❌ FALTA | Mostrar solo `****1234` |
+| F13 | Upload CV solo PDF | ⚠️ VERIFICAR | Validar mimetype antes de enviar |
+| F14 | CV máximo 5MB | ⚠️ VERIFICAR | Verificar tamaño antes de upload |
+
+### Código que DEBE agregar:
+
+```typescript
+// Para F9: Cambiar almacenamiento de token
+// ANTES (actual):
+import AsyncStorage from '@react-native-async-storage/async-storage';
+await AsyncStorage.setItem(TOKEN_KEY, token);
+
+// DESPUÉS (más seguro):
+import * as SecureStore from 'expo-secure-store';
+await SecureStore.setItemAsync(TOKEN_KEY, token);
+```
+
+```typescript
+// Para F11: Validar cédula ecuatoriana en frontend
+const validarCedulaEC = (cedula: string): boolean => {
+  if (!/^\d{10}$/.test(cedula)) return false;
+  const provincia = parseInt(cedula.substring(0, 2));
+  if (provincia < 1 || provincia > 24) return false;
+  
+  const coeficientes = [2, 1, 2, 1, 2, 1, 2, 1, 2];
+  let suma = 0;
+  for (let i = 0; i < 9; i++) {
+    let valor = parseInt(cedula.charAt(i)) * coeficientes[i];
+    if (valor > 9) valor -= 9;
+    suma += valor;
+  }
+  const verificador = (10 - (suma % 10)) % 10;
+  return verificador === parseInt(cedula.charAt(9));
+};
+```
+
+```typescript
+// Para F12: Ocultar cédula en pantalla
+const ocultarCedula = (cedula: string): string => {
+  return '******' + cedula.slice(-4);
+};
+// Mostrar: ******1234
+```
+
+```typescript
+// Para F13 y F14: Validar archivo CV
+const validarCV = (file: File): { valid: boolean; error?: string } => {
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_TYPES = ['application/pdf'];
+  
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { valid: false, error: 'Solo se permiten archivos PDF' };
+  }
+  if (file.size > MAX_SIZE) {
+    return { valid: false, error: 'El archivo no puede superar 5MB' };
+  }
+  return { valid: true };
+};
+```
+
+---
+
 ## Comandos Útiles
 
 ```bash
@@ -468,5 +554,5 @@ npx jest security --forceExit
 
 ---
 
-*Documento v7.0 - Actualizado con tests derivados*  
+*Documento v8.0 - Actualizado con Frontend de Sebastián*  
 *Responsable: Erick Gaona (Test & Security)*
