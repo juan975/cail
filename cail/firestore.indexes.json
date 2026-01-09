@@ -1,0 +1,61 @@
+{
+    "indexes": [
+        {
+            "collectionGroup": "aplicaciones",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "idPostulante",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "fechaAplicacion",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "aplicaciones",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "idOferta",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "fechaAplicacion",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "ofertas",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "idReclutador",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "fechaPublicacion",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "ofertas",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "estado",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "fechaPublicacion",
+                    "order": "DESCENDING"
+                }
+            ]
+        }
+    ],
+    "fieldOverrides": []
+}

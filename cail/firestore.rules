@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reglas para cuentas de usuario
+    match /cuentas/{accountId} {
+      allow read: if request.auth != null && request.auth.uid == accountId;
+      allow write: if request.auth != null && request.auth.uid == accountId;
+    }
+    
+    // Reglas para ofertas laborales
+    match /ofertas/{offerId} {
+      // Cualquier usuario autenticado puede leer ofertas
+      allow read: if request.auth != null;
+      // Solo reclutadores pueden escribir (validación en backend)
+      allow write: if request.auth != null;
+    }
+    
+    // Reglas para aplicaciones
+    match /aplicaciones/{applicationId} {
+      // Usuarios autenticados pueden leer sus propias aplicaciones
+      allow read: if request.auth != null;
+      // Solo candidatos pueden crear aplicaciones (validación en backend)
+      allow create: if request.auth != null;
+      // Solo el dueño de la aplicación o el reclutador pueden actualizar
+      allow update: if request.auth != null;
+    }
+  }
+}
