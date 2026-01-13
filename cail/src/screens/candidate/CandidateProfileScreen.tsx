@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
@@ -11,6 +11,7 @@ import { CandidateProfileForm } from '@/types';
 import { initialCandidateProfile } from '@/data/mockData';
 import { colors } from '@/theme/colors';
 import { userService } from '@/services/user.service';
+import * as DocumentPicker from 'expo-document-picker';
 
 export function CandidateProfileScreen() {
   const { contentWidth } = useResponsiveLayout();
@@ -21,6 +22,8 @@ export function CandidateProfileScreen() {
   const [newCompetency, setNewCompetency] = useState('');
   const [activeTab, setActiveTab] = useState<'personal' | 'professional' | 'experience'>('personal');
   const [saving, setSaving] = useState(false);
+  const [cvUrl, setCvUrl] = useState<string | null>(null);
+  const [uploadingCv, setUploadingCv] = useState(false);
 
   // Load user profile data
   useEffect(() => {
@@ -40,9 +43,10 @@ export function CandidateProfileScreen() {
           address: profile.candidateProfile.direccion || '',
           professionalSummary: profile.candidateProfile.resumenProfesional || '',
           technicalSkills: profile.candidateProfile.habilidadesTecnicas || [],
-          softSkills: [],
+          softSkills: profile.candidateProfile.softSkills || [],
           competencies: profile.candidateProfile.competencias || [],
         });
+        setCvUrl(profile.candidateProfile.cvUrl || null);
       }
     } catch (error: any) {
       Alert.alert('Error', 'No se pudo cargar el perfil');
@@ -93,6 +97,7 @@ export function CandidateProfileScreen() {
           direccion: form.address,
           resumenProfesional: form.professionalSummary,
           habilidadesTecnicas: form.technicalSkills,
+          softSkills: form.softSkills,
           competencias: form.competencies,
           cedula: '', // Mantener valor existente
         },
@@ -408,6 +413,101 @@ export function CandidateProfileScreen() {
                 </Pressable>
               </View>
             </View>
+          </View>
+
+          {/* CV Upload Section */}
+          <View style={[styles.sectionCard, { maxWidth: contentWidth }]}>
+            <View style={styles.sectionHeader}>
+              <Feather name="file-text" size={20} color="#DC2626" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Curriculum Vitae</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Sube tu CV en formato PDF (máximo 5MB)
+                </Text>
+              </View>
+            </View>
+
+            {cvUrl ? (
+              <View style={styles.cvUploaded}>
+                <View style={styles.cvFileIcon}>
+                  <Feather name="file" size={24} color="#DC2626" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cvFileName}>CV Subido</Text>
+                  <Pressable onPress={() => Linking.openURL(cvUrl)}>
+                    <Text style={styles.cvViewLink}>Ver documento</Text>
+                  </Pressable>
+                </View>
+                <Pressable
+                  style={styles.cvDeleteButton}
+                  onPress={async () => {
+                    setUploadingCv(true);
+                    try {
+                      await userService.deleteCV();
+                      setCvUrl(null);
+                      Alert.alert('Éxito', 'CV eliminado correctamente');
+                    } catch (error: any) {
+                      Alert.alert('Error', error.message || 'No se pudo eliminar el CV');
+                    } finally {
+                      setUploadingCv(false);
+                    }
+                  }}
+                  disabled={uploadingCv}
+                >
+                  <Feather name="trash-2" size={18} color="#FFFFFF" />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                style={[styles.cvDropzone, uploadingCv && styles.cvDropzoneDisabled]}
+                onPress={async () => {
+                  if (uploadingCv) return;
+                  try {
+                    const result = await DocumentPicker.getDocumentAsync({
+                      type: 'application/pdf',
+                      copyToCacheDirectory: true,
+                    });
+
+                    if (result.canceled) return;
+
+                    const file = result.assets[0];
+                    if (file.size && file.size > 5 * 1024 * 1024) {
+                      Alert.alert('Error', 'El archivo no puede superar 5MB');
+                      return;
+                    }
+
+                    setUploadingCv(true);
+                    const formData = new FormData();
+                    formData.append('cv', {
+                      uri: file.uri,
+                      name: file.name,
+                      type: 'application/pdf',
+                    } as any);
+
+                    const response = await userService.uploadCV(formData);
+                    setCvUrl(response.cvUrl);
+                    Alert.alert('Éxito', 'CV subido correctamente');
+                  } catch (error: any) {
+                    Alert.alert('Error', error.message || 'No se pudo subir el CV');
+                  } finally {
+                    setUploadingCv(false);
+                  }
+                }}
+                disabled={uploadingCv}
+              >
+                <View style={styles.cvDropzoneIcon}>
+                  {uploadingCv ? (
+                    <ActivityIndicator size="small" color="#9CA3AF" />
+                  ) : (
+                    <Feather name="upload" size={32} color="#9CA3AF" />
+                  )}
+                </View>
+                <Text style={styles.cvDropzoneText}>
+                  {uploadingCv ? 'Subiendo...' : 'Toca para seleccionar tu CV'}
+                </Text>
+                <Text style={styles.cvDropzoneSubtext}>PDF • Máximo 5MB</Text>
+              </Pressable>
+            )}
           </View>
 
           {/* Work Experience */}
@@ -787,5 +887,74 @@ const styles = StyleSheet.create({
   saveButton: {
     width: '100%',
     marginTop: 12,
+  },
+
+  // CV Upload Styles
+  cvUploaded: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  cvFileIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cvFileName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  cvViewLink: {
+    fontSize: 12,
+    color: '#0B7A4D',
+    marginTop: 2,
+  },
+  cvDeleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cvDropzone: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 32,
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+  },
+  cvDropzoneDisabled: {
+    opacity: 0.6,
+  },
+  cvDropzoneIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  cvDropzoneText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  cvDropzoneSubtext: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
 });

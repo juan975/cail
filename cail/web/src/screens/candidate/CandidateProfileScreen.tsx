@@ -6,6 +6,7 @@ import { CandidateProfileForm } from '../../types';
 import { initialCandidateProfile } from '../../data/mockData';
 import { colors } from '../../theme/colors';
 import { userService } from '../../services/user.service';
+import { CvUploadDropzone } from '../../components/CvUploadDropzone';
 
 export function CandidateProfileScreen() {
   const { contentWidth } = useResponsiveLayout();
@@ -13,6 +14,8 @@ export function CandidateProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'personal' | 'professional' | 'experience'>('personal');
   const [saving, setSaving] = useState(false);
+  const [cvUrl, setCvUrl] = useState<string | null>(null);
+  const [uploadingCv, setUploadingCv] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -30,9 +33,10 @@ export function CandidateProfileScreen() {
           address: profile.candidateProfile.direccion || '',
           professionalSummary: profile.candidateProfile.resumenProfesional || '',
           technicalSkills: profile.candidateProfile.habilidadesTecnicas || [],
-          softSkills: [],
+          softSkills: profile.candidateProfile.softSkills || [],
           competencies: profile.candidateProfile.competencias || [],
         });
+        setCvUrl(profile.candidateProfile.cvUrl || null);
       }
     } catch (error) {
       window.alert('No se pudo cargar el perfil');
@@ -71,6 +75,7 @@ export function CandidateProfileScreen() {
           direccion: form.address,
           resumenProfesional: form.professionalSummary,
           habilidadesTecnicas: form.technicalSkills,
+          softSkills: form.softSkills,
           competencias: form.competencies,
           cedula: '',
         },
@@ -227,9 +232,56 @@ export function CandidateProfileScreen() {
       )}
 
       {activeTab === 'experience' && (
-        <div style={{ background: '#fff', borderRadius: 14, padding: 16, border: '1px solid #E5E7EB' }}>
-          <div style={{ fontSize: 14, color: colors.textSecondary }}>
-            Sección de experiencia en desarrollo
+        <div style={{ display: 'grid', gap: 16 }}>
+          {/* CV Upload Section */}
+          <div style={{ background: '#fff', borderRadius: 14, padding: 16, border: '1px solid #E5E7EB' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14,2 14,8 20,8" />
+              </svg>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: colors.textPrimary }}>Curriculum Vitae</div>
+                <div style={{ fontSize: 12, color: colors.textSecondary }}>Sube tu CV en formato PDF (máximo 5MB)</div>
+              </div>
+            </div>
+            <CvUploadDropzone
+              cvUrl={cvUrl}
+              onUpload={async (file) => {
+                setUploadingCv(true);
+                try {
+                  const formData = new FormData();
+                  formData.append('cv', file);
+                  const result = await userService.uploadCV(formData);
+                  setCvUrl(result.cvUrl);
+                  window.alert('CV subido correctamente');
+                } catch (error: any) {
+                  window.alert(error.message || 'Error al subir el CV');
+                } finally {
+                  setUploadingCv(false);
+                }
+              }}
+              onDelete={async () => {
+                setUploadingCv(true);
+                try {
+                  await userService.deleteCV();
+                  setCvUrl(null);
+                  window.alert('CV eliminado correctamente');
+                } catch (error: any) {
+                  window.alert(error.message || 'Error al eliminar el CV');
+                } finally {
+                  setUploadingCv(false);
+                }
+              }}
+              uploading={uploadingCv}
+            />
+          </div>
+
+          {/* Experience Section Placeholder */}
+          <div style={{ background: '#fff', borderRadius: 14, padding: 16, border: '1px solid #E5E7EB' }}>
+            <div style={{ fontSize: 14, color: colors.textSecondary }}>
+              Sección de experiencia laboral en desarrollo
+            </div>
           </div>
         </div>
       )}

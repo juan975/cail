@@ -100,6 +100,16 @@ class ApiService {
         return response.data;
     }
 
+    async postFormData<T>(url: string, formData: FormData): Promise<T> {
+        const { client, cleanUrl } = this.getClientForPath(url);
+        const response = await client.post<T>(cleanUrl, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    }
+
     async put<T>(url: string, data?: any): Promise<T> {
         const { client, cleanUrl } = this.getClientForPath(url);
         const response = await client.put<T>(cleanUrl, data);

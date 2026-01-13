@@ -22,6 +22,7 @@ export const initializeFirebase = (): void => {
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
             projectId: config.firebase.projectId,
+            storageBucket: `${config.firebase.projectId}.appspot.com`,
         });
 
         initialized = true;
@@ -50,6 +51,16 @@ export const getAuth = (): admin.auth.Auth => {
         initializeFirebase();
     }
     return admin.auth();
+};
+
+/**
+ * Obtiene la instancia de Storage
+ */
+export const getStorage = (): admin.storage.Storage => {
+    if (!initialized && admin.apps.length === 0) {
+        initializeFirebase();
+    }
+    return admin.storage();
 };
 
 export default admin;

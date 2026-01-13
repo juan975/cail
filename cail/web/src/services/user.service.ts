@@ -15,11 +15,13 @@ export interface UserProfile {
         ciudad: string;
         resumenProfesional?: string;
         habilidadesTecnicas?: string[];
+        softSkills?: string[];
         nivelEducacion?: string;
         titulo?: string;
         competencias?: string[];
         anosExperiencia?: string;
         resumenExperiencia?: string;
+        cvUrl?: string;
     };
     employerProfile?: {
         nombreEmpresa: string;
@@ -57,6 +59,24 @@ class UserService {
             data
         );
         return response.data;
+    }
+
+    /**
+     * Upload CV (PDF file)
+     */
+    async uploadCV(file: FormData): Promise<{ cvUrl: string }> {
+        const response = await apiService.postFormData<BackendApiResponse<{ cvUrl: string }>>(
+            '/users/cv/upload',
+            file
+        );
+        return response.data;
+    }
+
+    /**
+     * Delete CV
+     */
+    async deleteCV(): Promise<void> {
+        await apiService.delete('/users/cv');
     }
 }
 
