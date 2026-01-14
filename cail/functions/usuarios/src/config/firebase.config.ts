@@ -63,4 +63,20 @@ export const getStorage = (): admin.storage.Storage => {
     return admin.storage();
 };
 
+/**
+ * Obtiene el bucket de Storage para subir archivos
+ */
+export const getBucket = () => {
+    if (!initialized && admin.apps.length === 0) {
+        initializeFirebase();
+    }
+    return admin.storage().bucket();
+};
+
+// Alias para compatibilidad
+export const bucket = {
+    file: (path: string) => getBucket().file(path),
+    getFiles: (options: any) => getBucket().getFiles(options),
+};
+
 export default admin;
