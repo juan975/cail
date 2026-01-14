@@ -12,12 +12,14 @@
 1. [Resumen Ejecutivo](#1-resumen-ejecutivo)
 2. [Cambios Recientes (13/01/2026)](#2-cambios-recientes-13012026)
 3. [Matriz de Tests por Contribuidor](#3-matriz-de-tests-por-contribuidor)
-4. [Tests del Módulo Usuarios](#4-tests-del-módulo-usuarios)
-5. [Tests del Módulo Ofertas](#5-tests-del-módulo-ofertas)
-6. [Tests del Módulo Matching](#6-tests-del-módulo-matching)
+4. [Tests del Modulo Usuarios](#4-tests-del-módulo-usuarios)
+5. [Tests del Modulo Ofertas](#5-tests-del-módulo-ofertas)
+6. [Tests del Modulo Matching](#6-tests-del-módulo-matching)
 7. [Resumen de Hallazgos](#7-resumen-de-hallazgos)
-8. [Comandos de Ejecución](#8-comandos-de-ejecución)
-9. [Despliegue WSO2 API Gateway](#9-despliegue-wso2-api-gateway) ← **NUEVO**
+8. [Comandos de Ejecucion](#8-comandos-de-ejecución)
+9. [Despliegue WSO2 API Gateway](#9-despliegue-wso2-api-gateway)
+
+**Documento Relacionado:** [Seguridad Por Modulo](./Seguridad-Por-Modulo.md) - Mapeo detallado de seguridad vs plan de desarrollo
 
 ---
 
@@ -56,13 +58,42 @@
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 Leyenda de Estados
+### 1.2 Por que 70 Tests Planificados vs 66 Implementados?
 
-| Símbolo | Significado |
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    DESGLOSE DE TESTS - PLANIFICADO VS ACTUAL                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  70 TESTS PLANIFICADOS INCLUIAN:                                           │
+│  ├── Funcionalidad YA implementada:              66 tests ✅                │
+│  └── Funcionalidad FUTURA (aun no desarrollada):  4 tests ⏳                │
+│                                                                             │
+│  ═══════════════════════════════════════════════════════════════════════    │
+│                                                                             │
+│  TESTS PENDIENTES (esperando codigo):                                       │
+│  ├── Validacion cedula ecuatoriana (2 tests) - Sebastian                   │
+│  ├── Limite 10 postulaciones/dia (1 test) - Dara/Cristobal                 │
+│  └── Verificar postulacion duplicada (1 test) - Dara/Cristobal             │
+│                                                                             │
+│  POR QUE NO ESTAN CREADOS?                                                  │
+│  El codigo de estas funcionalidades AUN NO existe. Cuando se               │
+│  implemente, se crearan los tests correspondientes.                         │
+│                                                                             │
+│  ESTO ES NORMAL: El proyecto no esta al 100% aun.                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Nota:** Ver documento completo en `Seguridad-Por-Modulo.md` para el mapeo detallado de seguridad por modulo segun el plan original de desarrollo.
+
+### 1.3 Leyenda de Estados
+
+| Simbolo | Significado |
 |---------|-------------|
-| ✅ | Test creado Y pasa (código implementado correctamente) |
-| ❌ | Test creado pero FALLA (código NO implementado o tiene bug) |
-| ⏳ | Test NO creado aún / Esperando implementación |
+| ✅ | Test creado Y pasa (codigo implementado correctamente) |
+| ❌ | Test creado pero FALLA (codigo NO implementado o tiene bug) |
+| ⏳ | Test NO creado aun / Esperando implementacion |
 | 🔄 | Test creado, resultado parcial |
 
 ---
