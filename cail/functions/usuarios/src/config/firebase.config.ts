@@ -22,7 +22,7 @@ export const initializeFirebase = (): void => {
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
             projectId: config.firebase.projectId,
-            storageBucket: `${config.firebase.projectId}.appspot.com`,
+            storageBucket: `${config.firebase.projectId}.firebasestorage.app`,
         });
 
         initialized = true;

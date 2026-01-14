@@ -2,20 +2,6 @@ import { Router } from 'express';
 import { authenticate } from '../../../shared/middleware/auth.middleware';
 import { getProfile, updateProfile, getUserById } from '../controllers/Users.controller';
 import { uploadCV, getCV, deleteCV } from '../controllers/Cv.controller';
-import multer from 'multer';
-
-// Configurar multer para manejar archivos en memoria
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
-    fileFilter: (req, file, cb) => {
-        if (file.mimetype === 'application/pdf') {
-            cb(null, true);
-        } else {
-            cb(new Error('Solo se permiten archivos PDF'));
-        }
-    },
-});
 
 const router = Router();
 
@@ -35,10 +21,10 @@ router.put('/profile', authenticate, updateProfile);
 
 /**
  * @route   POST /users/cv/upload
- * @desc    Subir CV del usuario autenticado
+ * @desc    Subir CV del usuario autenticado (busboy handles multipart directly)
  * @access  Private
  */
-router.post('/cv/upload', authenticate, upload.single('cv'), uploadCV);
+router.post('/cv/upload', authenticate, uploadCV);
 
 /**
  * @route   GET /users/cv

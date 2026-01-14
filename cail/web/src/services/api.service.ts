@@ -101,13 +101,30 @@ class ApiService {
     }
 
     async postFormData<T>(url: string, formData: FormData): Promise<T> {
-        const { client, cleanUrl } = this.getClientForPath(url);
-        const response = await client.post<T>(cleanUrl, formData, {
+        const token = localStorage.getItem(TOKEN_KEY);
+
+        // URL directa de la Cloud Function (no usar el proxy para multipart)
+        const CLOUD_FUNCTION_URL = 'https://us-central1-cail-backend-prod.cloudfunctions.net/usuarios';
+
+        // Usar fetch nativo para FormData - más confiable que axios
+        const response = await fetch(`${CLOUD_FUNCTION_URL}${url}`, {
+            method: 'POST',
+            body: formData,
             headers: {
-                'Content-Type': 'multipart/form-data',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                // NO establecer Content-Type - fetch lo hace automáticamente con el boundary
             },
         });
-        return response.data;
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw {
+                status: response.status,
+                message: errorData.message || 'Error al subir archivo',
+            };
+        }
+
+        return response.json();
     }
 
     async put<T>(url: string, data?: any): Promise<T> {

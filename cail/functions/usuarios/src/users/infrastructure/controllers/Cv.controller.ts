@@ -1,135 +1,247 @@
-import { Request, Response } from 'express';
-import { bucket } from '../../../config/firebase.config';
-import { ApiResponse } from '../../../shared/utils/response.util';
+﻿import { Request, Response } from 'express';
+import Busboy from 'busboy';
+import { Readable } from 'stream';
+import { getStorage, getFirestore } from '../../../config/firebase.config';
+import { AuthRequest } from '../../../shared/middleware/auth.middleware';
 
 /**
- * Controller para manejo de CV (Curriculum Vitae)
- * Responsable: Alex Ramírez
- * Seguridad implementada:
- * - Solo archivos PDF permitidos (validado en multer)
- * - Máximo 5MB (validado en multer)
- * - Rutas protegidas con authenticate middleware
+ * Controller para gesti├│n de CV (Curriculum Vitae)
+ * Usa busboy para parsing de multipart (compatible con Cloud Functions Gen2)
  */
 
+interface FileUpload {
+    buffer: Buffer;
+    filename: string;
+    mimetype: string;
+}
+
+// Extend Request para incluir rawBody de Cloud Functions
+interface CloudFunctionRequest extends AuthRequest {
+    rawBody?: Buffer;
+}
+
 /**
- * @desc    Subir CV del usuario autenticado
+ * Parsea el multipart form data usando busboy
+ * Cloud Functions Gen2 provee rawBody, usamos eso en lugar de piping el request
+ */
+const parseMultipart = (req: CloudFunctionRequest): Promise<FileUpload | null> => {
+    return new Promise((resolve, reject) => {
+        const busboy = Busboy({ headers: req.headers });
+        const chunks: Buffer[] = [];
+        let fileInfo: { filename: string; mimetype: string } | null = null;
+
+        busboy.on('file', (fieldname, file, info) => {
+            console.log('Busboy file event:', fieldname, info);
+            fileInfo = { filename: info.filename, mimetype: info.mimeType };
+
+            file.on('data', (data) => {
+                chunks.push(data);
+            });
+        });
+
+        busboy.on('finish', () => {
+            if (chunks.length === 0 || !fileInfo) {
+                resolve(null);
+            } else {
+                resolve({
+                    buffer: Buffer.concat(chunks),
+                    filename: fileInfo.filename,
+                    mimetype: fileInfo.mimetype,
+                });
+            }
+        });
+
+        busboy.on('error', (error) => {
+            console.error('Busboy error:', error);
+            reject(error);
+        });
+
+        // En Cloud Functions Gen2, el body ya fue consumido - usar rawBody
+        if (req.rawBody) {
+            console.log('Using rawBody, length:', req.rawBody.length);
+            const stream = Readable.from(req.rawBody);
+            stream.pipe(busboy);
+        } else {
+            console.log('No rawBody, piping request directly');
+            req.pipe(busboy);
+        }
+    });
+};
+
+/**
  * @route   POST /users/cv/upload
+ * @desc    Subir CV del usuario autenticado
  * @access  Private
  */
-export const uploadCV = async (req: Request, res: Response): Promise<void> => {
+export const uploadCV = async (req: CloudFunctionRequest, res: Response): Promise<void> => {
     try {
-        const userId = (req as any).user?.uid;
-        
+        console.log('=== CV Upload Started ===');
+
+        const userId = req.user?.uid;
         if (!userId) {
-            ApiResponse.error(res, 'Usuario no autenticado', 401);
+            res.status(401).json({ status: 'error', message: 'No autorizado' });
+            return;
+        }
+        console.log('User ID:', userId);
+
+        // Parsear multipart usando busboy
+        const file = await parseMultipart(req);
+        console.log('Parsed file:', file ? { filename: file.filename, mimetype: file.mimetype, size: file.buffer.length } : 'null');
+
+        if (!file) {
+            res.status(400).json({ status: 'error', message: 'No se envi├│ ning├║n archivo' });
             return;
         }
 
-        if (!req.file) {
-            ApiResponse.error(res, 'No se proporcionó ningún archivo', 400);
+        // Validar que sea PDF
+        if (file.mimetype !== 'application/pdf') {
+            res.status(400).json({ status: 'error', message: 'Solo se permiten archivos PDF' });
             return;
         }
 
-        // Crear nombre único para el archivo
-        const fileName = `cvs/${userId}/cv_${Date.now()}.pdf`;
-        const file = bucket.file(fileName);
+        // Validar tama├▒o (m├íximo 5MB)
+        const maxSize = 5 * 1024 * 1024;
+        if (file.buffer.length > maxSize) {
+            res.status(400).json({ status: 'error', message: 'El archivo no puede superar 5MB' });
+            return;
+        }
+
+        const storage = getStorage();
+        const bucket = storage.bucket();
+        const fileName = `cv/${userId}/cv_${Date.now()}.pdf`;
+        const storageFile = bucket.file(fileName);
+
+        console.log('Uploading to Storage:', fileName);
 
         // Subir archivo a Firebase Storage
-        await file.save(req.file.buffer, {
+        await storageFile.save(file.buffer, {
             metadata: {
                 contentType: 'application/pdf',
+                metadata: {
+                    userId: userId,
+                    originalName: file.filename,
+                },
             },
         });
 
-        // Obtener URL pública (o signed URL si es privado)
-        const [url] = await file.getSignedUrl({
-            action: 'read',
-            expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 días
+        // Hacer el archivo p├║blico y obtener URL
+        await storageFile.makePublic();
+        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+
+        console.log('File uploaded. Public URL:', publicUrl);
+
+        // Actualizar perfil del usuario con la URL del CV
+        const db = getFirestore();
+        await db.collection('usuarios').doc(userId).update({
+            'candidateProfile.cvUrl': publicUrl,
+            updatedAt: new Date(),
         });
 
-        ApiResponse.created(res, { 
-            cvUrl: url,
-            fileName: fileName
-        }, 'CV subido exitosamente');
+        console.log('=== CV Upload Completed ===');
 
+        res.status(200).json({
+            status: 'success',
+            message: 'CV subido correctamente',
+            data: { cvUrl: publicUrl },
+        });
     } catch (error: any) {
-        console.error('Error subiendo CV:', error);
-        ApiResponse.error(res, 'Error al subir el CV', 500);
+        console.error('Error uploading CV:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Error al subir el CV: ' + (error.message || 'Unknown error'),
+        });
     }
 };
 
 /**
- * @desc    Obtener URL del CV del usuario
  * @route   GET /users/cv
+ * @desc    Obtener URL del CV del usuario autenticado
  * @access  Private
  */
-export const getCV = async (req: Request, res: Response): Promise<void> => {
+export const getCV = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const userId = (req as any).user?.uid;
-        
+        const userId = req.user?.uid;
         if (!userId) {
-            ApiResponse.error(res, 'Usuario no autenticado', 401);
+            res.status(401).json({ status: 'error', message: 'No autorizado' });
             return;
         }
 
-        // Buscar CV del usuario en Storage
-        const [files] = await bucket.getFiles({ prefix: `cvs/${userId}/` });
-        
-        if (files.length === 0) {
-            ApiResponse.error(res, 'No se encontró CV para este usuario', 404);
+        const db = getFirestore();
+        const userDoc = await db.collection('usuarios').doc(userId).get();
+
+        if (!userDoc.exists) {
+            res.status(404).json({ status: 'error', message: 'Usuario no encontrado' });
             return;
         }
 
-        // Obtener el CV más reciente
-        const latestFile = files[files.length - 1];
-        const [url] = await latestFile.getSignedUrl({
-            action: 'read',
-            expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
-        });
+        const userData = userDoc.data();
+        const cvUrl = userData?.candidateProfile?.cvUrl;
 
-        ApiResponse.success(res, { 
-            cvUrl: url,
-            fileName: latestFile.name
+        res.status(200).json({
+            status: 'success',
+            data: { cvUrl: cvUrl || null },
         });
-
     } catch (error: any) {
-        console.error('Error obteniendo CV:', error);
-        ApiResponse.error(res, 'Error al obtener el CV', 500);
+        console.error('Error getting CV:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Error al obtener el CV',
+        });
     }
 };
 
 /**
- * @desc    Eliminar CV del usuario
  * @route   DELETE /users/cv
+ * @desc    Eliminar CV del usuario autenticado
  * @access  Private
  */
-export const deleteCV = async (req: Request, res: Response): Promise<void> => {
+export const deleteCV = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const userId = (req as any).user?.uid;
-        
+        const userId = req.user?.uid;
         if (!userId) {
-            ApiResponse.error(res, 'Usuario no autenticado', 401);
+            res.status(401).json({ status: 'error', message: 'No autorizado' });
             return;
         }
 
-        // Buscar y eliminar CVs del usuario
-        const [files] = await bucket.getFiles({ prefix: `cvs/${userId}/` });
-        
-        if (files.length === 0) {
-            ApiResponse.error(res, 'No se encontró CV para eliminar', 404);
+        const db = getFirestore();
+        const userDoc = await db.collection('usuarios').doc(userId).get();
+
+        if (!userDoc.exists) {
+            res.status(404).json({ status: 'error', message: 'Usuario no encontrado' });
             return;
         }
 
-        // Eliminar todos los CVs del usuario
-        await Promise.all(files.map(file => file.delete()));
+        const userData = userDoc.data();
+        const cvUrl = userData?.candidateProfile?.cvUrl;
 
-        ApiResponse.success(res, { 
-            message: 'CV eliminado exitosamente' 
+        if (cvUrl) {
+            try {
+                const storage = getStorage();
+                const bucket = storage.bucket();
+                const urlParts = cvUrl.split(`${bucket.name}/`);
+                if (urlParts.length > 1) {
+                    const filePath = urlParts[1];
+                    await bucket.file(filePath).delete();
+                }
+            } catch (deleteError) {
+                console.error('Error deleting file from storage:', deleteError);
+            }
+        }
+
+        await db.collection('usuarios').doc(userId).update({
+            'candidateProfile.cvUrl': null,
+            updatedAt: new Date(),
         });
 
+        res.status(200).json({
+            status: 'success',
+            message: 'CV eliminado correctamente',
+        });
     } catch (error: any) {
-        console.error('Error eliminando CV:', error);
-        ApiResponse.error(res, 'Error al eliminar el CV', 500);
+        console.error('Error deleting CV:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Error al eliminar el CV',
+        });
     }
 };
-

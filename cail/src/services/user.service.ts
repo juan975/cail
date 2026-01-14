@@ -65,7 +65,7 @@ class UserService {
      * Upload CV (PDF file)
      */
     async uploadCV(file: FormData): Promise<{ cvUrl: string }> {
-        const response = await apiService.post<BackendApiResponse<{ cvUrl: string }>>(
+        const response = await apiService.postFormData<BackendApiResponse<{ cvUrl: string }>>(
             '/users/cv/upload',
             file
         );

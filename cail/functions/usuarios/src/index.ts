@@ -52,9 +52,19 @@ app.use(cors({
 // Manejar preflight requests explícitamente
 app.options('*', cors());
 
-// Parseo de JSON
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Parseo de JSON y URL-encoded (skip multipart/form-data para que multer lo maneje)
+app.use((req, res, next) => {
+    const contentType = req.headers['content-type'] || '';
+    if (contentType.includes('multipart/form-data')) {
+        // Skip body parsing for multipart - multer will handle it
+        next();
+    } else {
+        express.json()(req, res, (err) => {
+            if (err) return next(err);
+            express.urlencoded({ extended: true })(req, res, next);
+        });
+    }
+});
 
 // Aplicar middleware de seguridad (helmet + rate-limit) - Agregado por Erick Gaona
 applySecurityMiddleware(app);

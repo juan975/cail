@@ -113,6 +113,33 @@ class ApiService {
         return response.data;
     }
 
+    async postFormData<T>(url: string, formData: FormData): Promise<T> {
+        const token = await AsyncStorage.getItem(TOKEN_KEY);
+
+        // URL directa de la Cloud Function (no usar el cliente axios para multipart)
+        const CLOUD_FUNCTION_URL = 'https://us-central1-cail-backend-prod.cloudfunctions.net/usuarios';
+
+        // Usar fetch nativo para FormData - más confiable que axios en React Native
+        const response = await fetch(`${CLOUD_FUNCTION_URL}${url}`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                // NO establecer Content-Type - fetch lo hace automáticamente con el boundary
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw {
+                status: response.status,
+                message: errorData.message || 'Error al subir archivo',
+            };
+        }
+
+        return response.json();
+    }
+
     // User profile
     async getUserProfile<T>(): Promise<T> {
         const response = await this.usuariosClient.get<T>('/users/profile');
