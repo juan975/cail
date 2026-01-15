@@ -1,15 +1,7 @@
-/**
- * Configuración de Firebase para el cliente (React Native / Expo)
- * 
- * IMPORTANTE: Las credenciales se cargan desde variables de entorno
- * NO hardcodear API Keys en el código fuente
- */
-
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import Constants from 'expo-constants';
 
-// Configuración de Firebase usando variables de entorno
 const firebaseConfig = {
     apiKey: Constants.expoConfig?.extra?.firebaseApiKey || process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
     authDomain: Constants.expoConfig?.extra?.firebaseAuthDomain || process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -20,17 +12,8 @@ const firebaseConfig = {
     measurementId: Constants.expoConfig?.extra?.firebaseMeasurementId || process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Validar que las credenciales existan
-if (!firebaseConfig.apiKey) {
-    console.error('❌ Firebase API Key no configurada. Verifica las variables de entorno.');
-}
-
-// Inicializar Firebase solo si no está inicializado
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-
-// Obtener instancia de Auth
 const auth = getAuth(app);
 
 export { app, auth };
 export default app;
-
