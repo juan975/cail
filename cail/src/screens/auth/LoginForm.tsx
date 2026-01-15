@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { InputField } from '@/components/ui/InputField';
 import { LoadingSplash } from '@/components/ui/LoadingSplash';
 import { UserRole } from '@/types';
-import { authService } from '@/services/auth.service';
+import { authService, RoleMismatchError } from '@/services/auth.service';
 
 interface LoginFormProps {
   role: UserRole;
@@ -37,16 +37,8 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: Login
     setSplashSuccess(false);
 
     try {
-      const response = await authService.login(email, password);
-
-      // Validar que el tipo de usuario coincide con el rol seleccionado
-      const backendRole = response.tipoUsuario === 'POSTULANTE' ? 'candidate' : 'employer';
-
-      if (backendRole !== role) {
-        setSplashErrorMessage('Credenciales inválidas');
-        setSplashError(true);
-        return;
-      }
+      // El servicio valida el rol y cierra sesión si no coincide
+      const response = await authService.login(email, password, role);
 
       const userData = role === 'candidate'
         ? {
@@ -67,8 +59,15 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: Login
       setPendingData(userData);
       setSplashSuccess(true);
     } catch (error: any) {
-      setSplashErrorMessage('Credenciales inválidas');
+      // Manejar error de rol incorrecto con mensaje específico
+      if (error instanceof RoleMismatchError) {
+        setSplashErrorMessage(error.message);
+      } else {
+        setSplashErrorMessage('Credenciales inválidas');
+      }
       setSplashError(true);
+    } finally {
+      setLoading(false);
     }
   };
 
