@@ -94,6 +94,63 @@ class EmailService {
     }
 
     /**
+     * Envía email con enlace para establecer contraseña (Password Reset Link)
+     */
+    async sendPasswordResetLink(email: string, link: string, name: string): Promise<void> {
+        const content = `
+            <h2 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: ${this.brandColors.textPrimary};">
+                ¡Hola ${name}! 👋
+            </h2>
+            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: ${this.brandColors.textSecondary};">
+                Te damos la bienvenida a <strong style="color: ${this.brandColors.primary};">CAIL</strong>. Tu cuenta de empleador ha sido creada satisfactoriamente.
+            </p>
+            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: ${this.brandColors.textSecondary};">
+                Para completar la configuración de tu cuenta y acceder a la plataforma, por favor establece tu contraseña segura haciendo clic en el siguiente botón:
+            </p>
+            
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 32px 0;">
+                <a href="${link}" style="display: inline-block; background: linear-gradient(135deg, ${this.brandColors.primary} 0%, ${this.brandColors.primaryDark} 100%); color: ${this.brandColors.white}; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.4);">
+                    Establecer Contraseña
+                </a>
+            </div>
+            
+            <p style="margin: 24px 0 0 0; font-size: 14px; color: ${this.brandColors.textSecondary}; text-align: center;">
+                Si el botón no funciona, copia y pega el siguiente enlace en tu navegador:<br>
+                <a href="${link}" style="color: ${this.brandColors.primary}; word-break: break-all;">${link}</a>
+            </p>
+            
+             <div style="background-color: #fef2f2; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                <p style="margin: 0; font-size: 14px; color: #991b1b;">
+                    ⚠️ <strong>Nota:</strong> Este enlace expirará en 24 horas por seguridad.
+                </p>
+            </div>
+        `;
+
+        const mailOptions = {
+            from: `CAIL <${this.fromEmail}>`,
+            to: email,
+            subject: '🔐 Configura tu contraseña de CAIL',
+            html: this.getBaseTemplate(content),
+        };
+
+        if (this.transporter) {
+            try {
+                await this.transporter.sendMail(mailOptions);
+                console.log(`✅ Password reset email sent to: ${email}`);
+            } catch (error) {
+                console.error('❌ Error sending reset email:', error);
+                throw new Error('Error enviando el correo de restablecimiento');
+            }
+        } else {
+            console.log('📧 [DEV] Reset link would be sent:', {
+                to: email,
+                link: link
+            });
+        }
+    }
+
+    /**
      * Envía email con contraseña temporal a empleadores
      */
     async sendTemporaryPassword(email: string, password: string, name: string): Promise<void> {
@@ -104,37 +161,35 @@ class EmailService {
             <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: ${this.brandColors.textSecondary};">
                 Te damos la bienvenida a <strong style="color: ${this.brandColors.primary};">CAIL</strong>. Tu cuenta de empleador ha sido creada satisfactoriamente.
             </p>
+            <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.6; color: ${this.brandColors.textSecondary};">
+                Para acceder a tu cuenta, utiliza la siguiente contraseña temporal:
+            </p>
             
-            <!-- Password Box -->
-            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${this.brandColors.warning};">
-                <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: ${this.brandColors.secondary}; text-transform: uppercase; letter-spacing: 0.5px;">
-                    🔐 Tu contraseña temporal
+            <!-- Contraseña Temporal Box -->
+            <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center; border: 2px dashed ${this.brandColors.primary};">
+                <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: ${this.brandColors.textSecondary}; text-transform: uppercase; letter-spacing: 1px;">
+                    Tu contraseña temporal
                 </p>
-                <p style="margin: 0; font-size: 28px; font-weight: 700; color: ${this.brandColors.secondary}; font-family: 'Courier New', monospace; letter-spacing: 2px;">
+                <p style="margin: 0; font-size: 24px; font-weight: 700; color: ${this.brandColors.primary}; font-family: 'Courier New', monospace; letter-spacing: 2px;">
                     ${password}
                 </p>
             </div>
             
-            <!-- Warning -->
-            <div style="background-color: #fef2f2; border-radius: 8px; padding: 16px; margin: 24px 0;">
-                <p style="margin: 0; font-size: 14px; color: #991b1b;">
-                    ⚠️ <strong>Importante:</strong> Por seguridad, deberás cambiar esta contraseña después de iniciar sesión por primera vez.
+            <div style="background-color: #fef3c7; border-radius: 8px; padding: 16px; margin: 24px 0; border-left: 4px solid #f59e0b;">
+                <p style="margin: 0; font-size: 14px; color: #92400e;">
+                    <strong>⚠️ Importante:</strong> Al iniciar sesión, se te pedirá que cambies esta contraseña temporal por una contraseña segura de tu elección.
                 </p>
             </div>
             
-            <!-- CTA Button -->
-            <div style="text-align: center; margin: 32px 0;">
-                <p style="margin: 0 0 16px 0; font-size: 14px; color: ${this.brandColors.textSecondary};">
-                    ¿Listo para empezar?
-                </p>
-                <a href="#" style="display: inline-block; background: linear-gradient(135deg, ${this.brandColors.primary} 0%, ${this.brandColors.primaryDark} 100%); color: ${this.brandColors.white}; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.4);">
-                    Iniciar Sesión
-                </a>
-            </div>
-            
-            <p style="margin: 24px 0 0 0; font-size: 14px; color: ${this.brandColors.textSecondary}; text-align: center;">
-                Si no solicitaste esta cuenta, puedes ignorar este correo.
+            <p style="margin: 24px 0 0 0; font-size: 14px; color: ${this.brandColors.textSecondary};">
+                <strong>Pasos a seguir:</strong>
             </p>
+            <ol style="margin: 8px 0 0 0; padding-left: 20px; color: ${this.brandColors.textSecondary}; font-size: 14px; line-height: 2;">
+                <li>Abre la aplicación CAIL</li>
+                <li>Selecciona "Empleador" e "Iniciar Sesión"</li>
+                <li>Ingresa tu correo y la contraseña temporal</li>
+                <li>Crea tu nueva contraseña segura</li>
+            </ol>
         `;
 
         const mailOptions = {
@@ -149,14 +204,13 @@ class EmailService {
                 await this.transporter.sendMail(mailOptions);
                 console.log(`✅ Temporary password email sent to: ${email}`);
             } catch (error) {
-                console.error('❌ Error sending email:', error);
-                throw new Error('Error enviando el correo electrónico');
+                console.error('❌ Error sending temporary password email:', error);
+                throw new Error('Error enviando el correo con contraseña temporal');
             }
         } else {
-            console.log('📧 [DEV] Email would be sent:', {
+            console.log('📧 [DEV] Temporary password email would be sent:', {
                 to: email,
-                subject: mailOptions.subject,
-                password: password // Solo en dev para debugging
+                password: password
             });
         }
     }
