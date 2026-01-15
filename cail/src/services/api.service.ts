@@ -1,9 +1,13 @@
+/**
+ * Servicio de API - Cliente HTTP para comunicación con microservicios
+ * 
+ * Actualizado para usar Firebase ID Tokens en lugar de JWT custom.
+ * Los tokens se obtienen automáticamente de Firebase Auth.
+ */
+
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from './config';
 import { ApiError } from '@/types/auth.types';
-
-const TOKEN_KEY = '@cail_auth_token';
 
 class ApiService {
     private usuariosClient: AxiosInstance;
@@ -25,12 +29,20 @@ class ApiService {
             },
         });
 
-        // Request interceptor - add auth token
+        // Request interceptor - obtener Firebase ID Token automáticamente
         client.interceptors.request.use(
             async (config) => {
-                const token = await AsyncStorage.getItem(TOKEN_KEY);
-                if (token) {
-                    config.headers.Authorization = `Bearer ${token}`;
+                try {
+                    // Importar dinámicamente para evitar dependencias circulares
+                    const { firebaseAuthService } = await import('./firebase.service');
+                    const token = await firebaseAuthService.getIdToken();
+
+                    if (token) {
+                        config.headers.Authorization = `Bearer ${token}`;
+                    }
+                } catch (error) {
+                    // Si no hay usuario autenticado, continuar sin token
+                    console.debug('No auth token available');
                 }
                 return config;
             },
@@ -41,6 +53,11 @@ class ApiService {
         client.interceptors.response.use(
             (response) => response,
             (error: AxiosError) => {
+                // LOG DETALLADO DEL ERROR DEL BACKEND
+                if (error.response?.data) {
+                    console.error('🔴 API Error Response Body:', JSON.stringify(error.response.data, null, 2));
+                }
+
                 const apiError: ApiError = {
                     status: error.response?.status || 500,
                     message: this.getErrorMessage(error),
@@ -61,14 +78,9 @@ class ApiService {
             return { client: this.ofertasClient, cleanUrl: url };
         }
         if (url.startsWith('/matching')) {
-            // El matchingClient tiene baseURL que ya incluye /matching
-            // Pero el backend tiene rutas montadas bajo /matching también
-            // Por lo tanto NO hacemos strip del prefijo - la URL queda como /matching/*
-            // Resultado: baseURL(/matching) + url(/matching/apply) = /matching/matching/apply
-            // Esto es correcto según la estructura del backend
             return { client: this.matchingClient, cleanUrl: url };
         }
-        // Default to usuarios for unknown paths (could be legacy or general)
+        // Default to usuarios for unknown paths
         return { client: this.usuariosClient, cleanUrl: url };
     }
 
@@ -114,23 +126,25 @@ class ApiService {
     }
 
     async postFormData<T>(url: string, formData: FormData): Promise<T> {
-        const token = await AsyncStorage.getItem(TOKEN_KEY);
+        // Obtener token de Firebase
+        const { firebaseAuthService } = await import('./firebase.service');
+        const token = await firebaseAuthService.getIdToken();
 
-        // URL directa de la Cloud Function (no usar el cliente axios para multipart)
+        // URL directa de la Cloud Function
         const CLOUD_FUNCTION_URL = 'https://us-central1-cail-backend-prod.cloudfunctions.net/usuarios';
 
-        // Usar fetch nativo para FormData - más confiable que axios en React Native
+        // Usar fetch nativo para FormData
         const response = await fetch(`${CLOUD_FUNCTION_URL}${url}`, {
             method: 'POST',
             body: formData,
             headers: {
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-                // NO establecer Content-Type - fetch lo hace automáticamente con el boundary
             },
         });
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+            console.error('🔴 API FormData Error:', JSON.stringify(errorData, null, 2)); // También para FormData
             throw {
                 status: response.status,
                 message: errorData.message || 'Error al subir archivo',
@@ -146,21 +160,25 @@ class ApiService {
         return response.data;
     }
 
-    // Token management
+    // =========================================
+    // DEPRECATED - Ya no se usan con Firebase Auth
+    // Mantenidos por compatibilidad temporal
+    // =========================================
+
+    /** @deprecated Firebase Auth maneja los tokens automáticamente */
     async saveToken(token: string): Promise<void> {
-        if (!token) {
-            console.warn('Attempted to save null/undefined token');
-            return;
-        }
-        await AsyncStorage.setItem(TOKEN_KEY, token);
+        console.warn('saveToken is deprecated. Firebase Auth handles tokens automatically.');
     }
 
+    /** @deprecated Use firebaseAuthService.getIdToken() instead */
     async getToken(): Promise<string | null> {
-        return await AsyncStorage.getItem(TOKEN_KEY);
+        const { firebaseAuthService } = await import('./firebase.service');
+        return await firebaseAuthService.getIdToken();
     }
 
+    /** @deprecated Use firebaseAuthService.logout() instead */
     async removeToken(): Promise<void> {
-        await AsyncStorage.removeItem(TOKEN_KEY);
+        console.warn('removeToken is deprecated. Use firebaseAuthService.logout() instead.');
     }
 }
 

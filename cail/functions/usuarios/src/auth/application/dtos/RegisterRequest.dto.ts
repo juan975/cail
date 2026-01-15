@@ -33,15 +33,21 @@ export interface EmployerProfileData {
 
 /**
  * DTO de solicitud de registro
+ * 
+ * Para CANDIDATOS: el frontend crea el usuario en Firebase Auth primero
+ *                  y envía el firebaseUid
+ * Para EMPLEADORES: el backend crea el usuario en Firebase Auth con
+ *                   contraseña temporal (password no se usa)
  */
 export interface RegisterRequestDto {
     email: string;
-    password: string;
+    password?: string; // Opcional - solo para compatibilidad, Firebase Auth lo maneja
     nombreCompleto: string;
     telefono?: string;
     tipoUsuario: TipoUsuario;
     candidateData?: CandidateProfileData;
     employerData?: EmployerProfileData;
+    firebaseUid?: string; // UID del usuario creado en Firebase Auth por el frontend
 }
 
 /**
@@ -53,4 +59,5 @@ export interface RegisterResponseDto {
     nombreCompleto: string;
     tipoUsuario: string;
     token: string;
+    needsPasswordChange?: boolean;
 }

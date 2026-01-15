@@ -3,7 +3,7 @@ import { Button } from '../../components/ui/Button';
 import { InputField } from '../../components/ui/InputField';
 import { LoadingSplash } from '../../components/ui/LoadingSplash';
 import { UserRole } from '../../types';
-import { authService } from '../../services/auth.service';
+import { authService, RoleMismatchError } from '../../services/auth.service';
 import { userService } from '../../services/user.service';
 
 interface LoginFormProps {
@@ -11,9 +11,10 @@ interface LoginFormProps {
   onSuccess: (data: any) => void;
   onBack: () => void;
   onSwitchToRegister: () => void;
+  onLoginStart?: () => void;
 }
 
-export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: LoginFormProps) {
+export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLoginStart }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,20 +31,18 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: Login
       return;
     }
 
+    // Notificar a App.tsx que estamos iniciando login 
+    // para que ignore onAuthStateChanged durante el proceso
+    onLoginStart?.();
+
     setLoading(true);
     setShowSplash(true);
     setSplashError(false);
     setSplashSuccess(false);
 
     try {
-      const response = await authService.login(email, password);
-      const backendRole = response.tipoUsuario === 'POSTULANTE' ? 'candidate' : 'employer';
-
-      if (backendRole !== role) {
-        setSplashErrorMessage('Credenciales inválidas');
-        setSplashError(true);
-        return;
-      }
+      // El servicio valida el rol y cierra sesión si no coincide
+      const response = await authService.login(email, password, role);
 
       let userData: any;
       try {
@@ -51,43 +50,50 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: Login
         userData =
           role === 'candidate'
             ? {
-                id: response.idCuenta,
-                name: profile.nombreCompleto || response.nombreCompleto,
-                email: profile.email || response.email,
-                progress: 0.5,
-              }
+              id: response.idCuenta,
+              name: profile.nombreCompleto || response.nombreCompleto,
+              email: profile.email || response.email,
+              progress: 0.5,
+            }
             : {
-                id: response.idCuenta,
-                company: profile.employerProfile?.nombreEmpresa || 'Empresa',
-                contactName: profile.employerProfile?.nombreContacto || response.nombreCompleto,
-                email: profile.email || response.email,
-                needsPasswordChange: response.needsPasswordChange || false,
-                isEmailVerified: true,
-              };
+              id: response.idCuenta,
+              company: profile.employerProfile?.nombreEmpresa || 'Empresa',
+              contactName: profile.employerProfile?.nombreContacto || response.nombreCompleto,
+              email: profile.email || response.email,
+              needsPasswordChange: response.needsPasswordChange || false,
+              isEmailVerified: true,
+            };
       } catch {
         userData =
           role === 'candidate'
             ? {
-                id: response.idCuenta,
-                name: response.nombreCompleto,
-                email: response.email,
-                progress: 0.5,
-              }
+              id: response.idCuenta,
+              name: response.nombreCompleto,
+              email: response.email,
+              progress: 0.5,
+            }
             : {
-                id: response.idCuenta,
-                company: 'Empresa',
-                contactName: response.nombreCompleto,
-                email: response.email,
-                needsPasswordChange: response.needsPasswordChange || false,
-                isEmailVerified: true,
-              };
+              id: response.idCuenta,
+              company: 'Empresa',
+              contactName: response.nombreCompleto,
+              email: response.email,
+              needsPasswordChange: response.needsPasswordChange || false,
+              isEmailVerified: true,
+            };
       }
 
       setPendingData(userData);
       setSplashSuccess(true);
     } catch (error: any) {
-      setSplashErrorMessage('Credenciales inválidas');
+      // Manejar error de rol incorrecto con mensaje específico
+      if (error instanceof RoleMismatchError) {
+        setSplashErrorMessage(error.message);
+      } else {
+        setSplashErrorMessage('Credenciales inválidas');
+      }
       setSplashError(true);
+    } finally {
+      setLoading(false);
     }
   };
 

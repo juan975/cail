@@ -32,9 +32,12 @@ export const errorHandler = (
 
     console.error('ERROR:', err);
 
+    // En producción idealmente no devolvemos el error crudo, 
+    // pero para depurar ESTE problema específico, lo necesitamos.
     return res.status(500).json({
         status: 'error',
-        message: 'Internal server error',
+        message: 'Internal server error: ' + (err.message || 'Unknown error'),
+        details: err.stack // Opcional: enviar stack trace si es crítico ver dónde falla
     });
 };
 

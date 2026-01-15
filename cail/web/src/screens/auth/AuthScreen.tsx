@@ -11,9 +11,10 @@ type AuthMode = 'select' | 'login' | 'register';
 interface AuthScreenProps {
   onAuthSuccess: (role: UserRole, data: any) => void;
   onShowTerms: () => void;
+  onLoginStart?: () => void;
 }
 
-export function AuthScreen({ onAuthSuccess, onShowTerms }: AuthScreenProps) {
+export function AuthScreen({ onAuthSuccess, onShowTerms, onLoginStart }: AuthScreenProps) {
   const [selectedRole, setSelectedRole] = useState<UserRole>('candidate');
   const [mode, setMode] = useState<AuthMode>('select');
 
@@ -125,6 +126,7 @@ export function AuthScreen({ onAuthSuccess, onShowTerms }: AuthScreenProps) {
               onSuccess={handleSuccess}
               onBack={() => setMode('select')}
               onSwitchToRegister={() => setMode('register')}
+              onLoginStart={onLoginStart}
             />
           )}
           {mode === 'register' && selectedRole === 'candidate' && (

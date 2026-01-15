@@ -46,11 +46,28 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
 
     setLoading(true);
     try {
+      // Primero hacer login con la contraseña temporal para establecer auth.currentUser
+      // Esto es necesario porque después del registro el usuario no está logueado
+      console.log('🔐 Logging in with temp password before changing...');
+      await authService.login(userData.email, tempPassword);
+
+      // Ahora cambiar la contraseña (auth.currentUser ya está establecido)
       await authService.changePassword(tempPassword, newPassword);
       setShowSplash(true);
       setSplashSuccess(true);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudo cambiar la contraseña');
+      console.error('❌ Password change error:', error);
+      let errorMessage = 'No se pudo cambiar la contraseña';
+
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        errorMessage = 'La contraseña temporal es incorrecta. Verifica el email recibido.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Demasiados intentos. Espera unos minutos e intenta de nuevo.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert('Error', errorMessage);
       setLoading(false);
     }
   };

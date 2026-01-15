@@ -19,13 +19,15 @@ export function LoadingSplash({ visible, success, error, message, onComplete }: 
 
   useEffect(() => {
     if (!shouldAutoClose || !onComplete) return;
-    timeoutRef.current = window.setTimeout(onComplete, 800);
+    // Error: 3 segundos para leer el mensaje, Éxito: 1.2 segundos
+    const duration = error ? 3000 : 1200;
+    timeoutRef.current = window.setTimeout(onComplete, duration);
     return () => {
       if (timeoutRef.current !== null) {
         window.clearTimeout(timeoutRef.current);
       }
     };
-  }, [shouldAutoClose, onComplete]);
+  }, [shouldAutoClose, onComplete, error]);
 
   return (
     <div

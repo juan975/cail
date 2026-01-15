@@ -145,7 +145,7 @@ export function LoadingSplash({
                 Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
                 Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
                 Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
-                Animated.delay(1500),
+                Animated.delay(3000), // 3 segundos para leer el mensaje de error
             ]).start(() => {
                 onErrorComplete?.();
             });

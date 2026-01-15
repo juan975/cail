@@ -478,16 +478,26 @@ export function CandidateProfileScreen() {
 
                     setUploadingCv(true);
                     const formData = new FormData();
-                    formData.append('cv', {
-                      uri: file.uri,
-                      name: file.name,
-                      type: 'application/pdf',
-                    } as any);
+
+                    // En web, DocumentPicker devuelve un 'file' property que es un File real
+                    // En móvil, necesitamos usar el objeto {uri, name, type}
+                    if ((file as any).file) {
+                      // Web: usar el File real
+                      formData.append('cv', (file as any).file);
+                    } else {
+                      // Móvil: usar objeto con uri
+                      formData.append('cv', {
+                        uri: file.uri,
+                        name: file.name,
+                        type: 'application/pdf',
+                      } as any);
+                    }
 
                     const response = await userService.uploadCV(formData);
                     setCvUrl(response.cvUrl);
                     Alert.alert('Éxito', 'CV subido correctamente');
                   } catch (error: any) {
+                    console.error('CV upload error:', error);
                     Alert.alert('Error', error.message || 'No se pudo subir el CV');
                   } finally {
                     setUploadingCv(false);
