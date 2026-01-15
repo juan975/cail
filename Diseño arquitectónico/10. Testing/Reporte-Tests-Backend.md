@@ -717,161 +717,21 @@ docker-compose restart wso2-apim
 
 ---
 
-## 10. Análisis SonarCloud
+## 10. Análisis SonarCloud (15/01/2026)
 
-### 10.1 Configuración (15/01/2026)
+**URL:** https://sonarcloud.io/project/overview?id=ErickGaona_cail  
+**Líneas analizadas:** 40,000 | **Security Hotspots:** 24
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    SONARCLOUD - ANÁLISIS ESTÁTICO DE CÓDIGO                │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  Proyecto: ErickGaona/cail (fork)                                          │
-│  URL: https://sonarcloud.io/project/overview?id=ErickGaona_cail            │
-│  Fecha configuración: 15 de Enero 2026                                     │
-│  Responsable: Erick Gaona                                                  │
-│                                                                             │
-│  RESULTADOS INICIALES:                                                      │
-│  ├── Líneas de código: 40,000                                              │
-│  ├── Issues totales: 6,017                                                 │
-│  ├── Security Hotspots: 24                                                 │
-│  ├── Vulnerabilidades: 1                                                   │
-│  └── Quality Gate: FAILED (0% hotspots revisados)                          │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+### 10.1 Vulnerabilidades Corregidas
 
-### 10.2 Security Hotspots Encontrados
+| Problema | Archivo | Solución |
+|----------|---------|----------|
+| ReDoS (regex vulnerable) | `Email.ts` (x2) | Agregado límite de 254 chars antes del regex |
+| Math.random() inseguro | `password-generator.util.ts` | Cambiado a `crypto.randomBytes()` |
 
-| # | Categoría | Descripción | Archivo | Acción | Estado |
-|---|-----------|-------------|---------|--------|--------|
-| 1-9 | Authentication | Hard-coded passwords | `tests/*.test.ts` | Safe (son tests) | ✅ Revisado |
-| 10-12 | DoS (ReDoS) | Regex vulnerable a backtracking | `Email.ts` (x2) | Fixed | ✅ Arreglado |
-| 13 | Cryptography | Math.random() inseguro | `password-generator.util.ts` | Fixed | ✅ Arreglado |
-| 14+ | Permission | Revisar permisos | Pendiente revisar | - | ⏳ Pendiente |
+### 10.2 Falsos Positivos (archivos de test)
 
-### 10.3 Fixes Aplicados
-
-#### Fix 1: Protección contra ReDoS en Email.ts
-
-**Problema:** El regex de validación de email era vulnerable a ataques de denegación de servicio (ReDoS).
-
-**Archivos afectados:**
-- `cail/backend/src/shared/domain/value-objects/Email.ts`
-- `cail/functions/usuarios/src/shared/domain/value-objects/Email.ts`
-
-**Solución aplicada:**
-```typescript
-private validate(email: string): void {
-    // Protección contra ReDoS - RFC 5321 limita emails a 254 caracteres
-    if (!email || email.length > 254) {
-        throw new Error('Invalid email format');
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        throw new Error('Invalid email format');
-    }
-}
-```
-
-**Por qué funciona:**
-- Limita el input a 254 caracteres (máximo según RFC 5321)
-- El regex no puede ejecutarse con strings infinitamente largas
-- Previene ataques de denegación de servicio
-
----
-
-#### Fix 2: Generador de contraseñas criptográficamente seguro
-
-**Problema:** Se usaba `Math.random()` para generar contraseñas, lo cual NO es criptográficamente seguro.
-
-**Archivo afectado:**
-- `cail/functions/usuarios/src/shared/utils/password-generator.util.ts`
-
-**Antes (INSEGURO):**
-```typescript
-// ❌ Math.random() es predecible y NO seguro para contraseñas
-retVal += charset.charAt(Math.floor(Math.random() * n));
-```
-
-**Después (SEGURO):**
-```typescript
-import crypto from 'crypto';
-
-// ✅ crypto.randomBytes() es criptográficamente seguro
-const randomBytes = crypto.randomBytes(length);
-retVal += charset.charAt(randomBytes[i] % charset.length);
-```
-
-**Por qué es importante:**
-- `Math.random()` usa un generador pseudoaleatorio predecible
-- Un atacante podría predecir las contraseñas generadas
-- `crypto.randomBytes()` usa el generador de números aleatorios del sistema operativo
-- Las contraseñas generadas son verdaderamente impredecibles
-
-### 10.4 Hotspots Marcados como Safe (Falsos Positivos)
-
-Los siguientes hotspots son **falsos positivos** porque están en archivos de TEST:
-
-| Archivo | Razón por la que es Safe |
-|---------|--------------------------|
-| `usuarios/tests/integration.test.ts` | Contraseñas de prueba necesarias para tests |
-| `usuarios/tests/security.test.ts` | Tokens de prueba para tests de seguridad |
-| `ofertas/tests/integration.test.ts` | Credenciales de test |
-| `matching/tests/security.test.ts` | JWT de prueba para tests |
-| `setup.env.ts` (x3) | Variables de entorno de test |
-
-**Justificación:** Las contraseñas y secrets en archivos de test son necesarias para ejecutar pruebas automatizadas y NO se usan en producción.
-
-### 10.5 Calificaciones SonarCloud
-
-| Métrica | Calificación | Descripción |
-|---------|--------------|-------------|
-| Security | C | 1 vulnerabilidad (arreglándose) |
-| Reliability | C | 2,900 bugs potenciales |
-| Maintainability | A | Buena mantenibilidad |
-| Hotspots Reviewed | E → A | 0% → 100% (en progreso) |
-| Duplications | 19.1% | Código duplicado |
-
-### 10.6 Plan de Acción
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    PLAN DE CORRECCIÓN SONARCLOUD                           │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  PRIORIDAD ALTA (Seguridad):                                               │
-│  ├── ✅ Fix ReDoS en Email.ts (2 archivos)                                  │
-│  ├── ⏳ Revisar Permission hotspot                                          │
-│  └── ⏳ Marcar tests como Safe                                              │
-│                                                                             │
-│  PRIORIDAD MEDIA (Reliability):                                             │
-│  ├── ⏳ Revisar los 19 issues High                                          │
-│  └── ⏳ Corregir bugs potenciales críticos                                  │
-│                                                                             │
-│  PRIORIDAD BAJA (Maintainability):                                          │
-│  └── ⏳ Reducir código duplicado                                            │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 10.7 Herramientas Configuradas
-
-| Herramienta | Ubicación | Función |
-|-------------|-----------|---------|
-| SonarCloud | sonarcloud.io | Análisis en la nube (automático en cada push) |
-| SonarLint | Extension Cursor/VSCode | Análisis en tiempo real mientras programas |
-| sonar-project.properties | `/cail/` | Configuración del proyecto |
-
-### 10.8 Comandos Útiles
-
-```bash
-# Ver resultados en SonarCloud
-# https://sonarcloud.io/project/overview?id=ErickGaona_cail
-
-# El análisis se ejecuta automáticamente en cada push
-git push origin ErickGaona  # → Trigger análisis SonarCloud
-```
+Los hotspots de "hard-coded passwords" en archivos `tests/*.ts` son **Safe** porque son credenciales de prueba necesarias para tests automatizados.
 
 ---
 
