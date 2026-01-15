@@ -28,4 +28,9 @@ export const getFirestore = (): admin.firestore.Firestore => {
     return admin.firestore();
 };
 
+export const getAuth = (): admin.auth.Auth => {
+    if (!initialized && admin.apps.length === 0) initializeFirebase();
+    return admin.auth();
+};
+
 export default admin;
