@@ -1,123 +1,258 @@
-import { Postulante, Oferta, MatchResult } from '../domain/types';
+// src/matching/services/matching.service.ts
+// Servicio de Matching con Clean Architecture y scoring completo
+
+import {
+    IMatchingRepository,
+    IPostulacionRepository,
+    ICatalogoRepository,
+    IEmbeddingProvider,
+    Postulante,
+    Oferta,
+    MatchResult,
+    Postulacion,
+    OfertaNoEncontradaError,
+    CatalogoInvalidoError,
+    PostulacionDuplicadaError,
+    LimitePostulacionesError
+} from '../domain/types';
 
 /**
- * Servicio de Matching
- * Implementa algoritmos de scoring para emparejar candidatos con ofertas
+ * Configuración del algoritmo de scoring
+ * Pesos basados en especificación CU08
+ */
+const SCORING_WEIGHTS = {
+    SIMILITUD_VECTORIAL: 0.40,      // 40% - Similaridad semántica
+    HABILIDADES_OBLIGATORIAS: 0.30, // 30% - Skills requeridas
+    HABILIDADES_DESEABLES: 0.15,    // 15% - Skills deseables
+    NIVEL_JERARQUICO: 0.15          // 15% - Match de nivel
+};
+
+const MAX_POSTULACIONES_DIA = 10;
+
+/**
+ * Servicio de Matching - Orquesta la lógica de negocio
+ * Sigue Clean Architecture: sin dependencias directas de infraestructura
  */
 export class MatchingService {
+    constructor(
+        private matchingRepository: IMatchingRepository,
+        private postulacionRepository: IPostulacionRepository,
+        private catalogoRepository: ICatalogoRepository,
+        private embeddingProvider: IEmbeddingProvider
+    ) { }
 
     /**
-     * Normaliza texto para comparaciones (minúsculas, sin tildes)
+     * Caso de Uso: Generar recomendaciones de candidatos para una vacante
+     * Implementa el algoritmo de matching híbrido con scoring ponderado
      */
-    private normalize(text: string): string {
-        return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    async executeMatching(offerId: string): Promise<MatchResult[]> {
+        // 1. Obtener y validar oferta
+        const oferta = await this.matchingRepository.getOferta(offerId);
+        if (!oferta) {
+            throw new OfertaNoEncontradaError(offerId);
+        }
+
+        // 2. Validar catálogos
+        await this.validarCatalogos(oferta.id_sector_industrial, oferta.id_nivel_requerido);
+
+        // 3. Generar vector semántico de la oferta
+        const textoParaVector = this.construirTextoOferta(oferta);
+        const vector = await this.embeddingProvider.generateEmbedding(textoParaVector);
+
+        // 4. Búsqueda híbrida: filtro duro + KNN vectorial
+        const candidatos = await this.matchingRepository.buscarCandidatosSimilares(
+            vector,
+            oferta.id_sector_industrial,
+            20 // Traer más para luego rankear
+        );
+
+        // 5. Calcular scoring completo y rankear
+        const resultados = candidatos.map(candidato =>
+            this.calcularScoreCompleto(candidato, oferta)
+        );
+
+        // 6. Ordenar por score descendente y limitar
+        return resultados
+            .sort((a, b) => b.match_score - a.match_score)
+            .slice(0, 10);
     }
 
     /**
-     * Calcula el score de compatibilidad entre un postulante y una oferta
-     * Score máximo: 100 puntos
+     * Caso de Uso: Postular a una oferta
+     * Incluye validaciones de duplicados y límites diarios
      */
-    public calculateMatch(postulante: Postulante, oferta: Oferta): MatchResult {
-        let scoreHabilidades = 0; // Max 40
-        let scoreExperiencia = 0; // Max 30
-        let scoreLogistica = 0;   // Max 20
-        let scoreFormacion = 0;   // Max 10
-
-        // 1. HABILIDADES Y COMPETENCIAS (40 pts)
-
-        // A. Habilidades Técnicas vs Descripción (20 pts)
-        const descNormalizada = this.normalize(oferta.descripcion);
-        let skillsFound = 0;
-        if (postulante.habilidades_tecnicas.length > 0) {
-            postulante.habilidades_tecnicas.forEach(skill => {
-                if (descNormalizada.includes(this.normalize(skill))) {
-                    skillsFound++;
-                }
-            });
-            const ratio = skillsFound / Math.max(1, postulante.habilidades_tecnicas.length);
-            scoreHabilidades += Math.min(20, ratio * 20 + (skillsFound * 2));
+    async aplicarAOferta(
+        idPostulante: string,
+        idOferta: string
+    ): Promise<{ postulacionId: string; mensaje: string }> {
+        // 1. Verificar que la oferta existe
+        const oferta = await this.matchingRepository.getOferta(idOferta);
+        if (!oferta) {
+            throw new OfertaNoEncontradaError(idOferta);
         }
 
-        // B. Habilidades Blandas vs Competencias Req (10 pts)
-        let softSkillsMatch = 0;
-        oferta.competencias_requeridas.forEach(req => {
-            if (postulante.competencias.some(c => this.normalize(c) === this.normalize(req))) {
-                softSkillsMatch++;
-            }
-        });
-        if (oferta.competencias_requeridas.length > 0) {
-            scoreHabilidades += (softSkillsMatch / oferta.competencias_requeridas.length) * 10;
-        }
-
-        // C. Competencias vs Descripción (10 pts)
-        let compInDesc = 0;
-        postulante.competencias.forEach(comp => {
-            if (descNormalizada.includes(this.normalize(comp))) compInDesc++;
-        });
-        if (compInDesc > 0) scoreHabilidades += 10;
-
-
-        // 2. EXPERIENCIA (30 pts)
-
-        // A. Título Puesto vs Experiencia Previa (15 pts)
-        const tituloOferta = this.normalize(oferta.titulo);
-        const tieneExperienciaSimilar = postulante.experiencia.some(exp =>
-            tituloOferta.includes(this.normalize(exp.cargo)) ||
-            this.normalize(exp.cargo).includes(tituloOferta)
+        // 2. Verificar postulación duplicada
+        const yaPostulo = await this.postulacionRepository.existePostulacion(
+            idPostulante,
+            idOferta
         );
-        if (tieneExperienciaSimilar) scoreExperiencia += 15;
-
-        // B. Responsabilidades vs Experiencia Requerida (15 pts)
-        const expReq = this.normalize(oferta.experiencia_requerida);
-        const keywordsMatch = postulante.experiencia.some(exp => {
-            const resp = this.normalize(exp.descripcion_responsabilidades);
-            return resp.split(" ").some(word => word.length > 4 && expReq.includes(word));
-        });
-        if (keywordsMatch) scoreExperiencia += 15;
-
-
-        // 3. LOGÍSTICA (20 pts)
-
-        // A. Ciudad (10 pts)
-        if (this.normalize(postulante.ciudad) === this.normalize(oferta.ciudad)) {
-            scoreLogistica += 10;
+        if (yaPostulo) {
+            throw new PostulacionDuplicadaError();
         }
 
-        // B. Modalidad (10 pts)
-        if (this.normalize(postulante.modalidad_preferida) === this.normalize(oferta.modalidad)) {
-            scoreLogistica += 10;
-        }
-
-
-        // 4. FORMACIÓN (10 pts)
-        const formacionReq = this.normalize(oferta.formacion_requerida);
-        const tieneTitulo = postulante.formacion.some(f =>
-            this.normalize(f.titulo_carrera).includes(formacionReq) ||
-            formacionReq.includes(this.normalize(f.titulo_carrera))
+        // 3. Verificar límite de postulaciones diarias
+        const postulacionesHoy = await this.postulacionRepository.contarPostulacionesHoy(
+            idPostulante
         );
-        if (tieneTitulo) scoreFormacion += 10;
+        if (postulacionesHoy >= MAX_POSTULACIONES_DIA) {
+            throw new LimitePostulacionesError();
+        }
 
+        // 4. Crear postulación
+        const nuevaPostulacion: Omit<Postulacion, 'id'> = {
+            id_postulante: idPostulante,
+            id_oferta: idOferta,
+            fecha_postulacion: new Date(),
+            estado: 'PENDIENTE'
+        };
 
-        // TOTAL
-        const totalScore = Math.min(100, scoreHabilidades + scoreExperiencia + scoreLogistica + scoreFormacion);
+        const postulacionId = await this.postulacionRepository.crear(nuevaPostulacion);
 
         return {
-            postulante,
-            score: Math.round(totalScore),
-            detalles: {
-                habilidades: Math.round(scoreHabilidades),
-                experiencia: Math.round(scoreExperiencia),
-                logistica: Math.round(scoreLogistica),
-                formacion: Math.round(scoreFormacion)
+            postulacionId,
+            mensaje: 'Postulación registrada exitosamente'
+        };
+    }
+
+    /**
+     * Caso de Uso: Obtener postulaciones del candidato
+     */
+    async obtenerMisPostulaciones(idPostulante: string): Promise<Postulacion[]> {
+        return this.postulacionRepository.getByPostulante(idPostulante);
+    }
+
+    /**
+     * Caso de Uso: Obtener postulaciones de una oferta (para reclutador)
+     */
+    async obtenerPostulacionesOferta(idOferta: string): Promise<Postulacion[]> {
+        // Verificar que la oferta existe
+        const oferta = await this.matchingRepository.getOferta(idOferta);
+        if (!oferta) {
+            throw new OfertaNoEncontradaError(idOferta);
+        }
+
+        return this.postulacionRepository.getByOferta(idOferta);
+    }
+
+    // ============================================
+    // MÉTODOS PRIVADOS
+    // ============================================
+
+    /**
+     * Valida que los IDs de catálogo sean válidos
+     */
+    private async validarCatalogos(sectorId: string, nivelId: string): Promise<void> {
+        const [sectorValido, nivelValido] = await Promise.all([
+            this.catalogoRepository.existeSector(sectorId),
+            this.catalogoRepository.existeNivel(nivelId)
+        ]);
+
+        if (!sectorValido) {
+            throw new CatalogoInvalidoError('SECTOR_INDUSTRIAL', sectorId);
+        }
+        if (!nivelValido) {
+            throw new CatalogoInvalidoError('NIVEL_JERARQUICO', nivelId);
+        }
+    }
+
+    /**
+     * Construye texto para vectorización incluyendo habilidades
+     */
+    private construirTextoOferta(oferta: Oferta): string {
+        const partes = [oferta.titulo, oferta.descripcion];
+
+        if (oferta.habilidades_obligatorias) {
+            const nombresObligatorias = oferta.habilidades_obligatorias.map(h => h.nombre);
+            partes.push(`Habilidades requeridas: ${nombresObligatorias.join(', ')}`);
+        }
+
+        if (oferta.habilidades_deseables) {
+            const nombresDeseables = oferta.habilidades_deseables.map(h => h.nombre);
+            partes.push(`Habilidades deseables: ${nombresDeseables.join(', ')}`);
+        }
+
+        return partes.join(' ');
+    }
+
+    /**
+     * Calcula el score completo con todos los criterios ponderados
+     */
+    private calcularScoreCompleto(candidato: Postulante, oferta: Oferta): MatchResult {
+        // Score de habilidades obligatorias
+        const scoreObligatorias = this.calcularScoreHabilidades(
+            candidato.habilidades_tecnicas,
+            oferta.habilidades_obligatorias || []
+        );
+
+        // Score de habilidades deseables
+        const scoreDeseables = this.calcularScoreHabilidades(
+            candidato.habilidades_tecnicas,
+            oferta.habilidades_deseables || []
+        );
+
+        // Score de nivel jerárquico
+        const scoreNivel = candidato.id_nivel_actual === oferta.id_nivel_requerido ? 1.0 : 0.5;
+
+        // Score de similitud vectorial (implícito en el orden de KNN, normalizamos a 0.8)
+        const scoreSimilitud = 0.8; // Base score por estar en top KNN
+
+        // Cálculo ponderado final
+        const matchScore =
+            (scoreSimilitud * SCORING_WEIGHTS.SIMILITUD_VECTORIAL) +
+            (scoreObligatorias * SCORING_WEIGHTS.HABILIDADES_OBLIGATORIAS) +
+            (scoreDeseables * SCORING_WEIGHTS.HABILIDADES_DESEABLES) +
+            (scoreNivel * SCORING_WEIGHTS.NIVEL_JERARQUICO);
+
+        return {
+            postulante: candidato,
+            match_score: Math.round(matchScore * 100) / 100, // Redondear a 2 decimales
+            score_detalle: {
+                similitud_vectorial: scoreSimilitud,
+                habilidades_obligatorias: scoreObligatorias,
+                habilidades_deseables: scoreDeseables,
+                nivel_jerarquico: scoreNivel
             }
         };
     }
 
     /**
-     * Ordena candidatos por score de compatibilidad
+     * Calcula score de coincidencia de habilidades
      */
-    public rankCandidates(postulantes: Postulante[], oferta: Oferta): MatchResult[] {
-        const results = postulantes.map(p => this.calculateMatch(p, oferta));
-        return results.sort((a, b) => b.score - a.score);
+    private calcularScoreHabilidades(
+        habilidadesCandidato: string[],
+        habilidadesOferta: { nombre: string; peso: number }[]
+    ): number {
+        if (habilidadesOferta.length === 0) {
+            return 1.0; // Si no hay requisitos, score perfecto
+        }
+
+        const habilidadesCandidatoLower = habilidadesCandidato.map(h => h.toLowerCase());
+        let pesoTotal = 0;
+        let pesoCoincidencias = 0;
+
+        for (const habilidad of habilidadesOferta) {
+            pesoTotal += habilidad.peso;
+
+            const coincide = habilidadesCandidatoLower.some(hc =>
+                hc.includes(habilidad.nombre.toLowerCase()) ||
+                habilidad.nombre.toLowerCase().includes(hc)
+            );
+
+            if (coincide) {
+                pesoCoincidencias += habilidad.peso;
+            }
+        }
+
+        return pesoTotal > 0 ? pesoCoincidencias / pesoTotal : 0;
     }
 }

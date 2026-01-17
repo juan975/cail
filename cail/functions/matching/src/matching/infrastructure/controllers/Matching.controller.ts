@@ -1,157 +1,253 @@
-import { Response } from 'express';
-import axios from 'axios';
-import { MatchingService } from '../../services/matching.service';
-import { FirestoreAplicacionRepository } from '../repositories/FirestoreAplicacionRepository';
-import { AuthRequest } from '../../../shared/middleware/auth.middleware';
-import { ApiResponse } from '../../../shared/utils/response.util';
-import { asyncHandler, AppError } from '../../../shared/middleware/error.middleware';
-import { config } from '../../../config/env.config';
-import { Postulante, Oferta, Aplicacion } from '../../domain/types';
+// src/matching/infrastructure/controllers/Matching.controller.ts
+// Controladores de Matching con manejo de errores y tipado estricto
 
-const matchingService = new MatchingService();
-const aplicacionRepository = new FirestoreAplicacionRepository();
+import { Request, Response, NextFunction } from 'express';
+import { MatchingService } from '../../services/matching.service';
+import { AuthRequest } from '../../../shared/middleware/auth.middleware';
+import { AppError, asyncHandler } from '../../../shared/middleware/error.middleware';
+import {
+    DomainError,
+    OfertaNoEncontradaError,
+    PostulacionDuplicadaError,
+    LimitePostulacionesError,
+    CatalogoInvalidoError
+} from '../../domain/types';
+
+/**
+ * Factory para crear el servicio de matching con todas las dependencias
+ */
+let matchingServiceInstance: MatchingService | null = null;
+
+export const getMatchingService = (): MatchingService => {
+    if (!matchingServiceInstance) {
+        // Lazy initialization - será configurado en index.ts
+        throw new AppError(500, 'MatchingService no inicializado');
+    }
+    return matchingServiceInstance;
+};
+
+export const setMatchingService = (service: MatchingService): void => {
+    matchingServiceInstance = service;
+};
+
+/**
+ * Mapeo de errores de dominio a respuestas HTTP
+ */
+const handleDomainError = (error: unknown, res: Response): Response => {
+    if (error instanceof DomainError) {
+        return res.status(error.statusCode).json({
+            success: false,
+            code: error.code,
+            message: error.message
+        });
+    }
+
+    console.error('Error no controlado:', error);
+    return res.status(500).json({
+        success: false,
+        code: 'INTERNAL_ERROR',
+        message: 'Error interno del servidor'
+    });
+};
+
+// ============================================
+// CONTROLADORES EXPORTADOS
+// ============================================
 
 /**
  * GET /matching/oferta/:idOferta
  * Obtiene candidatos rankeados para una oferta
+ * Acceso: RECLUTADOR, ADMIN
  */
-export const getCandidatesForOffer = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { idOferta } = req.params;
+export const getCandidatesForOffer = asyncHandler(
+    async (req: AuthRequest, res: Response): Promise<Response> => {
+        const { idOferta } = req.params;
 
-    // Obtener la oferta desde el servicio de ofertas
-    let oferta: Oferta;
-    try {
-        const ofertaResponse = await axios.get(`${config.services.ofertas}/offers/${idOferta}`);
-        oferta = ofertaResponse.data.data;
-    } catch (error) {
-        throw new AppError(404, 'Offer not found');
-    }
-
-    // Por ahora, usar datos mock para postulantes
-    // TODO: Obtener postulantes reales desde el servicio de usuarios
-    const mockPostulantes: Postulante[] = [
-        {
-            idPostulante: 'post_001',
-            nombreCompleto: 'Juan Pérez',
-            email: 'juan@email.com',
-            ciudad: oferta.ciudad,
-            modalidad_preferida: oferta.modalidad,
-            habilidades_tecnicas: ['JavaScript', 'React', 'Node.js'],
-            competencias: ['Trabajo en equipo', 'Comunicación'],
-            experiencia: [{
-                empresa: 'Tech Corp',
-                cargo: oferta.titulo,
-                fechaInicio: '2020-01-01',
-                descripcion_responsabilidades: 'Desarrollo de aplicaciones web'
-            }],
-            formacion: [{
-                institucion: 'Universidad',
-                titulo_carrera: 'Ingeniería de Software',
-                fechaInicio: '2015-01-01',
-                estado: 'COMPLETADO'
-            }]
-        },
-        {
-            idPostulante: 'post_002',
-            nombreCompleto: 'María García',
-            email: 'maria@email.com',
-            ciudad: 'Otra Ciudad',
-            modalidad_preferida: 'Remoto',
-            habilidades_tecnicas: ['Python', 'Django'],
-            competencias: ['Liderazgo'],
-            experiencia: [],
-            formacion: [{
-                institucion: 'Instituto',
-                titulo_carrera: 'Técnico',
-                fechaInicio: '2018-01-01',
-                estado: 'COMPLETADO'
-            }]
+        if (!idOferta) {
+            return res.status(400).json({
+                success: false,
+                message: 'El parámetro idOferta es requerido'
+            });
         }
-    ];
 
-    const rankedCandidates = matchingService.rankCandidates(mockPostulantes, oferta);
+        try {
+            const service = getMatchingService();
+            const resultados = await service.executeMatching(idOferta);
 
-    return ApiResponse.success(res, {
-        oferta: {
-            idOferta: oferta.idOferta,
-            titulo: oferta.titulo,
-            empresa: oferta.empresa
-        },
-        candidatos: rankedCandidates.map(r => ({
-            postulante: {
-                id: r.postulante.idPostulante,
-                nombre: r.postulante.nombreCompleto,
-                email: r.postulante.email
-            },
-            score: r.score,
-            detalles: r.detalles
-        }))
-    });
-});
+            return res.status(200).json({
+                success: true,
+                data: resultados,
+                meta: {
+                    total: resultados.length,
+                    ofertaId: idOferta
+                }
+            });
+        } catch (error) {
+            return handleDomainError(error, res);
+        }
+    }
+);
 
 /**
  * POST /matching/apply
- * Aplicar a una oferta
+ * Permite a un candidato aplicar a una oferta
+ * Acceso: CANDIDATO
  */
-export const applyToOffer = asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!req.user) {
-        throw new AppError(401, 'Unauthorized');
+export const applyToOffer = asyncHandler(
+    async (req: AuthRequest, res: Response): Promise<Response> => {
+        // Validar autenticación
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'No autenticado'
+            });
+        }
+
+        // Validar rol
+        if (req.user.tipoUsuario !== 'CANDIDATO' && req.user.tipoUsuario !== 'POSTULANTE') {
+            return res.status(403).json({
+                success: false,
+                message: 'Solo los candidatos pueden postular a ofertas'
+            });
+        }
+
+        const { idOferta } = req.body;
+
+        if (!idOferta) {
+            return res.status(400).json({
+                success: false,
+                message: 'El campo idOferta es requerido'
+            });
+        }
+
+        try {
+            const service = getMatchingService();
+            const resultado = await service.aplicarAOferta(req.user.uid, idOferta);
+
+            return res.status(201).json({
+                success: true,
+                data: resultado
+            });
+        } catch (error) {
+            return handleDomainError(error, res);
+        }
     }
-
-    if (req.user.tipoUsuario !== 'POSTULANTE') {
-        throw new AppError(403, 'Only candidates can apply to offers');
-    }
-
-    const { idOferta } = req.body;
-
-    if (!idOferta) {
-        throw new AppError(400, 'idOferta is required');
-    }
-
-    // Verificar si ya aplicó
-    const alreadyApplied = await aplicacionRepository.exists(req.user.uid, idOferta);
-    if (alreadyApplied) {
-        throw new AppError(409, 'Already applied to this offer');
-    }
-
-    const aplicacion: Aplicacion = {
-        idAplicacion: `app_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        idPostulante: req.user.uid,
-        idOferta,
-        fechaAplicacion: new Date(),
-        estado: 'PENDIENTE'
-    };
-
-    await aplicacionRepository.save(aplicacion);
-
-    return ApiResponse.created(res, aplicacion, 'Application submitted successfully');
-});
+);
 
 /**
- * GET /matching/applications
- * Listar aplicaciones del usuario autenticado
+ * GET /matching/my-applications
+ * Obtiene las postulaciones del candidato autenticado
+ * Acceso: CANDIDATO
  */
-export const getMyApplications = asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!req.user) {
-        throw new AppError(401, 'Unauthorized');
+export const getMyApplications = asyncHandler(
+    async (req: AuthRequest, res: Response): Promise<Response> => {
+        // Validar autenticación
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'No autenticado'
+            });
+        }
+
+        // Validar rol
+        if (req.user.tipoUsuario !== 'CANDIDATO' && req.user.tipoUsuario !== 'POSTULANTE') {
+            return res.status(403).json({
+                success: false,
+                message: 'Solo los candidatos pueden ver sus postulaciones'
+            });
+        }
+
+        try {
+            const service = getMatchingService();
+            const postulaciones = await service.obtenerMisPostulaciones(req.user.uid);
+
+            return res.status(200).json({
+                success: true,
+                data: postulaciones,
+                meta: {
+                    total: postulaciones.length
+                }
+            });
+        } catch (error) {
+            return handleDomainError(error, res);
+        }
     }
+);
 
-    const aplicaciones = await aplicacionRepository.findByPostulante(req.user.uid);
-
-    return ApiResponse.success(res, aplicaciones);
-});
+/**
+ * GET /matching/applications (alias para my-applications, para compatibilidad)
+ * Acceso: CANDIDATO
+ */
+export const getApplications = getMyApplications;
 
 /**
  * GET /matching/oferta/:idOferta/applications
- * Listar aplicaciones para una oferta (solo reclutadores)
+ * Lista las postulaciones recibidas para una oferta
+ * Acceso: RECLUTADOR, ADMIN
  */
-export const getOfferApplications = asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!req.user || req.user.tipoUsuario !== 'RECLUTADOR') {
-        throw new AppError(403, 'Only recruiters can view offer applications');
+export const getOfferApplications = asyncHandler(
+    async (req: AuthRequest, res: Response): Promise<Response> => {
+        // Validar autenticación
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'No autenticado'
+            });
+        }
+
+        // Validar rol
+        if (req.user.tipoUsuario !== 'RECLUTADOR' && req.user.tipoUsuario !== 'ADMIN') {
+            return res.status(403).json({
+                success: false,
+                message: 'Solo reclutadores y administradores pueden ver postulaciones de ofertas'
+            });
+        }
+
+        const { idOferta } = req.params;
+
+        if (!idOferta) {
+            return res.status(400).json({
+                success: false,
+                message: 'El parámetro idOferta es requerido'
+            });
+        }
+
+        try {
+            const service = getMatchingService();
+            const postulaciones = await service.obtenerPostulacionesOferta(idOferta);
+
+            return res.status(200).json({
+                success: true,
+                data: postulaciones,
+                meta: {
+                    total: postulaciones.length,
+                    ofertaId: idOferta
+                }
+            });
+        } catch (error) {
+            return handleDomainError(error, res);
+        }
+    }
+);
+
+// ============================================
+// CLASE ALTERNATIVA (Para compatibilidad con código existente)
+// ============================================
+
+export class MatchingController {
+    constructor(private matchingService: MatchingService) {
+        // Registrar el servicio globalmente
+        setMatchingService(matchingService);
     }
 
-    const { idOferta } = req.params;
-    const aplicaciones = await aplicacionRepository.findByOferta(idOferta);
+    async getRecommendations(req: Request, res: Response): Promise<Response> {
+        try {
+            const { offerId } = req.params;
+            const results = await this.matchingService.executeMatching(offerId);
 
-    return ApiResponse.success(res, aplicaciones);
-});
+            return res.status(200).json({ success: true, data: results });
+        } catch (error) {
+            return handleDomainError(error, res);
+        }
+    }
+}
