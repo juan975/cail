@@ -46,7 +46,7 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
     setShowSplash(true);
 
     try {
-      await authService.changePassword(tempPassword, newPassword);
+      await authService.changePassword(tempPassword, newPassword, userData.email);
       setSplashSuccess(true);
     } catch (error: any) {
       setShowSplash(false);

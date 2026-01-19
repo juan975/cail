@@ -1,7 +1,19 @@
+/**
+ * Servicio de Autenticación para Web
+ * 
+ * Sistema unificado usando Firebase Auth para todos los usuarios.
+ * 
+ * Flujos:
+ *   - Login: Firebase Auth -> Obtener perfil del backend
+ *   - Registro POSTULANTE: Firebase Auth (frontend) -> Crear perfil en backend
+ *   - Registro RECLUTADOR: Backend crea en Firebase Auth + envía email con temp password
+ *   - Cambio de contraseña: Backend (usa Firebase Admin para actualizar)
+ */
+
 import { apiService } from './api.service';
 import { API_CONFIG } from './config';
+import { firebaseAuthService } from './firebase.service';
 import {
-    LoginRequest,
     LoginResponse,
     RegisterRequest,
     RegisterResponse,
@@ -9,66 +21,179 @@ import {
 
 class AuthService {
     /**
-     * Login user
+     * Login de usuario usando Firebase Auth
+     * Works for both candidates (POSTULANTE) and employers (RECLUTADOR)
      */
     async login(email: string, password: string): Promise<LoginResponse> {
-        const request: LoginRequest = { email, password };
-        const response = await apiService.post<{ status: string; message: string; data: LoginResponse }>(
-            API_CONFIG.ENDPOINTS.LOGIN,
-            request
-        );
+        // 1. Autenticar con Firebase Auth
+        const { user, idToken } = await firebaseAuthService.login(email, password);
 
-        // Save token from data wrapper
-        await apiService.saveToken(response.data.token);
+        // 2. Guardar token para las peticiones al API
+        await apiService.saveToken(idToken);
 
-        return response.data;
+        try {
+            // 3. Obtener perfil del backend
+            const profileResponse = await apiService.get<{ status: string; data: any }>('/users/profile');
+
+            return {
+                idCuenta: user.uid,
+                email: user.email || email,
+                nombreCompleto: profileResponse.data.nombreCompleto || 'Usuario',
+                tipoUsuario: profileResponse.data.tipoUsuario || 'POSTULANTE',
+                token: idToken,
+                needsPasswordChange: profileResponse.data.needsPasswordChange || false,
+            };
+        } catch (profileError) {
+            // Si falla obtener el perfil, usar datos básicos de Firebase
+            console.warn('Could not fetch profile, using Firebase data:', profileError);
+            return {
+                idCuenta: user.uid,
+                email: user.email || email,
+                nombreCompleto: 'Usuario',
+                tipoUsuario: 'POSTULANTE',
+                token: idToken,
+            };
+        }
     }
 
     /**
-     * Register new user
+     * Registro de nuevo usuario
+     * - POSTULANTE: Crea en Firebase Auth desde frontend, luego crea perfil en backend
+     * - RECLUTADOR: Backend crea todo (Firebase Auth + perfil + envía email)
      */
     async register(data: RegisterRequest): Promise<RegisterResponse> {
-        const response = await apiService.post<{ status: string; message: string; data: RegisterResponse }>(
-            API_CONFIG.ENDPOINTS.REGISTER,
-            data
-        );
+        console.log('🚀 register() called with type:', data.tipoUsuario);
 
-        // Save token from data wrapper
-        await apiService.saveToken(response.data.token);
+        if (data.tipoUsuario === 'POSTULANTE') {
+            // For CANDIDATES: create in Firebase Auth first (client-side)
+            console.log('👤 Registering CANDIDATE - Client side creation');
 
-        return response.data;
+            const { user, idToken } = await firebaseAuthService.createAuthUser(
+                data.email,
+                data.password
+            );
+
+            await apiService.saveToken(idToken);
+
+            try {
+                console.log('✅ Auth User created, creating profile...', user.uid);
+                const response = await apiService.post<{ status: string; data: RegisterResponse }>(
+                    API_CONFIG.ENDPOINTS.REGISTER,
+                    {
+                        ...data,
+                        firebaseUid: user.uid,
+                    }
+                );
+
+                return {
+                    ...response.data,
+                    token: idToken,
+                };
+            } catch (error) {
+                console.error('❌ Profile creation failed, cleaning up...');
+                try {
+                    await firebaseAuthService.logout();
+                    await apiService.removeToken();
+                } catch (cleanupError) {
+                    console.error('Failed to cleanup:', cleanupError);
+                }
+                throw error;
+            }
+        } else if (data.tipoUsuario === 'RECLUTADOR') {
+            // For EMPLOYERS: backend creates everything (Firebase Auth + profile)
+            console.log('🏢 Registering RECRUITER - Backend side creation');
+
+            const response = await apiService.post<{ status: string; data: RegisterResponse }>(
+                API_CONFIG.ENDPOINTS.REGISTER,
+                {
+                    ...data,
+                    password: undefined, // Don't send password - backend generates temp password
+                }
+            );
+
+            return response.data;
+        } else {
+            throw new Error(`Invalid user type: ${data.tipoUsuario}`);
+        }
     }
 
     /**
-     * Change password
+     * Cambio de contraseña
+     * Re-authenticates with Firebase, then calls backend to update password
+     * 
+     * @param currentPassword The current (or temporary) password
+     * @param newPassword The new password to set
+     * @param email Optional email - if not provided, gets from Firebase current user
      */
-    async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    async changePassword(currentPassword: string, newPassword: string, email?: string): Promise<void> {
+        // Get email from parameter or from Firebase current user
+        const userEmail = email || firebaseAuthService.getCurrentUserEmail();
+        if (!userEmail) {
+            throw new Error('No user email available');
+        }
+
+        console.log('🔐 Changing password for:', userEmail);
+
+        // Re-authenticate with the current (temporary) password to get fresh token
+        const { idToken } = await firebaseAuthService.login(userEmail, currentPassword);
+        await apiService.saveToken(idToken);
+
+        // Call backend to update password in Firebase Auth via Admin SDK
         await apiService.post('/auth/change-password', {
             currentPassword,
             newPassword,
         });
+
+        console.log('✅ Password changed, re-logging in with new password');
+
+        // After password is changed, sign out and re-login with new password
+        await firebaseAuthService.logout();
+
+        // Re-login with new password
+        const { idToken: newToken } = await firebaseAuthService.login(userEmail, newPassword);
+        await apiService.saveToken(newToken);
+
+        console.log('✅ Re-logged in with new password');
     }
 
     /**
-     * Logout user
+     * Cerrar sesión
      */
     async logout(): Promise<void> {
+        await firebaseAuthService.logout();
         await apiService.removeToken();
     }
 
     /**
-     * Get stored token
+     * Obtener token actual (Firebase ID Token)
      */
     async getStoredToken(): Promise<string | null> {
+        const firebaseToken = await firebaseAuthService.getIdToken();
+        if (firebaseToken) {
+            return firebaseToken;
+        }
         return await apiService.getToken();
     }
 
     /**
-     * Check if user is authenticated
+     * Verificar si hay un usuario autenticado
      */
     async isAuthenticated(): Promise<boolean> {
-        const token = await this.getStoredToken();
-        return token !== null;
+        return firebaseAuthService.isAuthenticated();
+    }
+
+    /**
+     * Obtener UID del usuario actual
+     */
+    getCurrentUserId(): string | null {
+        return firebaseAuthService.getCurrentUserId();
+    }
+
+    /**
+     * Obtener email del usuario actual
+     */
+    getCurrentUserEmail(): string | null {
+        return firebaseAuthService.getCurrentUserEmail();
     }
 }
 

@@ -40,6 +40,8 @@ export interface RegisterRequestDto {
     nombreCompleto: string;
     telefono?: string;
     tipoUsuario: TipoUsuario;
+    // Firebase UID for candidates (created client-side)
+    firebaseUid?: string;
     candidateData?: CandidateProfileData;
     employerData?: EmployerProfileData;
 }
@@ -53,4 +55,5 @@ export interface RegisterResponseDto {
     nombreCompleto: string;
     tipoUsuario: string;
     token: string;
+    needsPasswordChange?: boolean;
 }
