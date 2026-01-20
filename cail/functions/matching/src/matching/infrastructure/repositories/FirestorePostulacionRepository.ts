@@ -34,35 +34,57 @@ export class FirestorePostulacionRepository implements IPostulacionRepository {
     }
 
     async getByPostulante(idPostulante: string): Promise<Postulacion[]> {
+        // Evitar índice compuesto: filtrar sin orderBy, luego ordenar en memoria
         const snapshot = await this.db.collection(this.COLLECTION)
             .where('id_postulante', '==', idPostulante)
-            .orderBy('fecha_postulacion', 'desc')
             .get();
 
-        return snapshot.docs.map(doc => this.mapToPostulacion(doc));
+        const postulaciones = snapshot.docs.map(doc => this.mapToPostulacion(doc));
+
+        // Ordenar en memoria por fecha descendente
+        return postulaciones.sort((a, b) => {
+            const dateA = a.fecha_postulacion instanceof Date ? a.fecha_postulacion : new Date(a.fecha_postulacion);
+            const dateB = b.fecha_postulacion instanceof Date ? b.fecha_postulacion : new Date(b.fecha_postulacion);
+            return dateB.getTime() - dateA.getTime();
+        });
     }
 
     async getByOferta(idOferta: string): Promise<Postulacion[]> {
+        // Evitar índice compuesto: filtrar sin orderBy, luego ordenar en memoria
         const snapshot = await this.db.collection(this.COLLECTION)
             .where('id_oferta', '==', idOferta)
-            .orderBy('fecha_postulacion', 'desc')
             .get();
 
-        return snapshot.docs.map(doc => this.mapToPostulacion(doc));
+        const postulaciones = snapshot.docs.map(doc => this.mapToPostulacion(doc));
+
+        // Ordenar en memoria por fecha descendente
+        return postulaciones.sort((a, b) => {
+            const dateA = a.fecha_postulacion instanceof Date ? a.fecha_postulacion : new Date(a.fecha_postulacion);
+            const dateB = b.fecha_postulacion instanceof Date ? b.fecha_postulacion : new Date(b.fecha_postulacion);
+            return dateB.getTime() - dateA.getTime();
+        });
     }
 
     /**
      * Verifica si ya existe una postulación activa para evitar duplicados
      */
     async existePostulacion(idPostulante: string, idOferta: string): Promise<boolean> {
+        // Evitar índice compuesto: hacer dos queries separados
         const snapshot = await this.db.collection(this.COLLECTION)
             .where('id_postulante', '==', idPostulante)
             .where('id_oferta', '==', idOferta)
-            .where('estado', 'in', ['PENDIENTE', 'EN_REVISION'])
             .limit(1)
             .get();
 
-        return !snapshot.empty;
+        if (snapshot.empty) {
+            return false;
+        }
+
+        // Verificar estado en memoria
+        const doc = snapshot.docs[0];
+        const data = doc.data();
+        const estado = data.estado;
+        return estado === 'PENDIENTE' || estado === 'EN_REVISION';
     }
 
     /**
@@ -72,12 +94,21 @@ export class FirestorePostulacionRepository implements IPostulacionRepository {
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
 
+        // Solo usar un where para evitar índice compuesto
         const snapshot = await this.db.collection(this.COLLECTION)
             .where('id_postulante', '==', idPostulante)
-            .where('fecha_postulacion', '>=', hoy)
             .get();
 
-        return snapshot.size;
+        // Filtrar por fecha en memoria
+        let count = 0;
+        for (const doc of snapshot.docs) {
+            const data = doc.data();
+            const fechaPostulacion = data.fecha_postulacion?.toDate?.() || new Date(data.fecha_postulacion);
+            if (fechaPostulacion >= hoy) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private mapToPostulacion(doc: FirebaseFirestore.DocumentSnapshot): Postulacion {

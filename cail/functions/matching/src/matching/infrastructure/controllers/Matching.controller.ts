@@ -135,6 +135,18 @@ export const applyToOffer = asyncHandler(
 );
 
 /**
+ * Mapea una postulación del backend (snake_case) al formato del frontend (camelCase)
+ */
+const mapPostulacionToResponse = (postulacion: any) => ({
+    idAplicacion: postulacion.id,
+    idPostulante: postulacion.id_postulante,
+    idOferta: postulacion.id_oferta,
+    fechaAplicacion: postulacion.fecha_postulacion,
+    estado: postulacion.estado,
+    matchScore: postulacion.match_score,
+});
+
+/**
  * GET /matching/my-applications
  * Obtiene las postulaciones del candidato autenticado
  * Acceso: CANDIDATO
@@ -161,11 +173,14 @@ export const getMyApplications = asyncHandler(
             const service = getMatchingService();
             const postulaciones = await service.obtenerMisPostulaciones(req.user.uid);
 
+            // Mapear a formato camelCase para el frontend
+            const mappedPostulaciones = postulaciones.map(mapPostulacionToResponse);
+
             return res.status(200).json({
                 success: true,
-                data: postulaciones,
+                data: mappedPostulaciones,
                 meta: {
-                    total: postulaciones.length
+                    total: mappedPostulaciones.length
                 }
             });
         } catch (error) {

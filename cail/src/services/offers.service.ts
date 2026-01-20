@@ -33,6 +33,11 @@ class OffersService {
         }
 
         const response = await apiService.get<OfferApiResponse<Offer[]>>(url);
+        console.log('📋 [OFFERS] API returned offers count:', response.data?.length);
+        if (response.data?.length > 0) {
+            console.log('📋 [OFFERS] First offer sample:', JSON.stringify(response.data[0], null, 2));
+            console.log('📋 [OFFERS] First offer idOferta:', response.data[0].idOferta);
+        }
         return response.data;
     }
 
