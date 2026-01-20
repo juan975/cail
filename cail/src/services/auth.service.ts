@@ -30,7 +30,7 @@ class AuthService {
         const { user, idToken } = await firebaseAuthService.login(email, password);
 
         // 2. Obtener perfil del backend
-        const profileResponse = await apiService.get<{ status: string; data: any }>('/auth/profile');
+        const profileResponse = await apiService.get<{ status: string; data: any }>('/users/profile');
 
         return {
             idCuenta: user.uid,
