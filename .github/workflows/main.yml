@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0
 
       - name: SonarQube Scan
-        # Esta es la versión actualizada que recomienda SonarCloud
+        # Pruebaa xd
         uses: sonarsource/sonarqube-scan-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
