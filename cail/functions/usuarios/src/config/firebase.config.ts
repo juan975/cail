@@ -79,4 +79,8 @@ export const bucket = {
     getFiles: (options: any) => getBucket().getFiles(options),
 };
 
+// Alias for getFirestore
+export const getDb = getFirestore;
+
 export default admin;
+

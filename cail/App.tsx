@@ -26,8 +26,12 @@ function RootApp() {
       if (user) {
         console.log('✅ Firebase user found on load:', user.email);
         try {
+          // Obtener y guardar el token de Firebase
+          const idToken = await user.getIdToken();
+          await apiService.saveToken(idToken);
+
           // Obtener perfil del backend
-          const profileResponse = await apiService.get<{ status: string; data: any }>('/auth/profile');
+          const profileResponse = await apiService.get<{ status: string; data: any }>('/users/profile');
           const profile = profileResponse.data;
 
           const role: UserRole = profile.tipoUsuario === 'POSTULANTE' ? 'candidate' : 'employer';

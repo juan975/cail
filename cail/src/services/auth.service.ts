@@ -6,8 +6,8 @@
  * Flujos:
  *   - Login: Firebase Auth -> Obtener perfil del backend -> Validar rol
  *   - Registro POSTULANTE: Firebase Auth (frontend) -> Crear perfil en backend
- *   - Registro RECLUTADOR: Backend crea en Firebase Auth + envía email con link de reset
- *   - Cambio de contraseña: Firebase Auth -> Confirmar en backend
+ *   - Registro RECLUTADOR: Backend crea en Firebase Auth + envía email con temp password
+ *   - Cambio de contraseña: Backend (usa Firebase Admin para actualizar)
  */
 
 import { apiService } from './api.service';
@@ -53,7 +53,7 @@ class AuthService {
 
         try {
             // 2. Obtener perfil del backend
-            const profileResponse = await apiService.get<{ status: string; data: any }>('/auth/profile');
+            const profileResponse = await apiService.get<{ status: string; data: any }>('/users/profile');
 
             const tipoUsuario = profileResponse.data.tipoUsuario;
             const actualRole: UIUserRole = tipoUsuario === 'POSTULANTE' ? 'candidate' : 'employer';

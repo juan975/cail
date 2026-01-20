@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { getAuth, getFirestore } from '../../config/firebase.config';
 import { AppError } from './error.middleware';
+import { getAuth, getDb } from '../../config/firebase.config';
 
 /**
- * Payload del token de Firebase decodificado
+ * Payload del usuario autenticado
  */
 export interface FirebaseTokenPayload {
     uid: string;
@@ -19,8 +19,9 @@ export interface AuthRequest extends Request {
 }
 
 /**
- * Middleware de autenticación usando Firebase ID Token
- * Valida el token emitido por Firebase Auth
+ * Middleware de autenticación que soporta Firebase ID Tokens
+ * 
+ * Verifica el token de Firebase y obtiene el tipoUsuario de Firestore
  */
 export const authenticate = async (
     req: AuthRequest,
@@ -34,29 +35,41 @@ export const authenticate = async (
             throw new AppError(401, 'No token provided');
         }
 
-        const idToken = authHeader.substring(7);
+        const token = authHeader.substring(7);
+
+        // Verify Firebase ID Token
         const auth = getAuth();
+        const decodedToken = await auth.verifyIdToken(token);
 
-        // Verificar Firebase ID Token
-        const decodedToken = await auth.verifyIdToken(idToken);
+        // Get user info from Firestore to get tipoUsuario
+        const db = getDb();
+        const userDoc = await db.collection('cuentas').doc(decodedToken.uid).get();
 
-        req.user = {
-            uid: decodedToken.uid,
-            email: decodedToken.email || '',
-        };
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            req.user = {
+                uid: decodedToken.uid,
+                email: decodedToken.email || userData?.email || '',
+                tipoUsuario: userData?.tipoUsuario || 'POSTULANTE',
+            };
+        } else {
+            // User exists in Firebase Auth but not in Firestore yet
+            req.user = {
+                uid: decodedToken.uid,
+                email: decodedToken.email || '',
+                tipoUsuario: 'POSTULANTE', // Default
+            };
+        }
 
         next();
     } catch (error: any) {
-        console.error('Auth middleware error:', error.code, error.message);
+        console.error('Auth middleware error:', error.message);
 
         if (error.code === 'auth/id-token-expired') {
             return next(new AppError(401, 'Token expired'));
         }
-        if (error.code === 'auth/argument-error') {
-            return next(new AppError(401, 'Invalid token format'));
-        }
-        if (error.code === 'auth/id-token-revoked') {
-            return next(new AppError(401, 'Token has been revoked'));
+        if (error.code === 'auth/argument-error' || error.code === 'auth/invalid-id-token') {
+            return next(new AppError(401, 'Invalid token'));
         }
         if (error instanceof AppError) {
             return next(error);
@@ -67,7 +80,7 @@ export const authenticate = async (
 
 /**
  * Middleware de autorización por roles
- * Obtiene el tipoUsuario de Firestore para validar permisos
+ * Verifica que el usuario tenga uno de los roles permitidos
  */
 export const authorize = (...allowedRoles: string[]) => {
     return async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -75,26 +88,10 @@ export const authorize = (...allowedRoles: string[]) => {
             return next(new AppError(401, 'Not authenticated'));
         }
 
-        try {
-            // Obtener tipoUsuario de Firestore
-            const db = getFirestore();
-            const userDoc = await db.collection('usuarios').doc(req.user.uid).get();
-
-            if (!userDoc.exists) {
-                return next(new AppError(404, 'User profile not found'));
-            }
-
-            const userData = userDoc.data();
-            req.user.tipoUsuario = userData?.tipoUsuario;
-
-            if (!allowedRoles.includes(req.user.tipoUsuario || '')) {
-                return next(new AppError(403, 'Not authorized to access this resource'));
-            }
-
-            next();
-        } catch (error) {
-            console.error('Authorization error:', error);
-            next(new AppError(500, 'Authorization check failed'));
+        if (!req.user.tipoUsuario || !allowedRoles.includes(req.user.tipoUsuario)) {
+            return next(new AppError(403, 'Not authorized to access this resource'));
         }
+
+        next();
     };
 };

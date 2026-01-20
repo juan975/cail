@@ -1,7 +1,7 @@
 /**
  * Servicio de Firebase Authentication para Web
  * 
- * Wrapper para las operaciones de Firebase Auth en el navegador.
+ * Wrapper para las operaciones de Firebase Auth.
  * Este servicio maneja: login, registro, logout, cambio de contraseña y tokens.
  */
 
@@ -13,7 +13,7 @@ import {
     updatePassword,
     EmailAuthProvider,
     reauthenticateWithCredential,
-    onAuthStateChanged as firebaseOnAuthStateChanged,
+    onAuthStateChanged,
     UserCredential,
 } from 'firebase/auth';
 import { auth } from '../config/firebase.config';
@@ -136,7 +136,7 @@ class FirebaseAuthService {
      * Retorna una función para desuscribirse
      */
     onAuthStateChanged(callback: (user: User | null) => void): () => void {
-        return firebaseOnAuthStateChanged(auth, callback);
+        return onAuthStateChanged(auth, callback);
     }
 
     /**

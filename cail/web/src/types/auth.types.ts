@@ -44,6 +44,7 @@ export interface RegisterRequest {
     tipoUsuario: 'POSTULANTE' | 'RECLUTADOR';
     candidateData?: CandidateProfileData;
     employerData?: EmployerProfileData;
+    firebaseUid?: string; // UID from Firebase Auth when creating user client-side
 }
 
 export interface RegisterResponse {
