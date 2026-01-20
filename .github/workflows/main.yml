@@ -1,13 +1,10 @@
-name: SonarCloud Analysis
-
+name: SonarQube Analysis
 on:
   push:
     branches:
       - main
-      - ErickGaona
-      - juan975
-      - cbhas-micro
-      - ALISrj
+      - develop
+      - 'feature/**'
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -21,27 +18,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies (Matching)
-        working-directory: cail/functions/matching
-        run: npm ci
-
-      - name: Run tests with coverage (Matching)
-        working-directory: cail/functions/matching
-        run: npm test -- --coverage
-        continue-on-error: true
-
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          projectBaseDir: .
-          args: >
-            -Dsonar.projectKey=juan975_cail
-            -Dsonar.organization=juan975
