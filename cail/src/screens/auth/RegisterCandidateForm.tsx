@@ -37,7 +37,8 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
   const [newSkill, setNewSkill] = useState('');
   const [educationLevel, setEducationLevel] = useState('');
   const [degree, setDegree] = useState('');
-  const [softSkills, setSoftSkills] = useState('');
+  const [softSkills, setSoftSkills] = useState<string[]>([]);
+  const [newSoftSkill, setNewSoftSkill] = useState('');
   const [competencies, setCompetencies] = useState<string[]>([]);
   const [newCompetency, setNewCompetency] = useState('');
   const [yearsExperience, setYearsExperience] = useState('');
@@ -88,6 +89,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
           ciudad: city,
           resumenProfesional: professionalSummary,
           habilidadesTecnicas: technicalSkills,
+          softSkills,
           nivelEducacion: educationLevel,
           titulo: degree,
           competencias: competencies,
@@ -129,6 +131,17 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
 
   const removeSkill = (index: number) => {
     setTechnicalSkills(technicalSkills.filter((_, i) => i !== index));
+  };
+
+  const addSoftSkill = () => {
+    if (newSoftSkill.trim()) {
+      setSoftSkills([...softSkills, newSoftSkill.trim()]);
+      setNewSoftSkill('');
+    }
+  };
+
+  const removeSoftSkill = (index: number) => {
+    setSoftSkills(softSkills.filter((_, i) => i !== index));
   };
 
   const addCompetency = () => {
@@ -423,6 +436,43 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                         <Text style={styles.chipTextBlue}>{skill}</Text>
                         <TouchableOpacity onPress={() => removeSkill(index)}>
                           <Feather name="x" size={14} color="#3B82F6" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              {/* Soft Skills */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Feather name="heart" size={16} color="#10B981" />
+                  <Text style={styles.sectionTitle}>Soft skills</Text>
+                </View>
+                <Text style={styles.sectionHint}>
+                  Habilidades blandas y fortalezas personales
+                </Text>
+
+                <View style={styles.skillInput}>
+                  <TextInput
+                    style={[styles.input, styles.flex1]}
+                    value={newSoftSkill}
+                    onChangeText={setNewSoftSkill}
+                    placeholder="Ej: Comunicación, Liderazgo, Trabajo en equipo..."
+                    placeholderTextColor="#9CA3AF"
+                  />
+                  <TouchableOpacity style={[styles.addButton, styles.addButtonGreen]} onPress={addSoftSkill}>
+                    <Feather name="plus" size={20} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+
+                {softSkills.length > 0 && (
+                  <View style={styles.chipContainer}>
+                    {softSkills.map((skill, index) => (
+                      <View key={`${skill}-${index}`} style={styles.chipGreen}>
+                        <Text style={styles.chipTextGreen}>{skill}</Text>
+                        <TouchableOpacity onPress={() => removeSoftSkill(index)}>
+                          <Feather name="x" size={14} color="#10B981" />
                         </TouchableOpacity>
                       </View>
                     ))}
@@ -801,6 +851,9 @@ const styles = StyleSheet.create({
   addButtonYellow: {
     backgroundColor: '#F59E0B',
   },
+  addButtonGreen: {
+    backgroundColor: '#10B981',
+  },
   chipContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -837,6 +890,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#F59E0B',
+  },
+  chipGreen: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  chipTextGreen: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#10B981',
   },
 
   // Info Box

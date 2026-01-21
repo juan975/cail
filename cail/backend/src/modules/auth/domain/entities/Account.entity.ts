@@ -15,11 +15,13 @@ export interface CandidateProfile {
     ciudad: string;
     resumenProfesional?: string;
     habilidadesTecnicas?: string[];
+    softSkills?: string[];
     nivelEducacion?: string;
     titulo?: string;
     competencias?: string[];
     anosExperiencia?: string;
     resumenExperiencia?: string;
+    cvUrl?: string;
 }
 
 // Perfil del empleador

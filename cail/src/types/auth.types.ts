@@ -69,6 +69,7 @@ export interface CandidateProfileData {
     ciudad: string;
     resumenProfesional?: string;
     habilidadesTecnicas?: string[];
+    softSkills?: string[];
     nivelEducacion?: string;
     titulo?: string;
     competencias?: string[];

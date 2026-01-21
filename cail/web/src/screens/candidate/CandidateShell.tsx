@@ -125,7 +125,8 @@ export function CandidateShell({ userData, onLogout }: CandidateShellProps) {
         {/* Logo */}
         <div
           style={{
-            padding: '20px',
+            height: '80px',
+            padding: '0 20px',
             borderBottom: '1px solid #E5E7EB',
             display: 'flex',
             alignItems: 'center',
@@ -234,7 +235,10 @@ export function CandidateShell({ userData, onLogout }: CandidateShellProps) {
           style={{
             background: '#FFFFFF',
             borderBottom: '1px solid #E5E7EB',
-            padding: '16px 24px',
+            height: '80px',
+            padding: '0 24px',
+            display: 'flex',
+            alignItems: 'center',
             position: 'sticky',
             top: 0,
             zIndex: 999,
@@ -246,6 +250,7 @@ export function CandidateShell({ userData, onLogout }: CandidateShellProps) {
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: '16px',
+              width: '100%',
             }}
           >
             {/* Search Bar */}

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useResponsiveLayout } from '../../hooks/useResponsive';
 import { UserRole } from '../../types';
 import { LoginForm } from './LoginForm';
 import { RegisterCandidateForm } from './RegisterCandidateForm';
@@ -26,146 +25,221 @@ export function AuthScreen({ onAuthSuccess, onShowTerms }: AuthScreenProps) {
     onAuthSuccess(selectedRole, data);
   };
 
-  const content = (
-    <div className="auth-container">
-      {/* Hero Section */}
-      {mode === 'select' && (
-        <div className="hero-section">
-          <div className="logo-badge">
-            <img src={logo} alt="CAIL" />
+  // Role selection screen
+  if (mode === 'select') {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        width: '100%',
+        background: 'linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '40px 20px',
+      }}>
+        <div style={{
+          width: '100%',
+          maxWidth: '900px',
+          background: '#FFFFFF',
+          borderRadius: '24px',
+          padding: '60px 40px',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.08)',
+        }}>
+          {/* Logo and Title */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '48px',
+          }}>
+            <div style={{
+              width: '100px',
+              height: '100px',
+              margin: '0 auto 24px',
+              borderRadius: '20px',
+              background: '#FFFFFF',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <img src={logo} alt="CAIL" style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
+            </div>
+            <h1 style={{
+              fontSize: '36px',
+              fontWeight: 800,
+              color: '#111827',
+              marginBottom: '8px',
+              letterSpacing: '-0.5px',
+            }}>
+              Bolsa de Empleo
+            </h1>
+            <p style={{
+              fontSize: '18px',
+              color: '#6B7280',
+              fontWeight: 500,
+            }}>
+              Cámara de Industrias de Loja
+            </p>
           </div>
 
-          <div className="hero-pill">
-            <svg fill="none" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-              />
-            </svg>
-            <span className="hero-pill-text">CAIL</span>
-          </div>
-
-          <h1 className="headline">Bolsa de Empleo</h1>
-          <p className="subtitle">Cámara de Industrias de Loja</p>
-        </div>
-      )}
-
-      {/* Role Cards */}
-      {mode === 'select' ? (
-        <>
-          <div className="role-cards">
-            <div className="role-card" onClick={() => handleRoleSelect('candidate')}>
-              <div className="role-icon" style={{ backgroundColor: '#1A936F' }}>
-                <svg fill="none" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
+          {/* Role Selection Cards */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '24px',
+            marginBottom: '32px',
+          }}>
+            {/* Candidate Card */}
+            <div
+              onClick={() => handleRoleSelect('candidate')}
+              style={{
+                background: '#FFFFFF',
+                border: '2px solid #E5E7EB',
+                borderRadius: '16px',
+                padding: '32px 24px',
+                cursor: 'pointer',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                textAlign: 'center',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#10B981';
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(16, 185, 129, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-4px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#E5E7EB';
+                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <div style={{
+                width: '80px',
+                height: '80px',
+                margin: '0 auto 20px',
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)',
+              }}>
+                <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#FFFFFF">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
-              <div className="role-content">
-                <h3 className="role-title">Soy Candidato</h3>
-                <p className="role-description">Busco oportunidades laborales</p>
-              </div>
-              <div className="role-arrow">
-                <span className="role-arrow-text" style={{ color: '#1A936F' }}>
-                  Continuar
-                </span>
-                <svg fill="none" viewBox="0 0 24 24" stroke="#1A936F">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
+              <h3 style={{
+                fontSize: '24px',
+                fontWeight: 700,
+                color: '#111827',
+                marginBottom: '8px',
+              }}>
+                Soy Candidato
+              </h3>
+              <p style={{
+                fontSize: '15px',
+                color: '#6B7280',
+                lineHeight: '1.6',
+              }}>
+                Busco oportunidades laborales y quiero conectar con empresas
+              </p>
             </div>
 
-            <div className="role-card" onClick={() => handleRoleSelect('employer')}>
-              <div className="role-icon" style={{ backgroundColor: '#F1842D' }}>
-                <svg fill="none" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
+            {/* Employer Card */}
+            <div
+              onClick={() => handleRoleSelect('employer')}
+              style={{
+                background: '#FFFFFF',
+                border: '2px solid #E5E7EB',
+                borderRadius: '16px',
+                padding: '32px 24px',
+                cursor: 'pointer',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                textAlign: 'center',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#F59E0B';
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(245, 158, 11, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-4px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#E5E7EB';
+                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <div style={{
+                width: '80px',
+                height: '80px',
+                margin: '0 auto 20px',
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 8px 24px rgba(245, 158, 11, 0.3)',
+              }}>
+                <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#FFFFFF">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
-              <div className="role-content">
-                <h3 className="role-title">Soy Empleador</h3>
-                <p className="role-description">Busco talento para mi empresa</p>
-              </div>
-              <div className="role-arrow">
-                <span className="role-arrow-text" style={{ color: '#F1842D' }}>
-                  Continuar
-                </span>
-                <svg fill="none" viewBox="0 0 24 24" stroke="#F1842D">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
+              <h3 style={{
+                fontSize: '24px',
+                fontWeight: 700,
+                color: '#111827',
+                marginBottom: '8px',
+              }}>
+                Soy Empleador
+              </h3>
+              <p style={{
+                fontSize: '15px',
+                color: '#6B7280',
+                lineHeight: '1.6',
+              }}>
+                Represento una empresa y busco talento para mi organización
+              </p>
             </div>
           </div>
 
-          <div className="footer">
-            <svg fill="none" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-              />
-            </svg>
-            <span className="footer-text">Conectando talento con oportunidades en Loja</span>
-          </div>
-        </>
-      ) : (
-        <div className="form-card">
-          {mode === 'login' && (
-            <LoginForm
-              role={selectedRole}
-              onSuccess={handleSuccess}
-              onBack={() => setMode('select')}
-              onSwitchToRegister={() => setMode('register')}
-            />
-          )}
-          {mode === 'register' && selectedRole === 'candidate' && (
-            <RegisterCandidateForm
-              onSuccess={handleSuccess}
-              onBack={() => setMode('select')}
-              onSwitchToLogin={() => setMode('login')}
-            />
-          )}
-          {mode === 'register' && selectedRole === 'employer' && (
-            <RegisterEmployerForm
-              onSuccess={handleSuccess}
-              onBack={() => setMode('select')}
-              onSwitchToLogin={() => setMode('login')}
-            />
-          )}
+          {/* Footer text */}
+          <p style={{
+            textAlign: 'center',
+            fontSize: '14px',
+            color: '#9CA3AF',
+          }}>
+            Selecciona tu perfil para continuar
+          </p>
         </div>
-      )}
-
-      <div className="legal-container">
-        <button
-          onClick={onShowTerms}
-          className={`legal-button ${mode !== 'select' ? 'legal-button-form' : ''}`}
-        >
-          <svg fill="none" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <span>Términos y Condiciones</span>
-        </button>
       </div>
-    </div>
-  );
+    );
+  }
 
-  return mode === 'select' ? (
-    <div className="auth-gradient">{content}</div>
-  ) : (
-    <div className="auth-plain">{content}</div>
+  // Login or Register
+  if (mode === 'login') {
+    return (
+      <LoginForm
+        role={selectedRole}
+        onSuccess={handleSuccess}
+        onBack={() => setMode('select')}
+        onSwitchToRegister={() => setMode('register')}
+      />
+    );
+  }
+
+  // Register
+  if (selectedRole === 'candidate') {
+    return (
+      <RegisterCandidateForm
+        onSuccess={handleSuccess}
+        onBack={() => setMode('login')}
+        onSwitchToLogin={() => setMode('login')}
+      />
+    );
+  }
+
+  return (
+    <RegisterEmployerForm
+      onSuccess={handleSuccess}
+      onBack={() => setMode('login')}
+      onSwitchToLogin={() => setMode('login')}
+    />
   );
 }
