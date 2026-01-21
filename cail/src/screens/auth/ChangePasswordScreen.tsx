@@ -80,7 +80,7 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
   };
 
   return (
-    <LinearGradient colors={['#F59E0B', '#D97706']} style={styles.gradient}>
+    <LinearGradient colors={['#0B7A4D', '#0A6B43', '#085C3A']} style={styles.gradient}>
       <SafeAreaView style={styles.safe}>
         <ScrollView
           contentContainerStyle={[styles.container, { paddingHorizontal: horizontalGutter }]}
