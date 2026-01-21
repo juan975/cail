@@ -6,13 +6,25 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Button } from '@/components/ui/Button';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { EmployerProfileForm } from '@/types';
-import { initialEmployerProfile } from '@/data/mockData';
 import { colors } from '@/theme/colors';
 import { userService } from '@/services/user.service';
 
+// Estado inicial vacío para el formulario
+const emptyEmployerProfile: EmployerProfileForm = {
+  companyName: '',
+  contactName: '',
+  email: '',
+  phone: '',
+  industry: '',
+  numberOfEmployees: '',
+  description: '',
+  website: '',
+  address: '',
+};
+
 export function EmployerProfileScreen() {
   const { isDesktop, contentWidth, horizontalGutter } = useResponsiveLayout();
-  const [form, setForm] = useState<EmployerProfileForm>(initialEmployerProfile);
+  const [form, setForm] = useState<EmployerProfileForm>(emptyEmployerProfile);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 

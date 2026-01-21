@@ -58,12 +58,28 @@ export class LoginUserUseCase {
     /**
      * Obtiene el perfil del usuario por UID de Firebase
      * Preferido ya que usa el UID directamente
+     * 
+     * Para RECLUTADORES: verifica que el email haya sido verificado antes de permitir acceso
      */
     async getProfileByUid(uid: string): Promise<GetProfileResponseDto> {
         const account = await this.accountRepository.findById(new UserId(uid));
 
         if (!account) {
             throw new AppError(404, 'User profile not found. Please complete registration.');
+        }
+
+        // Para RECLUTADORES: verificar que el email haya sido verificado
+        if (account.tipoUsuario === 'RECLUTADOR' && account.employerProfile) {
+            const emailVerified = account.employerProfile.emailVerified;
+
+            // Si emailVerified es explícitamente false, bloquear acceso
+            if (emailVerified === false) {
+                throw new AppError(403,
+                    'Email no verificado. Por favor verifica tu correo electrónico haciendo clic en el enlace que te enviamos. ' +
+                    'Si no encuentras el correo, revisa tu carpeta de spam.',
+                    'EMAIL_NOT_VERIFIED'
+                );
+            }
         }
 
         return {

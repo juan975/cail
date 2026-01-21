@@ -111,6 +111,13 @@ export class FirestorePostulacionRepository implements IPostulacionRepository {
         return count;
     }
 
+    async updateEstado(id: string, estado: string): Promise<void> {
+        await this.db.collection(this.COLLECTION).doc(id).update({
+            estado: estado,
+            updated_at: FieldValue.serverTimestamp()
+        });
+    }
+
     private mapToPostulacion(doc: FirebaseFirestore.DocumentSnapshot): Postulacion {
         const data = doc.data()!;
         return {

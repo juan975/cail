@@ -170,6 +170,110 @@ const sections: Section[] = [
 export function TermsScreen({ onClose, onBack }: TermsScreenProps) {
   const { contentWidth, horizontalGutter } = useResponsiveLayout();
 
+  // When embedded (onBack is present), render without full-screen wrappers
+  // to avoid nested ScrollView issues
+  const isEmbedded = !!onBack;
+
+  const content = (
+    <View style={[styles.container, { maxWidth: contentWidth }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          {onBack && (
+            <TouchableOpacity onPress={onBack} style={styles.closeButton} activeOpacity={0.8}>
+              <Feather name="arrow-left" size={18} color={colors.textPrimary} />
+            </TouchableOpacity>
+          )}
+          <View style={styles.badge}>
+            <Feather name="file-text" size={18} color={colors.candidateDark} />
+          </View>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>Términos y Condiciones de Uso</Text>
+            <Text style={styles.subtitle}>Bolsa de Empleo CAIL · Versión 1.0</Text>
+          </View>
+        </View>
+        {!onBack && (
+          <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.8}>
+            <Feather name="x" size={18} color={colors.textPrimary} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Meta Info */}
+      <View style={styles.metaRow}>
+        <MetaPill icon="calendar" label="Última actualización" value="12 de noviembre de 2025" />
+        <MetaPill icon="map" label="Ámbito" value="Loja, Ecuador" />
+        <MetaPill icon="shield" label="Al usar, aceptas estos términos" value="Aplicación y sitio web" />
+      </View>
+
+      {/* Summary Cards */}
+      <View style={styles.summaryRow}>
+        <SummaryCard
+          icon="check-circle"
+          title="Aceptación"
+          text="El uso implica lectura y aceptación íntegra de estos términos."
+        />
+        <SummaryCard
+          icon="globe"
+          title="Uso local"
+          text="Enfocado en oportunidades laborales de la ciudad y provincia de Loja."
+        />
+        <SummaryCard
+          icon="gift"
+          title="Servicio gratuito"
+          text="Sin comisiones ni suscripciones para candidatos o empleadores."
+        />
+      </View>
+
+      {/* Sections */}
+      <View style={styles.sections}>
+        {sections.map((section) => (
+          <View key={section.id} style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIcon}>
+                <Feather name={section.icon} size={16} color={colors.candidateDark} />
+              </View>
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+            </View>
+            {section.description && <Text style={styles.sectionDescription}>{section.description}</Text>}
+            {section.bullets?.map((bullet, index) => (
+              <View key={index} style={styles.bulletRow}>
+                <View style={styles.bulletDot} />
+                <Text style={styles.bulletText}>{bullet}</Text>
+              </View>
+            ))}
+            {section.footerNote && <Text style={styles.footerNote}>{section.footerNote}</Text>}
+          </View>
+        ))}
+      </View>
+
+      {/* Footer actions */}
+      <View style={styles.actions}>
+        <TouchableOpacity onPress={onClose} activeOpacity={0.85} style={styles.primaryButton}>
+          <Text style={styles.primaryButtonText}>Aceptar Términos y Condiciones</Text>
+        </TouchableOpacity>
+        <Text style={styles.disclaimer}>
+          Estos términos pueden actualizarse periódicamente. Te avisaremos cuando se publiquen cambios
+          relevantes.
+        </Text>
+      </View>
+    </View>
+  );
+
+  // Embedded mode: just the content with internal scroll, no gradient wrapper
+  if (isEmbedded) {
+    return (
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.embeddedScroll, { paddingHorizontal: horizontalGutter }]}
+        nestedScrollEnabled={true}
+      >
+        {content}
+      </ScrollView>
+    );
+  }
+
+  // Fullscreen mode: with gradient and SafeAreaView
   return (
     <LinearGradient colors={['#0B7A4D', '#0A6B43', '#085C3A']} style={styles.gradient}>
       <SafeAreaView style={styles.safe}>
@@ -177,89 +281,7 @@ export function TermsScreen({ onClose, onBack }: TermsScreenProps) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.scroll, { paddingHorizontal: horizontalGutter }]}
         >
-          <View style={[styles.container, { maxWidth: contentWidth }]}>
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={styles.headerLeft}>
-                {onBack && (
-                  <TouchableOpacity onPress={onBack} style={styles.closeButton} activeOpacity={0.8}>
-                    <Feather name="arrow-left" size={18} color={colors.textPrimary} />
-                  </TouchableOpacity>
-                )}
-                <View style={styles.badge}>
-                  <Feather name="file-text" size={18} color={colors.candidateDark} />
-                </View>
-                <View style={styles.headerText}>
-                  <Text style={styles.title}>Términos y Condiciones de Uso</Text>
-                  <Text style={styles.subtitle}>Bolsa de Empleo CAIL · Versión 1.0</Text>
-                </View>
-              </View>
-              {!onBack && (
-                <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.8}>
-                  <Feather name="x" size={18} color={colors.textPrimary} />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Meta Info */}
-            <View style={styles.metaRow}>
-              <MetaPill icon="calendar" label="Última actualización" value="12 de noviembre de 2025" />
-              <MetaPill icon="map" label="Ámbito" value="Loja, Ecuador" />
-              <MetaPill icon="shield" label="Al usar, aceptas estos términos" value="Aplicación y sitio web" />
-            </View>
-
-            {/* Summary Cards */}
-            <View style={styles.summaryRow}>
-              <SummaryCard
-                icon="check-circle"
-                title="Aceptación"
-                text="El uso implica lectura y aceptación íntegra de estos términos."
-              />
-              <SummaryCard
-                icon="globe"
-                title="Uso local"
-                text="Enfocado en oportunidades laborales de la ciudad y provincia de Loja."
-              />
-              <SummaryCard
-                icon="gift"
-                title="Servicio gratuito"
-                text="Sin comisiones ni suscripciones para candidatos o empleadores."
-              />
-            </View>
-
-            {/* Sections */}
-            <View style={styles.sections}>
-              {sections.map((section) => (
-                <View key={section.id} style={styles.sectionCard}>
-                  <View style={styles.sectionHeader}>
-                    <View style={styles.sectionIcon}>
-                      <Feather name={section.icon} size={16} color={colors.candidateDark} />
-                    </View>
-                    <Text style={styles.sectionTitle}>{section.title}</Text>
-                  </View>
-                  {section.description && <Text style={styles.sectionDescription}>{section.description}</Text>}
-                  {section.bullets?.map((bullet, index) => (
-                    <View key={index} style={styles.bulletRow}>
-                      <View style={styles.bulletDot} />
-                      <Text style={styles.bulletText}>{bullet}</Text>
-                    </View>
-                  ))}
-                  {section.footerNote && <Text style={styles.footerNote}>{section.footerNote}</Text>}
-                </View>
-              ))}
-            </View>
-
-            {/* Footer actions */}
-            <View style={styles.actions}>
-              <TouchableOpacity onPress={onClose} activeOpacity={0.85} style={styles.primaryButton}>
-                <Text style={styles.primaryButtonText}>Aceptar Términos y Condiciones</Text>
-              </TouchableOpacity>
-              <Text style={styles.disclaimer}>
-                Estos términos pueden actualizarse periódicamente. Te avisaremos cuando se publiquen cambios
-                relevantes.
-              </Text>
-            </View>
-          </View>
+          {content}
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
@@ -315,6 +337,10 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingVertical: 24,
+  },
+  embeddedScroll: {
+    paddingVertical: 16,
+    paddingBottom: 32,
   },
   container: {
     backgroundColor: '#F8FAFB',

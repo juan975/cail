@@ -75,6 +75,17 @@ export interface CandidateProfileData {
     competencias?: string[];
     anosExperiencia?: string;
     resumenExperiencia?: string;
+    experienciaLaboral?: WorkExperienceData[];
+}
+
+export interface WorkExperienceData {
+    id?: string;
+    company: string;
+    position: string;
+    startDate: string;
+    endDate?: string;
+    isCurrent: boolean;
+    description: string;
 }
 
 export interface EmployerProfileData {

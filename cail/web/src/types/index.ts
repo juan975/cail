@@ -95,6 +95,16 @@ export interface EmployerApplication {
   notes?: string;
 }
 
+export interface WorkExperience {
+  id: string;
+  company: string;
+  position: string;
+  startDate: string;
+  endDate?: string;
+  isCurrent: boolean;
+  description: string;
+}
+
 export interface CandidateProfileForm {
   fullName: string;
   email: string;
@@ -105,6 +115,7 @@ export interface CandidateProfileForm {
   technicalSkills: string[];
   softSkills: string[];
   competencies: string[];
+  workExperience: WorkExperience[];
 }
 
 export interface EmployerProfileForm {

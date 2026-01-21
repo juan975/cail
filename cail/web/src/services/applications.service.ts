@@ -93,20 +93,14 @@ class ApplicationsService {
     }
 
     /**
-     * Obtiene las aplicaciones para una oferta con información de candidatos
-     * Requiere llamadas adicionales al servicio de usuarios
+     * Obtiene las aplicaciones para una oferta CON información de candidatos
+     * Usa el endpoint enriquecido que ya incluye datos del candidato
      */
     async getOfferApplicationsWithCandidates(idOferta: string): Promise<ApplicationWithCandidate[]> {
-        const applications = await this.getOfferApplications(idOferta);
-
-        // Por ahora retornamos sin información adicional del candidato
-        // TODO: Implementar llamada al servicio de usuarios cuando esté disponible
-        const applicationsWithCandidates = applications.map(app => ({
-            ...app,
-            postulante: undefined // Se llenará cuando se implemente el endpoint
-        }));
-
-        return applicationsWithCandidates;
+        const response = await apiService.get<ApplicationApiResponse<ApplicationWithCandidate[]>>(
+            `/matching/oferta/${idOferta}/applications-detailed`
+        );
+        return response.data;
     }
 
     /**
@@ -137,6 +131,13 @@ class ApplicationsService {
         } catch {
             return new Map();
         }
+    }
+
+    /**
+     * Actualiza el estado de una aplicación (Reclutador)
+     */
+    async updateApplicationStatus(idAplicacion: string, status: 'ACEPTADA' | 'RECHAZADA'): Promise<void> {
+        await apiService.patch(`/matching/postulacion/${idAplicacion}/status`, { estado: status });
     }
 }
 

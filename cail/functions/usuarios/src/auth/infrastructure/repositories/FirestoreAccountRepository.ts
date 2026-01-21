@@ -63,6 +63,34 @@ export class FirestoreAccountRepository implements IAccountRepository {
     }
 
     /**
+     * Busca una cuenta por su token de verificación de email
+     */
+    async findByVerificationToken(token: string): Promise<Account | null> {
+        const snapshot = await this.getCollection()
+            .where('employerProfile.emailVerificationToken', '==', token)
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) {
+            return null;
+        }
+
+        const doc = snapshot.docs[0];
+        return this.mapToEntity(doc.data());
+    }
+
+    /**
+     * Marca el email de un usuario como verificado
+     */
+    async markEmailAsVerified(userId: string): Promise<void> {
+        await this.getCollection().doc(userId).update({
+            'employerProfile.emailVerified': true,
+            'employerProfile.emailVerificationToken': null, // Limpiar token usado
+            'updatedAt': new Date(),
+        });
+    }
+
+    /**
      * Mapea datos de Firestore a la entidad Account
      */
     private mapToEntity(data: any): Account {

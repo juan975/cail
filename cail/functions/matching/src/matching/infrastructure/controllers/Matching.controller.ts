@@ -245,6 +245,141 @@ export const getOfferApplications = asyncHandler(
     }
 );
 
+/**
+ * Mapea PostulacionConCandidato a formato de respuesta para el frontend
+ */
+const mapPostulacionConCandidatoToResponse = (postulacion: any) => ({
+    idAplicacion: postulacion.id,
+    idPostulante: postulacion.id_postulante,
+    idOferta: postulacion.id_oferta,
+    fechaAplicacion: postulacion.fecha_postulacion,
+    estado: postulacion.estado,
+    matchScore: postulacion.match_score,
+    candidato: postulacion.candidato ? {
+        nombreCompleto: postulacion.candidato.nombreCompleto,
+        email: postulacion.candidato.email,
+        telefono: postulacion.candidato.telefono,
+        ciudad: postulacion.candidato.ciudad,
+        nivelEducativo: postulacion.candidato.nivelEducativo,
+        resumenProfesional: postulacion.candidato.resumenProfesional,
+        habilidadesTecnicas: postulacion.candidato.habilidadesTecnicas,
+        habilidadesBlandas: postulacion.candidato.habilidadesBlandas,
+        experienciaAnios: postulacion.candidato.experienciaAnios,
+        cvUrl: postulacion.candidato.cvUrl,
+    } : undefined
+});
+
+/**
+ * GET /matching/oferta/:idOferta/applications-detailed
+ * Lista las postulaciones recibidas para una oferta CON INFORMACIÓN DEL CANDIDATO
+ * Acceso: RECLUTADOR, ADMIN
+ */
+export const getOfferApplicationsDetailed = asyncHandler(
+    async (req: AuthRequest, res: Response): Promise<Response> => {
+        // Validar autenticación
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'No autenticado'
+            });
+        }
+
+        // Validar rol
+        if (req.user.tipoUsuario !== 'RECLUTADOR' && req.user.tipoUsuario !== 'ADMIN') {
+            return res.status(403).json({
+                success: false,
+                message: 'Solo reclutadores y administradores pueden ver postulaciones de ofertas'
+            });
+        }
+
+        const { idOferta } = req.params;
+
+        if (!idOferta) {
+            return res.status(400).json({
+                success: false,
+                message: 'El parámetro idOferta es requerido'
+            });
+        }
+
+        try {
+            const service = getMatchingService();
+            const postulaciones = await service.obtenerPostulacionesConCandidatos(idOferta);
+
+            // Mapear a formato camelCase para el frontend
+            const mappedPostulaciones = postulaciones.map(mapPostulacionConCandidatoToResponse);
+
+            return res.status(200).json({
+                success: true,
+                data: mappedPostulaciones,
+                meta: {
+                    total: mappedPostulaciones.length,
+                    ofertaId: idOferta
+                }
+            });
+        } catch (error) {
+            return handleDomainError(error, res);
+        }
+    }
+);
+
+
+
+/**
+ * PATCH /matching/postulacion/:idAplicacion/status
+ * Actualiza el estado de una postulación
+ * Acceso: RECLUTADOR, ADMIN
+ */
+export const updateApplicationStatus = asyncHandler(
+    async (req: AuthRequest, res: Response): Promise<Response> => {
+        // Validar autenticación
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'No autenticado'
+            });
+        }
+
+        // Validar rol
+        if (req.user.tipoUsuario !== 'RECLUTADOR' && req.user.tipoUsuario !== 'ADMIN') {
+            return res.status(403).json({
+                success: false,
+                message: 'Solo reclutadores y administradores pueden actualizar postulaciones'
+            });
+        }
+
+        const { idAplicacion } = req.params;
+        const { estado } = req.body;
+
+        if (!idAplicacion || !estado) {
+            return res.status(400).json({
+                success: false,
+                message: 'idAplicacion y estado son requeridos'
+            });
+        }
+
+        const estadosValidos = ['PENDIENTE', 'EN_REVISION', 'ACEPTADA', 'RECHAZADA'];
+        if (!estadosValidos.includes(estado)) {
+            return res.status(400).json({
+                success: false,
+                message: `Estado inválido. Valores permitidos: ${estadosValidos.join(', ')}`
+            });
+        }
+
+        try {
+            const service = getMatchingService();
+            await service.actualizarEstadoPostulacion(idAplicacion, estado as any);
+
+            return res.status(200).json({
+                success: true,
+                message: 'Estado actualizado correctamente',
+                data: { idAplicacion, nuevoEstado: estado }
+            });
+        } catch (error) {
+            return handleDomainError(error, res);
+        }
+    }
+);
+
 // ============================================
 // CLASE ALTERNATIVA (Para compatibilidad con código existente)
 // ============================================

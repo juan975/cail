@@ -7,7 +7,9 @@ import {
     getCandidatesForOffer,
     applyToOffer,
     getMyApplications,
-    getOfferApplications
+    getOfferApplications,
+    getOfferApplicationsDetailed,
+    updateApplicationStatus
 } from '../controllers/Matching.controller';
 
 const router = Router();
@@ -84,6 +86,30 @@ router.get(
     authenticate,
     authorize('RECLUTADOR', 'ADMIN'),
     getOfferApplications
+);
+
+/**
+ * @route   GET /matching/oferta/:idOferta/applications-detailed
+ * @desc    Listar postulaciones CON DATOS DEL CANDIDATO (nombre, email, skills, etc)
+ * @access  Private - Solo RECLUTADOR/ADMIN
+ */
+router.get(
+    '/oferta/:idOferta/applications-detailed',
+    authenticate,
+    authorize('RECLUTADOR', 'ADMIN'),
+    getOfferApplicationsDetailed
+);
+
+/**
+ * @route   PATCH /matching/postulacion/:idAplicacion/status
+ * @desc    Actualizar el estado de una postulación (Aceptar/Rechazar)
+ * @access  Private - Solo RECLUTADOR/ADMIN
+ */
+router.patch(
+    '/postulacion/:idAplicacion/status',
+    authenticate,
+    authorize('RECLUTADOR', 'ADMIN'),
+    updateApplicationStatus
 );
 
 export default router;

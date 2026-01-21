@@ -69,7 +69,7 @@ export interface Postulacion {
     id_postulante: string;
     id_oferta: string;
     fecha_postulacion: Date;
-    estado: 'PENDIENTE' | 'EN_REVISION' | 'ACEPTADO' | 'RECHAZADO';
+    estado: 'PENDIENTE' | 'EN_REVISION' | 'ACEPTADA' | 'RECHAZADA';
     match_score?: number;
 }
 
@@ -115,6 +115,7 @@ export interface IPostulacionRepository {
     getByOferta(idOferta: string): Promise<Postulacion[]>;
     existePostulacion(idPostulante: string, idOferta: string): Promise<boolean>;
     contarPostulacionesHoy(idPostulante: string): Promise<number>;
+    updateEstado(id: string, estado: string): Promise<void>;
 }
 
 /**
@@ -123,6 +124,39 @@ export interface IPostulacionRepository {
 export interface ICatalogoRepository {
     existeSector(id: string): Promise<boolean>;
     existeNivel(id: string): Promise<boolean>;
+}
+
+/**
+ * Perfil de candidato para postulaciones enriquecidas
+ * Subset de datos relevantes para el reclutador
+ */
+export interface CandidatoPerfil {
+    nombreCompleto: string;
+    email: string;
+    telefono?: string;
+    ciudad?: string;
+    nivelEducativo?: string;
+    resumenProfesional?: string;
+    habilidadesTecnicas?: string[];
+    habilidadesBlandas?: string[];
+    experienciaAnios?: number;
+    cvUrl?: string;
+}
+
+/**
+ * Postulación enriquecida con datos del candidato
+ * Usado para la vista del reclutador
+ */
+export interface PostulacionConCandidato extends Postulacion {
+    candidato?: CandidatoPerfil;
+}
+
+/**
+ * Contrato para obtener perfiles de usuarios
+ */
+export interface IUsuarioRepository {
+    getCandidatoPerfil(idUsuario: string): Promise<CandidatoPerfil | null>;
+    getCandidatosPerfiles(idsUsuarios: string[]): Promise<Map<string, CandidatoPerfil>>;
 }
 
 // ============================================

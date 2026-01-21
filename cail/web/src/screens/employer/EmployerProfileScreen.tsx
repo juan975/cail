@@ -2,11 +2,23 @@ import { useState, useEffect } from 'react';
 import { InputField } from '../../components/ui/InputField';
 import { colors } from '../../theme/colors';
 import { EmployerProfileForm } from '../../types';
-import { initialEmployerProfile } from '../../data/mockData';
 import { userService } from '../../services/user.service';
 
+// Estado inicial vacío para el formulario
+const emptyEmployerProfile: EmployerProfileForm = {
+  companyName: '',
+  contactName: '',
+  email: '',
+  phone: '',
+  industry: '',
+  numberOfEmployees: '',
+  description: '',
+  website: '',
+  address: '',
+};
+
 export function EmployerProfileScreen() {
-  const [form, setForm] = useState<EmployerProfileForm>(initialEmployerProfile);
+  const [form, setForm] = useState<EmployerProfileForm>(emptyEmployerProfile);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 

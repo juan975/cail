@@ -6,10 +6,12 @@ import {
     IPostulacionRepository,
     ICatalogoRepository,
     IEmbeddingProvider,
+    IUsuarioRepository,
     Postulante,
     Oferta,
     MatchResult,
     Postulacion,
+    PostulacionConCandidato,
     OfertaNoEncontradaError,
     CatalogoInvalidoError,
     PostulacionDuplicadaError,
@@ -34,12 +36,21 @@ const MAX_POSTULACIONES_DIA = 10;
  * Sigue Clean Architecture: sin dependencias directas de infraestructura
  */
 export class MatchingService {
+    private usuarioRepository?: IUsuarioRepository;
+
     constructor(
         private matchingRepository: IMatchingRepository,
         private postulacionRepository: IPostulacionRepository,
         private catalogoRepository: ICatalogoRepository,
         private embeddingProvider: IEmbeddingProvider
     ) { }
+
+    /**
+     * Inyecta el repositorio de usuarios (opcional, para enriquecer postulaciones)
+     */
+    setUsuarioRepository(repo: IUsuarioRepository): void {
+        this.usuarioRepository = repo;
+    }
 
     /**
      * Caso de Uso: Generar recomendaciones de candidatos para una vacante
@@ -142,6 +153,46 @@ export class MatchingService {
         }
 
         return this.postulacionRepository.getByOferta(idOferta);
+    }
+
+    /**
+     * Caso de Uso: Obtener postulaciones de una oferta CON datos del candidato
+     * Requiere que se haya inyectado el usuarioRepository
+     */
+    async obtenerPostulacionesConCandidatos(idOferta: string): Promise<PostulacionConCandidato[]> {
+        // Obtener postulaciones básicas
+        const postulaciones = await this.obtenerPostulacionesOferta(idOferta);
+
+        // Si no hay repositorio de usuarios, retornar sin enriquecer
+        if (!this.usuarioRepository) {
+            console.warn('UsuarioRepository no configurado, retornando postulaciones sin datos de candidato');
+            return postulaciones.map(p => ({ ...p }));
+        }
+
+        // Obtener IDs únicos de postulantes
+        const idsPostulantes = [...new Set(postulaciones.map(p => p.id_postulante))];
+
+        // Obtener perfiles en batch (más eficiente)
+        const perfilesMap = await this.usuarioRepository.getCandidatosPerfiles(idsPostulantes);
+
+        // Enriquecer postulaciones con datos del candidato
+        return postulaciones.map(postulacion => ({
+            ...postulacion,
+            candidato: perfilesMap.get(postulacion.id_postulante) || undefined
+        }));
+    }
+
+    /**
+     * Caso de Uso: Actualizar estado de una postulación
+     */
+    async actualizarEstadoPostulacion(idAplicacion: string, nuevoEstado: 'PENDIENTE' | 'EN_REVISION' | 'ACEPTADA' | 'RECHAZADA'): Promise<void> {
+        // Verificar que existe
+        const postulacion = await this.postulacionRepository.getById(idAplicacion);
+        if (!postulacion) {
+            throw new Error('Postulación no encontrada');
+        }
+
+        await this.postulacionRepository.updateEstado(idAplicacion, nuevoEstado);
     }
 
     // ============================================

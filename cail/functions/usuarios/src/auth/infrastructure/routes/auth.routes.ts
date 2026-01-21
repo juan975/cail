@@ -43,6 +43,13 @@ router.post('/password-changed', authenticate, authController.confirmPasswordCha
  */
 router.post('/validate-token', authenticate, authController.validateToken);
 
+/**
+ * @route   GET /auth/verify-email
+ * @desc    Verifica el email de un reclutador usando el Magic Link
+ * @access  Public (el usuario hace clic en el enlace del email)
+ */
+router.get('/verify-email', authController.verifyEmail);
+
 // =========================================
 // DEPRECATED ROUTES (mantener por compatibilidad temporal)
 // =========================================

@@ -3,6 +3,7 @@ import { RegisterUserUseCase } from '../../application/use-cases/RegisterUser.us
 import { LoginUserUseCase } from '../../application/use-cases/LoginUser.usecase';
 import { ChangePasswordUseCase } from '../../application/use-cases/ChangePassword.usecase';
 import { FirestoreAccountRepository } from '../repositories/FirestoreAccountRepository';
+import { FirestoreEmpresaRepository } from '../repositories/FirestoreEmpresaRepository';
 import { ApiResponse } from '../../../shared/utils/response.util';
 import { asyncHandler, AppError } from '../../../shared/middleware/error.middleware';
 import { AuthRequest } from '../../../shared/middleware/auth.middleware';
@@ -14,6 +15,7 @@ import { AuthRequest } from '../../../shared/middleware/auth.middleware';
  * - /auth/login ya no valida contraseñas (eso lo hace Firebase Auth en el frontend)
  * - /auth/register para candidatos espera firebaseUid del frontend
  * - /auth/register para empleadores crea el usuario en Firebase Auth con contraseña temporal
+ * - /auth/register valida RUC de reclutadores contra colección empresas
  * - /auth/password-changed solo actualiza el flag en Firestore
  */
 export class AuthController {
@@ -22,10 +24,11 @@ export class AuthController {
     private changePasswordUseCase: ChangePasswordUseCase;
 
     constructor() {
-        const repository = new FirestoreAccountRepository();
-        this.registerUseCase = new RegisterUserUseCase(repository);
-        this.loginUseCase = new LoginUserUseCase(repository);
-        this.changePasswordUseCase = new ChangePasswordUseCase(repository);
+        const accountRepository = new FirestoreAccountRepository();
+        const empresaRepository = new FirestoreEmpresaRepository();
+        this.registerUseCase = new RegisterUserUseCase(accountRepository, empresaRepository);
+        this.loginUseCase = new LoginUserUseCase(accountRepository);
+        this.changePasswordUseCase = new ChangePasswordUseCase(accountRepository);
     }
 
     /**
@@ -124,4 +127,151 @@ export class AuthController {
             '(updatePassword), then call POST /auth/password-changed'
         );
     });
+
+    /**
+     * GET /auth/verify-email?token=xxx
+     * Verifica el email de un reclutador usando el Magic Link
+     * 
+     * Al hacer clic en el enlace del email:
+     * 1. Valida que el token existe y no ha expirado
+     * 2. Marca emailVerified: true en el perfil del usuario
+     * 3. Redirige a una página de éxito
+     */
+    verifyEmail = asyncHandler(async (req: Request, res: Response) => {
+        const { token } = req.query;
+
+        if (!token || typeof token !== 'string') {
+            return res.status(400).send(this.getVerificationErrorPage('Token de verificación no proporcionado'));
+        }
+
+        const accountRepository = new FirestoreAccountRepository();
+
+        // Buscar usuario por token de verificación
+        const account = await accountRepository.findByVerificationToken(token);
+
+        if (!account) {
+            return res.status(400).send(this.getVerificationErrorPage('Token de verificación inválido o ya utilizado'));
+        }
+
+        // Verificar que el token no ha expirado
+        const tokenExpiry = account.employerProfile?.emailVerificationExpiry;
+        if (tokenExpiry && new Date() > new Date(tokenExpiry)) {
+            return res.status(400).send(this.getVerificationErrorPage('El enlace de verificación ha expirado. Por favor solicita uno nuevo.'));
+        }
+
+        // Marcar email como verificado
+        await accountRepository.markEmailAsVerified(account.idCuenta.getValue());
+
+        console.log('✅ Email verified for:', account.email.getValue());
+
+        // Redirigir a página de éxito
+        return res.send(this.getVerificationSuccessPage(account.nombreCompleto));
+    });
+
+    /**
+     * Genera página HTML de éxito de verificación
+     */
+    private getVerificationSuccessPage(name: string): string {
+        return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verificado - CAIL</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 48px;
+            max-width: 480px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .icon { font-size: 64px; margin-bottom: 24px; }
+        h1 { color: #1e293b; font-size: 28px; margin-bottom: 16px; }
+        p { color: #64748b; font-size: 16px; line-height: 1.6; margin-bottom: 24px; }
+        .name { color: #10b981; font-weight: 600; }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            text-decoration: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+        .button:hover { transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">✅</div>
+        <h1>¡Email Verificado!</h1>
+        <p>Hola <span class="name">${name}</span>, tu correo electrónico ha sido verificado exitosamente.</p>
+        <p>Ya puedes iniciar sesión en la aplicación CAIL con tus credenciales.</p>
+        <a href="#" class="button">Ir a CAIL</a>
+    </div>
+</body>
+</html>`;
+    }
+
+    /**
+     * Genera página HTML de error de verificación
+     */
+    private getVerificationErrorPage(message: string): string {
+        return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error de Verificación - CAIL</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 48px;
+            max-width: 480px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .icon { font-size: 64px; margin-bottom: 24px; }
+        h1 { color: #1e293b; font-size: 28px; margin-bottom: 16px; }
+        p { color: #64748b; font-size: 16px; line-height: 1.6; margin-bottom: 24px; }
+        .error { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">❌</div>
+        <h1>Error de Verificación</h1>
+        <p class="error">${message}</p>
+        <p>Si el problema persiste, contacta a soporte.</p>
+    </div>
+</body>
+</html>`;
+    }
 }

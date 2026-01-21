@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  Linking,
   Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,8 +14,22 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useResponsiveLayout } from "@/hooks/useResponsive";
+import { applicationsService } from "@/services/applications.service";
+import { offersService } from "@/services/offers.service";
+import { ApplicationWithCandidate, ApplicationStatus as ApiStatus } from "@/types/applications.types";
 
 type ApplicationStatus = "pending" | "review" | "accepted" | "rejected";
+
+// Mapea estado de API a estado local
+const mapApiStatus = (status: ApiStatus): ApplicationStatus => {
+  const statusMap: Record<ApiStatus, ApplicationStatus> = {
+    'PENDIENTE': 'pending',
+    'EN_REVISION': 'review',
+    'ACEPTADA': 'accepted',
+    'RECHAZADA': 'rejected'
+  };
+  return statusMap[status] || 'pending';
+};
 
 interface Application {
   id: string;
@@ -28,167 +46,105 @@ interface Application {
   receivedDate: string;
   status: ApplicationStatus;
   cvFile?: string;
+  matchScore?: number;
 }
 
-const mockSpontaneousApplications: Application[] = [
-  {
-    id: "1",
-    candidateName: "María Fernanda González",
-    initials: "MF",
-    department: "Desarrollo de Software",
-    position: "Desarrollador Backend",
-    education: "Ingeniería en Sistemas",
-    experience: "3 años de exp.",
-    email: "mf.gonzalez@email.com",
-    phone: "0998765432",
-    location: "Loja",
-    skills: ["Node.js", "API Rest", "SQL/NoSQL"],
-    receivedDate: "27/10/2025",
-    status: "pending",
-    cvFile: "CV_Maria_Fernanda_Gonzalez.pdf",
-  },
-  {
-    id: "2",
-    candidateName: "Carlos Alberto Moreno",
-    initials: "CA",
-    department: "Tecnologías de la Información",
-    position: "Analista de Seguridad Informática",
-    education: "Ingeniería en Ciencias de la Computación",
-    experience: "5 años de exp.",
-    email: "ca.moreno@email.com",
-    phone: "0987654321",
-    location: "Loja",
-    skills: ["Ciberseguridad", "Penetration Testing", "Firewalls"],
-    receivedDate: "26/10/2025",
-    status: "pending",
-  },
-  {
-    id: "3",
-    candidateName: "Roberto Miguel Sánchez",
-    initials: "RM",
-    department: "Desarrollo de Software",
-    position: "Desarrollador Full Stack",
-    education: "Ingeniería en Sistemas",
-    experience: "6 años de exp.",
-    email: "rm.sanchez@email.com",
-    phone: "0995432109",
-    location: "Loja",
-    skills: ["React", "Node.js", "MongoDB", "Docker"],
-    receivedDate: "24/10/2025",
-    status: "pending",
-  },
-  {
-    id: "4",
-    candidateName: "Patricia Elizabeth Jiménez",
-    initials: "PE",
-    department: "Ingeniería de Software",
-    position: "Ingeniero de Proyectos de TI",
-    education: "Ingeniería en Sistemas",
-    experience: "4 años de exp.",
-    email: "pe.jimenez@email.com",
-    phone: "0994321098",
-    location: "Loja",
-    skills: ["Gestión de Proyectos", "Agile", "Scrum", "DevOps"],
-    receivedDate: "23/10/2025",
-    status: "review",
-  },
-  {
-    id: "5",
-    candidateName: "Fernando José Castillo",
-    initials: "FJ",
-    department: "Calidad de Software",
-    position: "QA Engineer",
-    education: "Ingeniería en Sistemas",
-    experience: "3 años de exp.",
-    email: "fj.castillo@email.com",
-    phone: "0993210987",
-    location: "Loja",
-    skills: ["Pruebas de Software", "Automatización", "Selenium"],
-    receivedDate: "22/10/2025",
-    status: "accepted",
-  },
-];
+// Convierte aplicación de API a formato local
+const mapApiToLocal = (app: ApplicationWithCandidate, offerTitle: string): Application => {
+  const candidato = app.candidato;
+  const nombre = candidato?.nombreCompleto || 'Candidato';
+  const initials = nombre.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  const fecha = new Date(app.fechaAplicacion);
 
-const mockOfferApplications: Application[] = [
-  {
-    id: "a1",
-    candidateName: "Lucía Andrade Vega",
-    initials: "LA",
-    department: "Analítica de Datos",
-    position: "Data Analyst",
-    education: "Ingeniería en Estadística",
-    experience: "4 años de exp.",
-    email: "lucia.ava@email.com",
-    phone: "0991112233",
-    location: "Quito",
-    skills: ["SQL", "Power BI", "Python", "ETL"],
-    receivedDate: "18/10/2025",
-    status: "pending",
-    cvFile: "CV_Lucia_Andrade.pdf",
-  },
-  {
-    id: "a2",
-    candidateName: "Jorge Cabrera Mora",
-    initials: "JC",
-    department: "Infraestructura",
-    position: "Ingeniero DevOps",
-    education: "Ingeniería de Sistemas",
-    experience: "6 años de exp.",
-    email: "jorge.cabrera@email.com",
-    phone: "0982223344",
-    location: "Guayaquil",
-    skills: ["AWS", "Docker", "Kubernetes", "CI/CD"],
-    receivedDate: "17/10/2025",
-    status: "review",
-  },
-  {
-    id: "a3",
-    candidateName: "Elena Ruiz",
-    initials: "ER",
-    department: "Diseño y Producto",
-    position: "Diseñador UI/UX",
-    education: "Diseño Gráfico",
-    experience: "5 años de exp.",
-    email: "elena.ruiz@email.com",
-    phone: "0973334455",
-    location: "Cuenca",
-    skills: ["Figma", "Prototipado", "Investigación UX"],
-    receivedDate: "15/10/2025",
-    status: "accepted",
-  },
-  {
-    id: "a4",
-    candidateName: "Martín Benítez",
-    initials: "MB",
-    department: "Infraestructura",
-    position: "Ingeniero DevOps",
-    education: "Telecomunicaciones",
-    experience: "4 años de exp.",
-    email: "martin.benitez@email.com",
-    phone: "0964445566",
-    location: "Loja",
-    skills: ["Terraform", "Bash", "Observabilidad"],
-    receivedDate: "13/10/2025",
-    status: "pending",
-    cvFile: "CV_Martin_Benitez.pdf",
-  }
-];
+  return {
+    id: app.idAplicacion,
+    candidateName: nombre,
+    initials,
+    department: candidato?.resumenProfesional?.substring(0, 50) || 'Perfil pendiente',
+    position: offerTitle,
+    education: candidato?.nivelEducativo || 'No especificado',
+    experience: candidato?.experienciaAnios ? `${candidato.experienciaAnios} años de exp.` : 'No especificado',
+    email: candidato?.email || 'email@pendiente.com',
+    phone: candidato?.telefono || 'No especificado',
+    location: candidato?.ciudad || 'No especificado',
+    skills: [...(candidato?.habilidadesTecnicas || []), ...(candidato?.habilidadesBlandas || [])].slice(0, 5),
+    receivedDate: fecha.toLocaleDateString('es-EC'),
+    status: mapApiStatus(app.estado),
+    matchScore: app.matchScore,
+    cvFile: app.candidato?.cvUrl,
+  };
+};
+
+// Los datos mock ya no se utilizan - ahora se cargan desde la API
 
 export default function ApplicationsScreen() {
   const { isDesktop, contentWidth, horizontalGutter } = useResponsiveLayout();
-  const [spontaneousApplications, setSpontaneousApplications] = useState<Application[]>(
-    mockSpontaneousApplications,
-  );
-  const [offerApplications, setOfferApplications] = useState<Application[]>(mockOfferApplications);
-  const [selectedView, setSelectedView] = useState<"cvs" | "offers">("cvs");
+
+  // Estados de datos
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [groupedByOffer, setGroupedByOffer] = useState<{ offerId: string; offerTitle: string; apps: Application[] }[]>([]);
+
+  // Estados de UI
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedView, setSelectedView] = useState<"all" | "byOffer">("byOffer");
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
-  const [selectedSource, setSelectedSource] = useState<"cvs" | "offers">("cvs");
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [experienceFilter] = useState("Toda exp.");
   const [statusFilter] = useState("Todos");
 
-  const activeApplications = selectedView === "cvs" ? spontaneousApplications : offerApplications;
+  // Cargar aplicaciones desde la API
+  const loadApplications = useCallback(async (showRefresh = false) => {
+    try {
+      if (showRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+      setError(null);
+
+      // Obtener ofertas del reclutador
+      const myOffers = await offersService.getMyOffers();
+
+      // Para cada oferta, obtener aplicaciones enriquecidas
+      const groupsPromises = myOffers.map(async (offer) => {
+        try {
+          const apps = await applicationsService.getOfferApplicationsWithCandidates(offer.idOferta);
+          return {
+            offerId: offer.idOferta,
+            offerTitle: offer.titulo,
+            apps: apps.map(app => mapApiToLocal(app, offer.titulo))
+          };
+        } catch (err) {
+          console.warn(`Error loading apps for offer ${offer.idOferta}:`, err);
+          return { offerId: offer.idOferta, offerTitle: offer.titulo, apps: [] };
+        }
+      });
+
+      const groups = await Promise.all(groupsPromises);
+      setGroupedByOffer(groups);
+
+      // Flatten para vista de todas
+      const allApps = groups.flatMap(g => g.apps);
+      setApplications(allApps);
+    } catch (err: any) {
+      console.error('Error loading applications:', err);
+      setError(err.message || 'Error al cargar las postulaciones');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadApplications();
+  }, [loadApplications]);
+
+  const handleRefresh = () => loadApplications(true);
+
+  const activeApplications = applications;
 
   const stats = {
     total: activeApplications.length,
@@ -217,47 +173,64 @@ export default function ApplicationsScreen() {
 
   const openEvaluationModal = (app: Application) => {
     setSelectedApplication(app);
-    setSelectedSource(selectedView);
     setShowEvaluationModal(true);
   };
 
-  const handleSelectCandidate = () => {
+  const handleSelectCandidate = async () => {
     if (selectedApplication) {
-      if (selectedSource === "cvs") {
-        setSpontaneousApplications((prev) =>
-          prev.map((app) =>
-            app.id === selectedApplication.id ? { ...app, status: "accepted" as ApplicationStatus } : app,
-          ),
-        );
-      } else {
-        setOfferApplications((prev) =>
-          prev.map((app) =>
-            app.id === selectedApplication.id ? { ...app, status: "accepted" as ApplicationStatus } : app,
-          ),
-        );
+      try {
+        setIsLoading(true);
+        await applicationsService.updateApplicationStatus(selectedApplication.id, 'ACEPTADA');
+        Alert.alert('Éxito', 'Candidato aceptado correctamente');
+        setShowEvaluationModal(false);
+        setSelectedApplication(null);
+        loadApplications(true);
+      } catch (error) {
+        console.error('Error accepting candidate:', error);
+        Alert.alert('Error', 'No se pudo aceptar al candidato. Intenta nuevamente.');
+      } finally {
+        setIsLoading(false);
       }
-      setShowEvaluationModal(false);
-      setSelectedApplication(null);
     }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (selectedApplication) {
-      if (selectedSource === "cvs") {
-        setSpontaneousApplications((prev) =>
-          prev.map((app) =>
-            app.id === selectedApplication.id ? { ...app, status: "rejected" as ApplicationStatus } : app,
-          ),
-        );
-      } else {
-        setOfferApplications((prev) =>
-          prev.map((app) =>
-            app.id === selectedApplication.id ? { ...app, status: "rejected" as ApplicationStatus } : app,
-          ),
-        );
-      }
-      setShowEvaluationModal(false);
-      setSelectedApplication(null);
+      Alert.alert(
+        'Rechazar Candidato',
+        '¿Estás seguro de que quieres rechazar esta postulación?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Rechazar',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                setIsLoading(true);
+                await applicationsService.updateApplicationStatus(selectedApplication.id, 'RECHAZADA');
+                setShowEvaluationModal(false);
+                setSelectedApplication(null);
+                loadApplications(true);
+              } catch (error) {
+                console.error('Error rejecting candidate:', error);
+                Alert.alert('Error', 'No se pudo rechazar la postulación.');
+              } finally {
+                setIsLoading(false);
+              }
+            }
+          }
+        ]
+      );
+    }
+  };
+
+  const handleDownloadCV = () => {
+    if (selectedApplication?.cvFile) {
+      Linking.openURL(selectedApplication.cvFile).catch(err =>
+        Alert.alert('Error', 'No se pudo abrir el enlace del CV')
+      );
+    } else {
+      Alert.alert('Información', 'Este candidato no ha adjuntado un CV');
     }
   };
 
@@ -313,20 +286,20 @@ export default function ApplicationsScreen() {
 
           <View style={[styles.surfaceCard, styles.block, styles.viewTabsCard]}>
             <TouchableOpacity
-              style={[styles.viewTab, selectedView === "cvs" && styles.viewTabActive]}
-              onPress={() => setSelectedView("cvs")}
+              style={[styles.viewTab, selectedView === "all" && styles.viewTabActive]}
+              onPress={() => setSelectedView("all")}
             >
-              <Feather name="file-text" size={16} color={selectedView === "cvs" ? "#1F2937" : "#6B7280"} />
-              <Text style={[styles.viewTabText, selectedView === "cvs" && styles.viewTabTextActive]}>
-                CVs Espontáneos
+              <Feather name="list" size={16} color={selectedView === "all" ? "#1F2937" : "#6B7280"} />
+              <Text style={[styles.viewTabText, selectedView === "all" && styles.viewTabTextActive]}>
+                Todas las Postulaciones
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.viewTab, selectedView === "offers" && styles.viewTabActive]}
-              onPress={() => setSelectedView("offers")}
+              style={[styles.viewTab, selectedView === "byOffer" && styles.viewTabActive]}
+              onPress={() => setSelectedView("byOffer")}
             >
-              <Feather name="briefcase" size={16} color={selectedView === "offers" ? "#1F2937" : "#6B7280"} />
-              <Text style={[styles.viewTabText, selectedView === "offers" && styles.viewTabTextActive]}>
+              <Feather name="briefcase" size={16} color={selectedView === "byOffer" ? "#1F2937" : "#6B7280"} />
+              <Text style={[styles.viewTabText, selectedView === "byOffer" && styles.viewTabTextActive]}>
                 Por Ofertas
               </Text>
             </TouchableOpacity>
@@ -336,49 +309,64 @@ export default function ApplicationsScreen() {
             <View style={styles.infoBanner}>
               <Feather name="info" size={16} color="#1E40AF" />
               <Text style={styles.infoBannerText}>
-                {selectedView === "cvs"
-                  ? "CVs Recibidos Espontáneamente: Candidatos que enviaron su hoja de vida sin aplicar a una oferta específica. Puedes revisar sus perfiles y contactarlos directamente."
-                  : "Postulaciones por Oferta: Candidatos que aplicaron específicamente a tus ofertas de trabajo publicadas. Puedes clasificarlos por experiencia, formación y compatibilidad."}
+                {selectedView === "all"
+                  ? "Vista de todas las postulaciones recibidas. Puedes revisar los perfiles de los candidatos que aplicaron a tus ofertas."
+                  : "Postulaciones agrupadas por oferta. Puedes clasificarlos por experiencia, formación y compatibilidad."}
               </Text>
             </View>
           </View>
 
           <View style={[styles.surfaceCard, styles.block, styles.listCard]}>
-            {selectedView === "cvs"
-              ? filteredApplications.length > 0 ? (
-                  filteredApplications.map((app) => (
-                    <ApplicationCard
-                      key={app.id}
-                      application={app}
-                      onPress={() => openEvaluationModal(app)}
-                      getStatusBadge={getStatusBadge}
-                    />
-                  ))
-                ) : (
-                  <EmptyState message="No hay CVs que coincidan. Ajusta filtros o busca por nombre/habilidad." />
-                )
-              : Object.entries(groupedApplications).length > 0 ? (
-                  Object.entries(groupedApplications).map(([position, apps]) => (
-                    <View key={position} style={styles.positionGroup}>
-                      <View style={styles.positionHeader}>
-                        <Feather name="briefcase" size={16} color="#F59E0B" />
-                        <Text style={styles.positionTitle}>{position}</Text>
-                        <Text style={styles.positionCount}>{apps.length} postulaciones</Text>
-                      </View>
-                      {apps.map((app) => (
-                        <ApplicationCard
-                          key={app.id}
-                          application={app}
-                          onPress={() => openEvaluationModal(app)}
-                          getStatusBadge={getStatusBadge}
-                          compact
-                        />
-                      ))}
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#3B82F6" />
+                <Text style={styles.loadingText}>Cargando postulaciones...</Text>
+              </View>
+            ) : error ? (
+              <View style={styles.errorContainer}>
+                <Feather name="alert-circle" size={32} color="#EF4444" />
+                <Text style={styles.errorText}>{error}</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
+                  <Text style={styles.retryButtonText}>Reintentar</Text>
+                </TouchableOpacity>
+              </View>
+            ) : selectedView === "all" ? (
+              filteredApplications.length > 0 ? (
+                filteredApplications.map((app) => (
+                  <ApplicationCard
+                    key={app.id}
+                    application={app}
+                    onPress={() => openEvaluationModal(app)}
+                    getStatusBadge={getStatusBadge}
+                  />
+                ))
+              ) : (
+                <EmptyState message="No hay postulaciones aún. Cuando los candidatos apliquen a tus ofertas, aparecerán aquí." />
+              )
+            ) : groupedByOffer.length > 0 ? (
+              groupedByOffer.map((group) => (
+                group.apps.length > 0 && (
+                  <View key={group.offerId} style={styles.positionGroup}>
+                    <View style={styles.positionHeader}>
+                      <Feather name="briefcase" size={16} color="#F59E0B" />
+                      <Text style={styles.positionTitle}>{group.offerTitle}</Text>
+                      <Text style={styles.positionCount}>{group.apps.length} postulaciones</Text>
                     </View>
-                  ))
-                ) : (
-                  <EmptyState message="No hay postulaciones agrupadas. Cambia a la vista CVs o ajusta filtros." />
-                )}
+                    {group.apps.map((app) => (
+                      <ApplicationCard
+                        key={app.id}
+                        application={app}
+                        onPress={() => openEvaluationModal(app)}
+                        getStatusBadge={getStatusBadge}
+                        compact
+                      />
+                    ))}
+                  </View>
+                )
+              ))
+            ) : (
+              <EmptyState message="No hay postulaciones agrupadas. Publica ofertas para recibir candidatos." />
+            )}
           </View>
         </View>
       </ScrollView>
@@ -464,24 +452,41 @@ export default function ApplicationsScreen() {
                   </View>
                 </View>
 
-                {selectedApplication.cvFile && (
+                {selectedApplication.cvFile ? (
                   <View style={styles.modalSection}>
                     <Text style={styles.sectionTitle}>Curriculum Vitae</Text>
-                    <TouchableOpacity style={styles.cvDownload}>
+                    <TouchableOpacity style={styles.cvDownload} onPress={handleDownloadCV}>
                       <Feather name="file-text" size={16} color="#6B7280" />
-                      <Text style={styles.cvFileName}>{selectedApplication.cvFile}</Text>
-                      <Feather name="download" size={16} color="#F59E0B" />
+                      <Text style={styles.cvFileName}>Ver CV / Hoja de Vida</Text>
+                      <Feather name="external-link" size={16} color="#F59E0B" />
                     </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.modalSection}>
+                    <Text style={styles.sectionTitle}>Curriculum Vitae</Text>
+                    <Text style={styles.infoText}>No adjuntado</Text>
                   </View>
                 )}
               </ScrollView>
             )}
 
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.selectButton} onPress={handleSelectCandidate}>
-                <Text style={styles.selectButtonText}>Agregar Candidato</Text>
+              <TouchableOpacity
+                style={[styles.selectButton, isLoading && { opacity: 0.7 }]}
+                onPress={handleSelectCandidate}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.selectButtonText}>Aceptar Candidato</Text>
+                )}
               </TouchableOpacity>
-              <TouchableOpacity style={styles.rejectButton} onPress={handleReject}>
+              <TouchableOpacity
+                style={[styles.rejectButton, isLoading && { opacity: 0.7 }]}
+                onPress={handleReject}
+                disabled={isLoading}
+              >
                 <Text style={styles.rejectButtonText}>Rechazar</Text>
               </TouchableOpacity>
             </View>
@@ -1092,5 +1097,38 @@ const styles = StyleSheet.create({
     color: "#4B5563",
     fontSize: 13,
     textAlign: "center",
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  errorContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  errorText: {
+    fontSize: 14,
+    color: "#EF4444",
+    textAlign: "center",
+  },
+  retryButton: {
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

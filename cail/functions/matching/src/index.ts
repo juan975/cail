@@ -33,6 +33,7 @@ import {
     FirestorePostulacionRepository,
     CatalogoValidator
 } from './matching/infrastructure/repositories/FirestorePostulacionRepository';
+import { FirestoreUsuarioRepository } from './matching/infrastructure/repositories/FirestoreUsuarioRepository';
 import { createEmbeddingProvider } from './matching/infrastructure/providers/VertexAIEmbeddingProvider';
 import { setMatchingService } from './matching/infrastructure/controllers/Matching.controller';
 
@@ -50,6 +51,7 @@ const initializeServices = (): void => {
     const matchingRepository = new FirestoreAplicacionRepository(db);
     const postulacionRepository = new FirestorePostulacionRepository(db);
     const catalogoRepository = new CatalogoValidator();
+    const usuarioRepository = new FirestoreUsuarioRepository();
 
     // Crear provider de embeddings (Infraestructura)
     const embeddingProvider = createEmbeddingProvider(
@@ -65,10 +67,14 @@ const initializeServices = (): void => {
         embeddingProvider
     );
 
+    // Inyectar repositorio de usuarios para postulaciones enriquecidas
+    matchingService.setUsuarioRepository(usuarioRepository);
+
     // Registrar servicio globalmente para los controllers
     setMatchingService(matchingService);
 
     console.log('✅ MatchingService inicializado con todas las dependencias');
+    console.log('✅ FirestoreUsuarioRepository configurado para postulaciones enriquecidas');
 };
 
 // Inicializar servicios
@@ -138,3 +144,10 @@ if (!isTest && !isProduction && !isCloudFunction) {
 }
 
 export default app;
+
+// ============================================
+// FIRESTORE TRIGGERS (Firebase Functions v2)
+// ============================================
+// Trigger para sincronizar usuarios → candidatos
+export { syncCandidatoFromUsuario } from './matching/triggers/syncCandidato.trigger';
+

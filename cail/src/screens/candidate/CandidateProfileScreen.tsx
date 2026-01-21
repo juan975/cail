@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator, Linking } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator, Linking, Modal, Switch } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
@@ -8,22 +8,37 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Button } from '@/components/ui/Button';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { CandidateProfileForm } from '@/types';
-import { initialCandidateProfile } from '@/data/mockData';
 import { colors } from '@/theme/colors';
 import { userService } from '@/services/user.service';
+import { SkillSelector } from '@/components/ui/SkillSelector';
 import * as DocumentPicker from 'expo-document-picker';
+import { WorkExperience } from '@/types';
+
+// Estado inicial vacío para el formulario
+const emptyCandidateProfile: CandidateProfileForm = {
+  fullName: '',
+  email: '',
+  phone: '',
+  city: '',
+  address: '',
+  professionalSummary: '',
+  technicalSkills: [],
+  softSkills: [],
+  competencies: [],
+  workExperience: [],
+};
 
 export function CandidateProfileScreen() {
   const { contentWidth } = useResponsiveLayout();
-  const [form, setForm] = useState<CandidateProfileForm>(initialCandidateProfile);
+  const [form, setForm] = useState<CandidateProfileForm>(emptyCandidateProfile);
   const [loading, setLoading] = useState(true);
-  const [newSkill, setNewSkill] = useState('');
-  const [newSoftSkill, setNewSoftSkill] = useState('');
-  const [newCompetency, setNewCompetency] = useState('');
   const [activeTab, setActiveTab] = useState<'personal' | 'professional' | 'experience'>('personal');
   const [saving, setSaving] = useState(false);
   const [cvUrl, setCvUrl] = useState<string | null>(null);
+
   const [uploadingCv, setUploadingCv] = useState(false);
+  const [experienceModalVisible, setExperienceModalVisible] = useState(false);
+  const [currentExperience, setCurrentExperience] = useState<Partial<WorkExperience>>({});
 
   // Load user profile data
   useEffect(() => {
@@ -45,6 +60,7 @@ export function CandidateProfileScreen() {
           technicalSkills: profile.candidateProfile.habilidadesTecnicas || [],
           softSkills: profile.candidateProfile.softSkills || [],
           competencies: profile.candidateProfile.competencias || [],
+          workExperience: (profile.candidateProfile.experienciaLaboral as any[]) || [],
         });
         setCvUrl(profile.candidateProfile.cvUrl || null);
       }
@@ -74,16 +90,59 @@ export function CandidateProfileScreen() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const addItem = (key: 'technicalSkills' | 'softSkills' | 'competencies', value: string) => {
-    if (!value.trim()) return;
-    updateField(key, [...form[key], value.trim()]);
+  const handleAddExperience = () => {
+    setCurrentExperience({
+      company: '',
+      position: '',
+      startDate: '',
+      endDate: '',
+      isCurrent: false,
+      description: '',
+    });
+    setExperienceModalVisible(true);
   };
 
-  const removeItem = (key: 'technicalSkills' | 'softSkills' | 'competencies', index: number) => {
-    updateField(
-      key,
-      form[key].filter((_, i) => i !== index),
-    );
+  const handleEditExperience = (exp: WorkExperience) => {
+    setCurrentExperience({ ...exp });
+    setExperienceModalVisible(true);
+  };
+
+  const handleSaveExperience = () => {
+    if (!currentExperience.company || !currentExperience.position || !currentExperience.startDate) {
+      Alert.alert('Error', 'Completa los campos obligatorios (*)');
+      return;
+    }
+
+    const newExp = {
+      ...currentExperience,
+      id: currentExperience.id || Date.now().toString(),
+    } as WorkExperience;
+
+    if (currentExperience.id) {
+      updateField(
+        'workExperience',
+        form.workExperience.map((e) => (e.id === newExp.id ? newExp : e))
+      );
+    } else {
+      updateField('workExperience', [...form.workExperience, newExp]);
+    }
+    setExperienceModalVisible(false);
+  };
+
+  const handleDeleteExperience = (id: string) => {
+    Alert.alert('Confirmar', '¿Eliminar esta experiencia?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => {
+          updateField(
+            'workExperience',
+            form.workExperience.filter((e) => e.id !== id)
+          );
+        },
+      },
+    ]);
   };
 
   const handleSave = async () => {
@@ -99,6 +158,7 @@ export function CandidateProfileScreen() {
           habilidadesTecnicas: form.technicalSkills,
           softSkills: form.softSkills,
           competencias: form.competencies,
+          experienciaLaboral: form.workExperience,
           cedula: '', // Mantener valor existente
         },
       });
@@ -276,39 +336,13 @@ export function CandidateProfileScreen() {
             </View>
 
             <View style={styles.formSection}>
-              {form.technicalSkills.length > 0 && (
-                <View style={styles.chipContainer}>
-                  {form.technicalSkills.map((skill, index) => (
-                    <Pressable
-                      key={skill + index}
-                      style={styles.skillChip}
-                      onPress={() => removeItem('technicalSkills', index)}
-                    >
-                      <Text style={styles.skillChipText}>{skill}</Text>
-                      <Feather name="x" size={14} color="#3B82F6" />
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-
-              <View style={styles.addSkillRow}>
-                <View style={{ flex: 1 }}>
-                  <InputField
-                    value={newSkill}
-                    onChangeText={setNewSkill}
-                    placeholder="Ej. React Native, Python, AWS..."
-                  />
-                </View>
-                <Pressable
-                  style={styles.addButton}
-                  onPress={() => {
-                    addItem('technicalSkills', newSkill);
-                    setNewSkill('');
-                  }}
-                >
-                  <Feather name="plus" size={20} color="#FFFFFF" />
-                </Pressable>
-              </View>
+              <SkillSelector
+                selectedSkills={form.technicalSkills}
+                onChange={(skills) => updateField('technicalSkills', skills)}
+                label="Habilidades técnicas e informáticas"
+                placeholder="Ej. React Native, Python, AWS..."
+                chipColor="#3B82F6"
+              />
             </View>
           </View>
 
@@ -325,39 +359,13 @@ export function CandidateProfileScreen() {
             </View>
 
             <View style={styles.formSection}>
-              {form.softSkills.length > 0 && (
-                <View style={styles.chipContainer}>
-                  {form.softSkills.map((skill, index) => (
-                    <Pressable
-                      key={skill + index}
-                      style={[styles.skillChip, styles.skillChipGreen]}
-                      onPress={() => removeItem('softSkills', index)}
-                    >
-                      <Text style={[styles.skillChipText, styles.skillChipTextGreen]}>{skill}</Text>
-                      <Feather name="x" size={14} color="#10B981" />
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-
-              <View style={styles.addSkillRow}>
-                <View style={{ flex: 1 }}>
-                  <InputField
-                    value={newSoftSkill}
-                    onChangeText={setNewSoftSkill}
-                    placeholder="Ej. Liderazgo, Comunicación..."
-                  />
-                </View>
-                <Pressable
-                  style={[styles.addButton, styles.addButtonGreen]}
-                  onPress={() => {
-                    addItem('softSkills', newSoftSkill);
-                    setNewSoftSkill('');
-                  }}
-                >
-                  <Feather name="plus" size={20} color="#FFFFFF" />
-                </Pressable>
-              </View>
+              <SkillSelector
+                selectedSkills={form.softSkills}
+                onChange={(skills) => updateField('softSkills', skills)}
+                label="Habilidades blandas y sociales"
+                placeholder="Ej. Liderazgo, Comunicación, Trabajo en equipo..."
+                chipColor="#10B981"
+              />
             </View>
           </View>
         </>
@@ -379,39 +387,13 @@ export function CandidateProfileScreen() {
             </View>
 
             <View style={styles.formSection}>
-              {form.competencies.length > 0 && (
-                <View style={styles.chipContainer}>
-                  {form.competencies.map((skill, index) => (
-                    <Pressable
-                      key={skill + index}
-                      style={[styles.skillChip, styles.skillChipYellow]}
-                      onPress={() => removeItem('competencies', index)}
-                    >
-                      <Text style={[styles.skillChipText, styles.skillChipTextYellow]}>{skill}</Text>
-                      <Feather name="x" size={14} color="#F59E0B" />
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-
-              <View style={styles.addSkillRow}>
-                <View style={{ flex: 1 }}>
-                  <InputField
-                    value={newCompetency}
-                    onChangeText={setNewCompetency}
-                    placeholder="Ej. Gestión de proyectos, Análisis de datos..."
-                  />
-                </View>
-                <Pressable
-                  style={[styles.addButton, styles.addButtonYellow]}
-                  onPress={() => {
-                    addItem('competencies', newCompetency);
-                    setNewCompetency('');
-                  }}
-                >
-                  <Feather name="plus" size={20} color="#FFFFFF" />
-                </Pressable>
-              </View>
+              <SkillSelector
+                selectedSkills={form.competencies}
+                onChange={(skills) => updateField('competencies', skills)}
+                label="Otras competencias clave"
+                placeholder="Ej. Gestión de proyectos, Análisis de datos..."
+                chipColor="#F59E0B"
+              />
             </View>
           </View>
 
@@ -530,21 +512,62 @@ export function CandidateProfileScreen() {
                   Registra tus últimos cargos o prácticas
                 </Text>
               </View>
-            </View>
-
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
-                <Feather name="inbox" size={32} color={colors.textSecondary} />
-              </View>
-              <Text style={styles.emptyTitle}>Aún no registras experiencia</Text>
-              <Text style={styles.emptySubtitle}>
-                Agrega tus experiencias para mejorar tus coincidencias con ofertas laborales.
-              </Text>
-              <Pressable style={styles.emptyButton}>
-                <Feather name="plus-circle" size={18} color="#0B7A4D" />
-                <Text style={styles.emptyButtonText}>Agregar experiencia</Text>
+              <Pressable
+                style={{ padding: 8, backgroundColor: '#F3F4F6', borderRadius: 8 }}
+                onPress={handleAddExperience}
+              >
+                <Feather name="plus" size={18} color="#0B7A4D" />
               </Pressable>
             </View>
+
+            {form.workExperience.length === 0 ? (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIcon}>
+                  <Feather name="inbox" size={32} color={colors.textSecondary} />
+                </View>
+                <Text style={styles.emptyTitle}>Aún no registras experiencia</Text>
+                <Text style={styles.emptySubtitle}>
+                  Agrega tus experiencias para mejorar tus coincidencias.
+                </Text>
+                <Pressable style={styles.emptyButton} onPress={handleAddExperience}>
+                  <Feather name="plus-circle" size={18} color="#0B7A4D" />
+                  <Text style={styles.emptyButtonText}>Agregar experiencia</Text>
+                </Pressable>
+              </View>
+            ) : (
+              form.workExperience.map((exp) => (
+                <View key={exp.id} style={styles.experienceItem}>
+                  <View style={styles.experienceHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.experienceCompany}>{exp.company}</Text>
+                      <Text style={styles.experiencePosition}>{exp.position}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <Pressable
+                        style={{ padding: 6 }}
+                        onPress={() => handleEditExperience(exp)}
+                      >
+                        <Feather name="edit-2" size={16} color={colors.textSecondary} />
+                      </Pressable>
+                      <Pressable
+                        style={{ padding: 6 }}
+                        onPress={() => handleDeleteExperience(exp.id)}
+                      >
+                        <Feather name="trash-2" size={16} color="#DC2626" />
+                      </Pressable>
+                    </View>
+                  </View>
+                  <Text style={styles.experienceDate}>
+                    {exp.startDate} - {exp.isCurrent ? 'Actualidad' : exp.endDate}
+                  </Text>
+                  {exp.description ? (
+                    <Text style={styles.experienceDescription} numberOfLines={3}>
+                      {exp.description}
+                    </Text>
+                  ) : null}
+                </View>
+              ))
+            )}
           </View>
         </>
       )}
@@ -557,6 +580,97 @@ export function CandidateProfileScreen() {
         loading={saving}
         disabled={saving}
       />
+
+      {/* Experience Modal */}
+      <Modal
+        visible={experienceModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setExperienceModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={styles.modalTitle}>
+                {currentExperience.id ? 'Editar Experiencia' : 'Nueva Experiencia'}
+              </Text>
+              <Pressable onPress={() => setExperienceModalVisible(false)}>
+                <Feather name="x" size={24} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <ScrollView contentContainerStyle={{ gap: 12 }}>
+              <InputField
+                label="Empresa *"
+                value={currentExperience.company || ''}
+                onChangeText={(text) =>
+                  setCurrentExperience({ ...currentExperience, company: text })
+                }
+              />
+              <InputField
+                label="Cargo / Posición *"
+                value={currentExperience.position || ''}
+                onChangeText={(text) =>
+                  setCurrentExperience({ ...currentExperience, position: text })
+                }
+              />
+
+              <View style={styles.formRow}>
+                <View style={{ flex: 1 }}>
+                  <InputField
+                    label="Fecha Inicio (YYYY-MM-DD) *"
+                    value={currentExperience.startDate || ''}
+                    onChangeText={(text) => setCurrentExperience({ ...currentExperience, startDate: text })}
+                    placeholder="2023-01-01"
+                  />
+                </View>
+                {!currentExperience.isCurrent && (
+                  <View style={{ flex: 1 }}>
+                    <InputField
+                      label="Fecha Fin (YYYY-MM-DD)"
+                      value={currentExperience.endDate || ''}
+                      onChangeText={(text) => setCurrentExperience({ ...currentExperience, endDate: text })}
+                      placeholder="2024-01-01"
+                    />
+                  </View>
+                )}
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 }}>
+                <Text style={{ fontSize: 14, color: colors.textPrimary, fontWeight: '600' }}>Actualmente trabajo aquí</Text>
+                <Switch
+                  value={currentExperience.isCurrent || false}
+                  onValueChange={(val) => {
+                    setCurrentExperience({
+                      ...currentExperience,
+                      isCurrent: val,
+                      endDate: val ? undefined : currentExperience.endDate
+                    });
+                  }}
+                  trackColor={{ false: '#E5E7EB', true: '#10B981' }}
+                />
+              </View>
+
+              <InputField
+                label="Descripción / Logros"
+                value={currentExperience.description || ''}
+                onChangeText={(text) =>
+                  setCurrentExperience({ ...currentExperience, description: text })
+                }
+                multiline
+                style={{ height: 100, textAlignVertical: 'top' }}
+                placeholder="Describe tus responsabilidades y logros principales..."
+              />
+            </ScrollView>
+
+            <Button
+              label="Guardar Experiencia"
+              onPress={handleSaveExperience}
+              style={{ marginTop: 8 }}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -876,17 +990,74 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   emptyButton: {
+    padding: 10,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
-    marginTop: 8,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    gap: 16,
+    maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary
+  },
+  experienceItem: {
+    padding: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    gap: 8,
+  },
+  experienceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  experienceCompany: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  experiencePosition: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3B82F6',
+    marginTop: 2,
+  },
+  experienceDate: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  experienceDescription: {
+    fontSize: 13,
+    color: '#4B5563',
+    lineHeight: 20,
+    marginTop: 4,
+  },
+
   emptyButtonText: {
     fontSize: 14,
     fontWeight: '600',

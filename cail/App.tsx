@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -15,14 +15,26 @@ import { apiService } from '@/services/api.service';
 function RootApp() {
   const [session, setSession] = useState<UserSession | null>(null);
   const [showTerms, setShowTerms] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Loading state while checking auth
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Flag para ignorar la restauración automática durante el proceso de login
+  const isLoggingIn = useRef(false);
 
   // Escuchar cambios de estado de autenticación de Firebase
-  // Esto restaura la sesión al recargar la página
+  // IMPORTANTE: No restauramos sesión durante el proceso de login
+  // para evitar condiciones de carrera con la validación de roles
   useEffect(() => {
     console.log('🔄 Setting up auth state listener...');
 
     const unsubscribe = firebaseAuthService.onAuthStateChanged(async (user) => {
+      // Si estamos en proceso de login, ignorar este callback
+      // La validación de roles se hace en LoginForm
+      if (isLoggingIn.current) {
+        console.log('🔄 Ignoring auth state change during login process');
+        setIsLoading(false);
+        return;
+      }
+
       if (user) {
         console.log('✅ Firebase user found on load:', user.email);
         try {
@@ -83,6 +95,11 @@ function RootApp() {
     return () => unsubscribe();
   }, []);
 
+  // Función para indicar que comenzó el proceso de login
+  const handleLoginStart = () => {
+    isLoggingIn.current = true;
+  };
+
   // Mostrar loading mientras se verifica la autenticación
   if (isLoading) {
     return (
@@ -90,7 +107,12 @@ function RootApp() {
         <ActivityIndicator size="large" color={colors.candidate} />
       </View>
     );
-  } const handleAuthSuccess = (role: UserRole, userData: any) => {
+  }
+
+  const handleAuthSuccess = (role: UserRole, userData: any) => {
+    // Resetear el flag de login
+    isLoggingIn.current = false;
+
     setSession({
       role,
       userData,
@@ -123,7 +145,7 @@ function RootApp() {
   }
 
   if (!session) {
-    return <AuthScreen onAuthSuccess={handleAuthSuccess} onShowTerms={handleShowTerms} />;
+    return <AuthScreen onAuthSuccess={handleAuthSuccess} onShowTerms={handleShowTerms} onLoginStart={handleLoginStart} />;
   }
 
   if (session.role === 'employer' && session.needsPasswordChange) {

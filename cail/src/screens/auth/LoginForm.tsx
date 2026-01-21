@@ -12,9 +12,10 @@ interface LoginFormProps {
   onSuccess: (data: any) => void;
   onBack: () => void;
   onSwitchToRegister: () => void;
+  onLoginStart?: () => void;
 }
 
-export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: LoginFormProps) {
+export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLoginStart }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,6 +31,10 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister }: Login
       Alert.alert('Campos incompletos', 'Ingresa tu correo y contraseña.');
       return;
     }
+
+    // Notificar a App.tsx que estamos iniciando login
+    // para que ignore onAuthStateChanged durante el proceso
+    onLoginStart?.();
 
     setLoading(true);
     setShowSplash(true);

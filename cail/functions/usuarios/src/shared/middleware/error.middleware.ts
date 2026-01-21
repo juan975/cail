@@ -4,13 +4,23 @@ import { Request, Response, NextFunction } from 'express';
  * Error de aplicación personalizado
  */
 export class AppError extends Error {
+    public errorCode?: string;
+
     constructor(
         public statusCode: number,
         public message: string,
+        errorCodeOrIsOperational?: string | boolean,
         public isOperational = true
     ) {
         super(message);
         Object.setPrototypeOf(this, AppError.prototype);
+
+        // Si el tercer parámetro es string, es un errorCode
+        if (typeof errorCodeOrIsOperational === 'string') {
+            this.errorCode = errorCodeOrIsOperational;
+        } else if (typeof errorCodeOrIsOperational === 'boolean') {
+            this.isOperational = errorCodeOrIsOperational;
+        }
     }
 }
 

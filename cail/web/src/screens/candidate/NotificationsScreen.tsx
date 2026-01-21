@@ -1,8 +1,41 @@
 import { useState } from 'react';
 import { FiBell, FiClock, FiInfo, FiSettings } from 'react-icons/fi';
 import { colors } from '../../theme/colors';
-import { NOTIFICATION_ITEMS, NOTIFICATION_PREFERENCES } from '../../data/mockData';
 import { useResponsiveLayout } from '../../hooks/useResponsive';
+
+const NOTIFICATION_ITEMS = [
+  {
+    id: '1',
+    title: 'Tu perfil ha sido verificado',
+    description: 'Ahora puedes postular a vacantes con mayor visibilidad para los reclutadores.',
+    date: 'Hace 2 horas',
+    unread: true,
+    category: 'Sistema',
+  },
+  {
+    id: '2',
+    title: 'Nueva vacante en tu área',
+    description: 'Se ha publicado una vacante para Desarrollador React Native que coincide con tu perfil.',
+    date: 'Hace 5 horas',
+    unread: true,
+    category: 'Sugerencia',
+  },
+  {
+    id: '3',
+    title: 'Postulación vista',
+    description: 'La empresa TechSolutions ha revisado tu postulación para Arquitecto de Software.',
+    date: 'Ayer',
+    unread: false,
+    category: 'Proceso',
+  },
+];
+
+const NOTIFICATION_PREFERENCES = [
+  { id: '1', label: 'Notificaciones push', description: 'Recibe alertas en tu dispositivo móvil', enabled: true },
+  { id: '2', label: 'Correos electrónicos', description: 'Resumen semanal y alertas importantes', enabled: true },
+  { id: '3', label: 'Mensajes SMS', description: 'Solo para alertas urgentes de seguridad', enabled: false },
+  { id: '4', label: 'Alertas de empleo', description: 'Cuando aparezcan vacantes compatibles', enabled: true },
+];
 
 export function NotificationsScreen() {
   const { contentWidth } = useResponsiveLayout();

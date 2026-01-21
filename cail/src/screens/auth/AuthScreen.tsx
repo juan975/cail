@@ -16,9 +16,10 @@ type AuthMode = 'select' | 'login' | 'register' | 'terms';
 type AuthScreenProps = {
   onAuthSuccess: (role: UserRole, data: any) => void;
   onShowTerms: () => void;
+  onLoginStart?: () => void;
 };
 
-export function AuthScreen({ onAuthSuccess, onShowTerms }: AuthScreenProps) {
+export function AuthScreen({ onAuthSuccess, onShowTerms, onLoginStart }: AuthScreenProps) {
   const { isTablet, isDesktop, contentWidth, horizontalGutter } = useResponsiveLayout();
   const [selectedRole, setSelectedRole] = useState<UserRole>('candidate');
   const [mode, setMode] = useState<AuthMode>('select');
@@ -109,6 +110,7 @@ export function AuthScreen({ onAuthSuccess, onShowTerms }: AuthScreenProps) {
                   onSuccess={handleSuccess}
                   onBack={() => setMode('select')}
                   onSwitchToRegister={handleShowTermsForRegister}
+                  onLoginStart={onLoginStart}
                 />
               )}
               {mode === 'terms' && (

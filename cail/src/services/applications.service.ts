@@ -95,20 +95,50 @@ class ApplicationsService {
     }
 
     /**
-     * Obtiene las aplicaciones para una oferta con información de candidatos
-     * Requiere llamadas adicionales al servicio de usuarios
+     * Obtiene las aplicaciones para una oferta CON información de candidatos
+     * Usa el endpoint enriquecido que ya incluye datos del candidato
      */
     async getOfferApplicationsWithCandidates(idOferta: string): Promise<ApplicationWithCandidate[]> {
-        const applications = await this.getOfferApplications(idOferta);
+        const response = await apiService.get<ApplicationApiResponse<ApplicationWithCandidate[]>>(
+            `/matching/oferta/${idOferta}/applications-detailed`
+        );
+        return response.data;
+    }
 
-        // Por ahora retornamos sin información adicional del candidato
-        // TODO: Implementar llamada al servicio de usuarios cuando esté disponible
-        const applicationsWithCandidates = applications.map(app => ({
-            ...app,
-            postulante: undefined // Se llenará cuando se implemente el endpoint
-        }));
+    /**
+     * Obtiene TODAS las aplicaciones recibidas por el reclutador autenticado
+     * Itera sobre todas las ofertas del reclutador y recopila las postulaciones
+     */
+    async getAllEmployerApplications(): Promise<{
+        byOffer: { offer: { id: string; titulo: string }; applications: Application[] }[];
+        total: number;
+    }> {
+        // 1. Obtener todas las ofertas del reclutador
+        const myOffers = await offersService.getMyOffers();
 
-        return applicationsWithCandidates;
+        // 2. Para cada oferta, obtener las aplicaciones
+        const byOffer = await Promise.all(
+            myOffers.map(async (offer) => {
+                try {
+                    const applications = await this.getOfferApplications(offer.idOferta);
+                    return {
+                        offer: { id: offer.idOferta, titulo: offer.titulo },
+                        applications
+                    };
+                } catch (error) {
+                    console.warn(`Could not fetch applications for offer ${offer.idOferta}:`, error);
+                    return {
+                        offer: { id: offer.idOferta, titulo: offer.titulo },
+                        applications: []
+                    };
+                }
+            })
+        );
+
+        // 3. Calcular total
+        const total = byOffer.reduce((sum, group) => sum + group.applications.length, 0);
+
+        return { byOffer, total };
     }
 
     /**
@@ -139,6 +169,13 @@ class ApplicationsService {
         } catch {
             return new Map();
         }
+    }
+
+    /**
+     * Actualiza el estado de una aplicación (Reclutador)
+     */
+    async updateApplicationStatus(idAplicacion: string, status: 'ACEPTADA' | 'RECHAZADA'): Promise<void> {
+        await apiService.patch(`/matching/postulacion/${idAplicacion}/status`, { estado: status });
     }
 }
 

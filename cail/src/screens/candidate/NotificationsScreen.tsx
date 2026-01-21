@@ -2,8 +2,41 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { colors } from '@/theme/colors';
-import { NOTIFICATION_ITEMS, NOTIFICATION_PREFERENCES } from '@/data/mockData';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
+
+const NOTIFICATION_ITEMS = [
+  {
+    id: '1',
+    title: 'Tu perfil ha sido verificado',
+    description: 'Ahora puedes postular a vacantes con mayor visibilidad para los reclutadores.',
+    date: 'Hace 2 horas',
+    unread: true,
+    category: 'Sistema',
+  },
+  {
+    id: '2',
+    title: 'Nueva vacante en tu área',
+    description: 'Se ha publicado una vacante para Desarrollador React Native que coincide con tu perfil.',
+    date: 'Hace 5 horas',
+    unread: true,
+    category: 'Sugerencia',
+  },
+  {
+    id: '3',
+    title: 'Postulación vista',
+    description: 'La empresa TechSolutions ha revisado tu postulación para Arquitecto de Software.',
+    date: 'Ayer',
+    unread: false,
+    category: 'Proceso',
+  },
+];
+
+const NOTIFICATION_PREFERENCES = [
+  { id: '1', label: 'Notificaciones push', description: 'Recibe alertas en tu dispositivo móvil', enabled: true },
+  { id: '2', label: 'Correos electrónicos', description: 'Resumen semanal y alertas importantes', enabled: true },
+  { id: '3', label: 'Mensajes SMS', description: 'Solo para alertas urgentes de seguridad', enabled: false },
+  { id: '4', label: 'Alertas de empleo', description: 'Cuando aparezcan vacantes compatibles', enabled: true },
+];
 
 export function NotificationsScreen() {
   const { contentWidth } = useResponsiveLayout();
@@ -32,17 +65,17 @@ export function NotificationsScreen() {
 
         {/* Tab Bar */}
         <View style={styles.tabBar}>
-          <TabButton 
-            label="Notificaciones" 
+          <TabButton
+            label="Notificaciones"
             icon="bell"
-            active={tab === 'feed'} 
-            onPress={() => setTab('feed')} 
+            active={tab === 'feed'}
+            onPress={() => setTab('feed')}
           />
-          <TabButton 
-            label="Configuración" 
+          <TabButton
+            label="Configuración"
             icon="settings"
-            active={tab === 'settings'} 
-            onPress={() => setTab('settings')} 
+            active={tab === 'settings'}
+            onPress={() => setTab('settings')}
           />
         </View>
 
@@ -63,10 +96,10 @@ export function NotificationsScreen() {
                     styles.iconBadge,
                     { backgroundColor: getCategoryColor(item.category) + '20' }
                   ]}>
-                    <Feather 
-                      name={getCategoryIcon(item.category)} 
-                      size={20} 
-                      color={getCategoryColor(item.category)} 
+                    <Feather
+                      name={getCategoryIcon(item.category)}
+                      size={20}
+                      color={getCategoryColor(item.category)}
                     />
                   </View>
 
@@ -115,21 +148,21 @@ export function NotificationsScreen() {
             {/* Preferences Card */}
             <View style={styles.preferencesCard}>
               {preferences.map((pref, index) => (
-                <View 
-                  key={pref.id} 
+                <View
+                  key={pref.id}
                   style={[
                     styles.preferenceRow,
                     index < preferences.length - 1 && styles.preferenceRowBorder
                   ]}
                 >
                   <View style={styles.preferenceIcon}>
-                    <Feather 
-                      name={getPreferenceIcon(pref.label)} 
-                      size={20} 
-                      color={pref.enabled ? '#0B7A4D' : colors.textSecondary} 
+                    <Feather
+                      name={getPreferenceIcon(pref.label)}
+                      size={20}
+                      color={pref.enabled ? '#0B7A4D' : colors.textSecondary}
                     />
                   </View>
-                  
+
                   <View style={styles.preferenceContent}>
                     <Text style={styles.preferenceLabel}>{pref.label}</Text>
                     <Text style={styles.preferenceDescription}>{pref.description}</Text>
@@ -150,7 +183,7 @@ export function NotificationsScreen() {
             <View style={styles.infoBox}>
               <Feather name="info" size={16} color="#3B82F6" />
               <Text style={styles.infoText}>
-                Puedes cambiar estas preferencias en cualquier momento. 
+                Puedes cambiar estas preferencias en cualquier momento.
                 Las notificaciones importantes siempre te llegarán.
               </Text>
             </View>
@@ -161,26 +194,26 @@ export function NotificationsScreen() {
   );
 }
 
-function TabButton({ 
-  label, 
+function TabButton({
+  label,
   icon,
-  active, 
-  onPress 
-}: { 
-  label: string; 
+  active,
+  onPress
+}: {
+  label: string;
   icon: keyof typeof Feather.glyphMap;
-  active: boolean; 
+  active: boolean;
   onPress: () => void;
 }) {
   return (
-    <Pressable 
-      onPress={onPress} 
+    <Pressable
+      onPress={onPress}
       style={[styles.tabButton, active && styles.tabButtonActive]}
     >
-      <Feather 
-        name={icon} 
-        size={16} 
-        color={active ? '#0B7A4D' : colors.textSecondary} 
+      <Feather
+        name={icon}
+        size={16}
+        color={active ? '#0B7A4D' : colors.textSecondary}
       />
       <Text style={[styles.tabButtonText, active && styles.tabButtonTextActive]}>
         {label}

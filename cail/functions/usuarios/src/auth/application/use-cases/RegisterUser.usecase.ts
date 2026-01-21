@@ -1,5 +1,6 @@
 import { getAuth } from '../../../config/firebase.config';
 import { IAccountRepository } from '../../domain/repositories/IAccountRepository';
+import { IEmpresaRepository } from '../../domain/repositories/IEmpresaRepository';
 import { Account, TipoUsuario } from '../../domain/entities/Account.entity';
 import { Email } from '../../../shared/domain/value-objects/Email';
 import { UserId } from '../../../shared/domain/value-objects/UserId';
@@ -7,16 +8,27 @@ import { RegisterRequestDto, RegisterResponseDto } from '../dtos/RegisterRequest
 import { AppError } from '../../../shared/middleware/error.middleware';
 import { emailService } from '../../../shared/services/email.service';
 import { generatePassword } from '../../../shared/utils/password-generator.util';
+import crypto from 'crypto';
 
 /**
  * Caso de uso: Registro de usuario con Firebase Authentication
  * 
  * POSTULANTES: Frontend crea usuario en Firebase Auth, envía firebaseUid al backend
- * RECLUTADORES: Backend crea usuario en Firebase Auth y envía LINK DE RESET de contraseña.
- *              - Maneja usuarios huérfanos (Auth existe, Firestore no) recuperándolos.
+ * RECLUTADORES: Backend crea usuario en Firebase Auth, valida RUC contra colección empresas,
+ *              envía Magic Link para verificación de email.
  */
 export class RegisterUserUseCase {
-    constructor(private accountRepository: IAccountRepository) { }
+    constructor(
+        private accountRepository: IAccountRepository,
+        private empresaRepository?: IEmpresaRepository
+    ) { }
+
+    /**
+     * Genera un token único para verificación de email
+     */
+    private generateVerificationToken(): string {
+        return crypto.randomBytes(32).toString('hex');
+    }
 
     async execute(dto: RegisterRequestDto): Promise<RegisterResponseDto> {
         console.log('RegisterUserUseCase started for:', dto.email, 'Type:', dto.tipoUsuario);
@@ -33,12 +45,33 @@ export class RegisterUserUseCase {
 
         let firebaseUid = dto.firebaseUid;
         let needsPasswordChange = false;
+        let companyValidationStatus: 'PENDIENTE' | 'VERIFICADA' | 'RECHAZADA' = 'PENDIENTE';
 
-        // Para RECLUTADORES: crear (o recuperar) usuario en Firebase Auth y enviar link de password
+        // Para RECLUTADORES: crear (o recuperar) usuario en Firebase Auth y enviar magic link de verificación
         if (dto.tipoUsuario === TipoUsuario.RECLUTADOR) {
             const auth = getAuth();
             const tempPassword = generatePassword(16); // Contraseña inicial compleja (no se envía)
             needsPasswordChange = true;
+
+            // 🔐 VALIDACIÓN DE RUC contra colección empresas
+            if (this.empresaRepository && dto.employerData?.ruc) {
+                const ruc = dto.employerData.ruc;
+                console.log('🔍 Validando RUC contra colección empresas:', ruc);
+
+                const empresaValida = await this.empresaRepository.existeEmpresaActiva(ruc);
+
+                if (empresaValida) {
+                    companyValidationStatus = 'VERIFICADA';
+                    console.log('✅ RUC verificado exitosamente:', ruc);
+                } else {
+                    companyValidationStatus = 'PENDIENTE';
+                    console.log('⚠️ RUC no encontrado o empresa inactiva, marcado como PENDIENTE:', ruc);
+                }
+            } else {
+                // Sin RUC proporcionado o sin repositorio, queda pendiente
+                companyValidationStatus = 'PENDIENTE';
+                console.log('⚠️ Sin RUC para validar, companyValidationStatus = PENDIENTE');
+            }
 
             try {
                 // Verificar si ya existe en Firebase Auth
@@ -59,7 +92,7 @@ export class RegisterUserUseCase {
                             email: dto.email,
                             password: tempPassword,
                             displayName: dto.nombreCompleto,
-                            emailVerified: false,
+                            emailVerified: false, // Se marcará true al hacer clic en el magic link
                         });
                         firebaseUid = userRecord.uid;
                         console.log('🔐 Created Firebase Auth user for employer:', dto.email, 'UID:', firebaseUid);
@@ -68,18 +101,32 @@ export class RegisterUserUseCase {
                     }
                 }
 
-                // Enviar contraseña temporal por email
-                // Esta contraseña es la misma que se usó para crear el usuario en Firebase Auth
+                // 🔗 GENERAR TOKEN DE VERIFICACIÓN Y ENVIAR MAGIC LINK
+                // El token es único y expira en 24 horas
+                const verificationToken = this.generateVerificationToken();
+                const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
+
+                // Guardar token en Firestore para validación posterior
+                // Se guardará junto con el perfil del usuario más abajo
+
                 try {
-                    await emailService.sendTemporaryPassword(
+                    await emailService.sendVerificationMagicLink(
                         dto.email,
-                        tempPassword,
+                        verificationToken,
                         dto.employerData?.nombreEmpresa || dto.nombreCompleto
                     );
-                    console.log('✅ Temporary password sent to:', dto.email);
+                    console.log('✅ Verification magic link sent to:', dto.email);
+
+                    // Guardar los datos del token para usarlos al crear la cuenta
+                    dto.employerData = {
+                        ...dto.employerData!,
+                        emailVerificationToken: verificationToken,
+                        emailVerificationExpiry: tokenExpiry,
+                        emailVerified: false,
+                    };
                 } catch (emailError) {
-                    console.error('⚠️ Failed to send email:', emailError);
-                    // Continuar aunque falle el email (el usuario puede pedir reset manual luego)
+                    console.error('⚠️ Failed to send verification email:', emailError);
+                    // Continuar aunque falle el email (el usuario puede pedir reenvío luego)
                 }
             } catch (error: any) {
                 if (error instanceof AppError) throw error;
@@ -99,6 +146,12 @@ export class RegisterUserUseCase {
             throw new AppError(400, 'Firebase UID could not be determined');
         }
 
+        // Agregar companyValidationStatus al employerData si es reclutador
+        const employerData = dto.employerData ? {
+            ...dto.employerData,
+            companyValidationStatus
+        } : undefined;
+
         // Crear cuenta/perfil en Firestore
         const account = new Account({
             idCuenta: new UserId(firebaseUid),
@@ -110,11 +163,14 @@ export class RegisterUserUseCase {
             fechaRegistro: new Date(),
             needsPasswordChange,
             candidateProfile: dto.candidateData,
-            employerProfile: dto.employerData,
+            employerProfile: employerData,
         });
 
         await this.accountRepository.save(account);
         console.log('✅ User profile created in Firestore:', firebaseUid, 'Type:', dto.tipoUsuario);
+        if (dto.tipoUsuario === TipoUsuario.RECLUTADOR) {
+            console.log('   Company validation status:', companyValidationStatus);
+        }
 
         return {
             idCuenta: firebaseUid,
@@ -126,3 +182,4 @@ export class RegisterUserUseCase {
         };
     }
 }
+
