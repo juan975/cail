@@ -24,9 +24,63 @@
 
 ---
 
-## 2. Tests por Microservicio
+## 2. ¿Qué es la Seguridad? (Explicación Simple)
 
-### 2.1 Matching (62 tests) ✅
+### Analogía: El Guardia de Seguridad
+
+Imagina que tu API es un **edificio de oficinas** y cada petición es un **visitante**:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    🏢 SIN GUARDIA (Sin Seguridad)                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   Visitante → Entra directamente a Oficina 1 (Usuarios)                    │
+│   Visitante → Entra directamente a Oficina 2 (Ofertas)                     │
+│   Visitante → Entra directamente a Oficina 3 (Matching)                    │
+│                                                                             │
+│   ⚠️ PROBLEMA: Cualquiera entra sin identificarse                          │
+│   ⚠️ PROBLEMA: No hay registro de quién entró                              │
+│   ⚠️ PROBLEMA: Pueden entrar con "maletas sospechosas" (inyecciones)       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    🛡️ CON GUARDIA (Con Seguridad)                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   Visitante llega a RECEPCIÓN (API Gateway)                                │
+│                                                                             │
+│   El guardia verifica:                                                      │
+│   ├── 1️⃣ ¿Trae identificación? (JWT Token)                                │
+│   ├── 2️⃣ ¿La identificación es válida? (Verificación Firebase)            │
+│   ├── 3️⃣ ¿Tiene permiso para esta oficina? (Roles: CANDIDATO/RECLUTADOR)  │
+│   ├── 4️⃣ ¿Ha venido demasiadas veces hoy? (Rate Limiting)                 │
+│   ├── 5️⃣ ¿Trae algo sospechoso? (Validación de entrada)                   │
+│   └── 6️⃣ ¿Está en la lista negra? (IP Blacklist)                          │
+│                                                                             │
+│   ✅ Si pasa TODO → Puede entrar                                            │
+│   ❌ Si falla ALGO → "Lo siento, no puede pasar"                            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Ejemplos Reales de Cada Verificación
+
+| Verificación | Ejemplo de la Vida Real | Ejemplo en el Código |
+|--------------|------------------------|----------------------|
+| **JWT Token** | Mostrar credencial de empleado | `Authorization: Bearer eyJhbG...` |
+| **Rate Limiting** | "Solo puedes pasar 100 veces al día" | 100 peticiones / 15 min |
+| **Validación** | Revisar que no traiga armas | Rechazar `<script>alert()</script>` |
+| **Roles** | "Solo gerentes pueden entrar aquí" | Solo RECLUTADOR puede crear ofertas |
+| **Helmet** | Cámaras de seguridad y alarmas | Headers HTTP de seguridad |
+| **bcrypt** | Guardar contraseñas en caja fuerte | Hash irreversible con 10 rounds |
+
+---
+
+## 3. Tests por Microservicio
+
+### 3.1 Matching (62 tests) ✅
 
 | Categoría | Tests | Descripción |
 |-----------|-------|-------------|
@@ -41,7 +95,7 @@
 - ✅ Límite de 10 postulaciones/día se respeta
 - ✅ Ordenamiento por score descendente funciona
 
-### 2.2 Usuarios (29 tests) - 23 pasan
+### 3.2 Usuarios (29 tests) - 23 pasan
 
 | Categoría | Tests | Descripción |
 |-----------|-------|-------------|
@@ -58,7 +112,7 @@
 - ✅ Headers de seguridad presentes
 - ⚠️ 6 tests fallan (requieren Firebase real)
 
-### 2.3 Ofertas (22 tests) - 21 pasan
+### 3.3 Ofertas (22 tests) - 21 pasan
 
 | Categoría | Tests | Descripción |
 |-----------|-------|-------------|
@@ -77,77 +131,123 @@
 
 ---
 
-## 3. Capas de Seguridad
+## 4. Capas de Seguridad Implementadas
 
-### 3.1 Helmet (Headers HTTP)
-```
-X-Content-Type-Options: nosniff     → Previene MIME sniffing
-X-Frame-Options: DENY               → Previene clickjacking
-Content-Security-Policy             → Controla recursos cargados
-Strict-Transport-Security           → Fuerza HTTPS
-```
+### 4.1 Helmet (Headers HTTP)
 
-### 3.2 Rate Limiting
+**Analogía:** Son como las **cámaras de seguridad y alarmas** del edificio - no detienen al atacante directamente, pero lo disuaden y registran todo.
+
 ```
-General:    100 peticiones / 15 min
-Login:      10 intentos / 15 min
-Registro:   5 intentos / 1 hora
+X-Content-Type-Options: nosniff     → "No puedes disfrazarte de otro tipo de archivo"
+X-Frame-Options: DENY               → "No puedes meter mi página dentro de otra"
+Content-Security-Policy             → "Solo puedes cargar recursos de estos lugares"
+Strict-Transport-Security           → "Siempre debes usar HTTPS (conexión segura)"
 ```
 
-### 3.3 JWT Authentication
+### 4.2 Rate Limiting
+
+**Analogía:** Es como decirle al visitante: "Solo puedes entrar X veces al día, si vienes más te bloqueo"
+
 ```
-Algoritmo:   HS256
-Expiración:  7 días
-Validación:  Firebase Admin SDK
+General:    100 peticiones / 15 min   → "100 entradas cada 15 minutos"
+Login:      10 intentos / 15 min      → "10 intentos de contraseña, luego espera"
+Registro:   5 intentos / 1 hora       → "No puedes crear 100 cuentas en 1 hora"
 ```
 
-### 3.4 Bcrypt (Contraseñas)
+### 4.3 JWT Authentication
+
+**Analogía:** Es tu **credencial de empleado** con tu foto, nombre y cargo que caduca cada cierto tiempo.
+
 ```
-Rounds:      10 (2^10 iteraciones)
-Resultado:   Hash irreversible
+Algoritmo:   HS256                    → Firma digital que no se puede falsificar
+Expiración:  7 días                   → "Tu credencial vence en 7 días"
+Validación:  Firebase Admin SDK       → Sistema central verifica autenticidad
 ```
 
-### 3.5 Validación de Archivos
+### 4.4 Bcrypt (Contraseñas)
+
+**Analogía:** Es como una **caja fuerte unidireccional** - puedes meter algo, pero nadie puede sacarlo ni el guardia.
+
 ```
-Tipo:        Solo PDF
-Tamaño:      Máximo 5 MB
-Validación:  MIME type real
+Rounds:      10 (2^10 iteraciones)    → "1,024 vueltas de mezcla"
+Resultado:   Hash irreversible        → Imposible recuperar contraseña original
 ```
 
-### 3.6 Manejo de Errores
+### 4.5 Validación de Archivos
+
+**Analogía:** Es como el **detector de metales** en la entrada - revisamos que no traigas nada peligroso.
+
 ```
-Desarrollo:  Stack trace visible
-Producción:  Solo mensaje genérico
+Tipo:        Solo PDF                 → "Solo puedes traer documentos PDF"
+Tamaño:      Máximo 5 MB              → "Nada más grande que 5MB"
+Validación:  MIME type real           → "Verificamos que realmente sea PDF, no virus disfrazado"
+```
+
+### 4.6 Manejo de Errores Seguro
+
+**Analogía:** Si hay un error, no le decimos al atacante exactamente qué salió mal.
+
+```
+Desarrollo:  Stack trace visible      → Para debugging
+Producción:  Solo mensaje genérico    → "Algo salió mal" (sin dar pistas)
 ```
 
 ---
 
-## 4. WSO2 API Gateway
+## 5. WSO2 API Gateway
+
+**Analogía:** WSO2 es como la **RECEPCIÓN PRINCIPAL** del edificio - TODO el mundo pasa por aquí primero.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              ESTADO WSO2                                    │
+│                   ANTES (Sin WSO2) - Cada puerta abierta                   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  ✅ Gateway desplegado (Docker)                                            │
-│  ✅ 3 APIs publicadas:                                                     │
-│     • /usuarios  → puerto 8080                                             │
-│     • /ofertas   → puerto 8083                                             │
-│     • /matching  → puerto 8084                                             │
-│  ✅ OAuth2 activo (requiere token)                                         │
+│                         INTERNET                                            │
+│                            │                                                │
+│              ┌─────────────┼─────────────┐                                 │
+│              │             │             │                                  │
+│              ▼             ▼             ▼                                  │
+│         [Usuarios]    [Ofertas]    [Matching]                              │
+│           :8080         :8083        :8084                                 │
 │                                                                             │
-│  Beneficios:                                                                │
-│  • Rate limiting centralizado                                               │
-│  • Logs de todas las peticiones                                            │
-│  • Blacklist de IPs                                                        │
-│  • Un solo punto de entrada                                                │
+│   ⚠️ Cada servicio expuesto directamente                                   │
+│   ⚠️ Si bloqueas un atacante, debes hacerlo en 3 lugares                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                   DESPUÉS (Con WSO2) - Una sola entrada                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│                         INTERNET                                            │
+│                            │                                                │
+│                            ▼                                                │
+│                    ┌──────────────┐                                        │
+│                    │   WSO2 API   │  ← ÚNICO PUNTO DE ENTRADA              │
+│                    │   Gateway    │                                        │
+│                    │   :8243      │                                        │
+│                    └──────┬───────┘                                        │
+│              ┌────────────┼────────────┐                                   │
+│              ▼            ▼            ▼                                    │
+│         [Usuarios]   [Ofertas]   [Matching]                                │
+│                                                                             │
+│   ✅ Todo pasa por WSO2 primero                                            │
+│   ✅ Un solo lugar para controlar, monitorear, bloquear                    │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+**Estado actual:**
+- ✅ Gateway desplegado en Docker
+- ✅ 3 APIs publicadas: `/usuarios`, `/ofertas`, `/matching`
+- ✅ OAuth2 activo (requiere token para acceder)
+
 ---
 
-## 5. SonarCloud
+## 6. SonarCloud (Análisis Estático)
+
+**Analogía:** SonarCloud es como un **inspector de calidad** que revisa tu edificio buscando grietas, cables sueltos y puertas sin cerradura ANTES de que alguien las explote.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -156,25 +256,28 @@ Producción:  Solo mensaje genérico
 │                                                                             │
 │  ✅ Configurado en repositorio juan975/cail                                │
 │  ✅ GitHub Actions workflow activo                                         │
-│  ✅ Analiza código en cada push                                            │
+│  ✅ Analiza código en cada push automáticamente                            │
 │                                                                             │
 │  Qué detecta:                                                               │
-│  • Vulnerabilidades de seguridad                                           │
-│  • Code smells                                                              │
-│  • Bugs potenciales                                                        │
-│  • Código duplicado                                                        │
-│                                                                             │
-│  Fixes aplicados:                                                           │
-│  • ReDoS en Email.ts (límite 254 chars antes de regex)                     │
-│  • Math.random → crypto.randomBytes para passwords                         │
-│  • API Keys movidas a variables de entorno                                 │
+│  • 🔴 Vulnerabilidades (puertas abiertas)                                  │
+│  • 🟡 Code smells (malas prácticas)                                        │
+│  • 🟠 Bugs potenciales (cables sueltos)                                    │
+│  • 📋 Código duplicado                                                     │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+**Vulnerabilidades corregidas:**
+
+| Problema | Riesgo | Solución |
+|----------|--------|----------|
+| ReDoS en Email.ts | Regex podía congelar servidor | Limitar a 254 caracteres antes de regex |
+| Math.random() en passwords | Contraseñas predecibles | Usar `crypto.randomBytes()` |
+| API Keys hardcodeadas | Exposición de credenciales | Mover a variables de entorno |
+
 ---
 
-## 6. Comandos para Ejecutar Tests
+## 7. Comandos para Ejecutar Tests
 
 ```bash
 # === MATCHING ===
@@ -199,7 +302,19 @@ npm test -- --testNamePattern="Helmet"
 
 ---
 
-## 7. Resumen Final
+## 8. Estándares Seguidos
+
+| Estándar | Descripción | Aplicado en |
+|----------|-------------|-------------|
+| **OWASP Top 10** | Prevención de vulnerabilidades web comunes | Inyección, XSS, Auth |
+| **OWASP ASVS** | Verificación de seguridad de aplicaciones | Tests de seguridad |
+| **RFC 5321** | Límite de 254 caracteres en emails | Validación Email.ts |
+
+> **Nota:** NIST SP 800-61 es para manejo de incidentes (respuesta). Nuestro enfoque es **prevención** (OWASP).
+
+---
+
+## 9. Resumen Final
 
 | Área | Estado | Notas |
 |------|--------|-------|
