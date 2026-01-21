@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">60.52% </span>
+                <span class="strong">66.66% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>23/38</span>
+                <span class='fraction'>26/39</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">20% </span>
+                <span class="strong">26.66% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>3/15</span>
+                <span class='fraction'>4/15</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">28.57% </span>
+                <span class="strong">42.85% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>2/7</span>
+                <span class='fraction'>3/7</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">54.54% </span>
+                <span class="strong">61.76% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>18/33</span>
+                <span class='fraction'>21/34</span>
             </div>
         
             
@@ -145,7 +145,11 @@
 <a name='L80'></a><a href='#L80'>80</a>
 <a name='L81'></a><a href='#L81'>81</a>
 <a name='L82'></a><a href='#L82'>82</a>
-<a name='L83'></a><a href='#L83'>83</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
@@ -184,10 +188,20 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -211,22 +225,16 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import admin from 'firebase-admin';
 import { config } from './env.config';
 &nbsp;
@@ -251,7 +259,7 @@ export const initializeFirebase = (): void =&gt; {
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
             projectId: config.firebase.projectId,
-            storageBucket: `${config.firebase.projectId}.appspot.com`,
+            storageBucket: `${config.firebase.projectId}.firebasestorage.app`,
         });
 &nbsp;
         initialized = true;
@@ -275,11 +283,11 @@ export const getFirestore = (): admin.firestore.Firestore =&gt; {
 /**
  * Obtiene la instancia de Auth
  */
-export const getAuth = <span class="fstat-no" title="function not covered" >(): admin.auth.Auth =</span>&gt; {
-<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (!initialized &amp;&amp; admin.apps.length === 0) {</span>
+export const getAuth = (): admin.auth.Auth =&gt; {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!initialized &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >admin.apps.length === 0)</span> {
 <span class="cstat-no" title="statement not covered" >        initializeFirebase();</span>
     }
-<span class="cstat-no" title="statement not covered" >    return admin.auth();</span>
+    return admin.auth();
 };
 &nbsp;
 /**
@@ -308,7 +316,11 @@ export const bucket = {
     getFiles: <span class="fstat-no" title="function not covered" >(o</span>ptions: any) =&gt; <span class="cstat-no" title="statement not covered" >getBucket().getFiles(options),</span>
 };
 &nbsp;
+// Alias for getFirestore
+export const getDb = getFirestore;
+&nbsp;
 export default admin;
+&nbsp;
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -316,7 +328,7 @@ export default admin;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-01-14T02:05:43.783Z
+                at 2026-01-21T13:08:29.656Z
             </div>
         <script src="../prettify.js"></script>
         <script>

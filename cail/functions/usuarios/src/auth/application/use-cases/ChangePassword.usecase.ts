@@ -47,4 +47,23 @@ export class ChangePasswordUseCase {
 
         console.log('✅ Password change completed for user:', userId);
     }
+
+    /**
+     * Confirma que el usuario ya cambió su contraseña (desde el frontend)
+     * Solo actualiza el flag needsPasswordChange en Firestore
+     */
+    async confirmPasswordChanged(userId: string): Promise<void> {
+        console.log('ConfirmPasswordChanged for userId:', userId);
+
+        const account = await this.accountRepository.findById(new UserId(userId));
+
+        if (!account) {
+            throw new AppError(404, 'Account not found');
+        }
+
+        account.needsPasswordChange = false;
+        await this.accountRepository.save(account);
+
+        console.log('✅ Password change confirmed for user:', userId);
+    }
 }
