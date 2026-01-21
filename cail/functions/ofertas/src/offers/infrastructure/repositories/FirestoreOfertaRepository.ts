@@ -23,7 +23,7 @@ export class FirestoreOfertaRepository implements IOfertaRepository {
     async findById(id: string): Promise<Oferta | null> {
         const doc = await this.getCollection().doc(id).get();
         if (!doc.exists) return null;
-        return this.mapToEntity(doc.data()!);
+        return this.mapToEntity(doc.data()!, doc.id);
     }
 
     async findAll(filters?: OfertaFilters): Promise<Oferta[]> {
@@ -55,7 +55,7 @@ export class FirestoreOfertaRepository implements IOfertaRepository {
             }
 
             const snapshot = await query.get();
-            let ofertas = snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+            let ofertas = snapshot.docs.map(doc => this.mapToEntity(doc.data(), doc.id));
 
             // Ordenar en memoria si se usaron filtros
             if (needsInMemorySort) {
@@ -80,7 +80,7 @@ export class FirestoreOfertaRepository implements IOfertaRepository {
                 .get();
 
             // Ordenar en memoria para evitar necesidad de índice compuesto
-            const ofertas = snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+            const ofertas = snapshot.docs.map(doc => this.mapToEntity(doc.data(), doc.id));
             return ofertas.sort((a, b) => {
                 const dateA = a.fechaPublicacion instanceof Date ? a.fechaPublicacion : new Date(a.fechaPublicacion);
                 const dateB = b.fechaPublicacion instanceof Date ? b.fechaPublicacion : new Date(b.fechaPublicacion);
@@ -96,9 +96,10 @@ export class FirestoreOfertaRepository implements IOfertaRepository {
         await this.getCollection().doc(id).delete();
     }
 
-    private mapToEntity(data: any): Oferta {
+    private mapToEntity(data: any, docId?: string): Oferta {
         return new Oferta({
-            idOferta: data.idOferta,
+            // Use docId as fallback if idOferta is not stored in document
+            idOferta: data.idOferta || docId,
             titulo: data.titulo,
             descripcion: data.descripcion,
             empresa: data.empresa,

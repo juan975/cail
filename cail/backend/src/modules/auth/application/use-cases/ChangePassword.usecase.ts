@@ -1,7 +1,7 @@
-import bcrypt from 'bcryptjs';
 import { IAccountRepository } from '../../domain/repositories/IAccountRepository';
 import { AppError } from '../../../../shared/infrastructure/middleware/error.middleware';
 import { UserId } from '../../../../shared/domain/value-objects/UserId';
+import { auth as firebaseAuth } from '../../../../shared/infrastructure/config/firebase.config';
 
 export class ChangePasswordUseCase {
     constructor(private accountRepository: IAccountRepository) { }
@@ -13,22 +13,21 @@ export class ChangePasswordUseCase {
             throw new AppError(404, 'Account not found');
         }
 
-        // If currentPassword is provided, verify it (standard flow)
-        // If not, it might be a forced reset (employer temporary password flow)
-        if (data.currentPassword) {
-            const isValid = await bcrypt.compare(data.currentPassword, account.passwordHash);
-            if (!isValid) {
-                throw new AppError(401, 'Invalid current password');
-            }
+        try {
+            // Update password in Firebase Auth
+            await firebaseAuth.updateUser(userId, {
+                password: data.newPassword,
+            });
+            console.log('✅ Firebase Auth password updated for user:', userId);
+        } catch (firebaseError: any) {
+            console.error('❌ Failed to update Firebase Auth password:', firebaseError);
+            throw new AppError(500, 'Failed to update password');
         }
 
-        const newPasswordHash = await bcrypt.hash(data.newPassword, 10);
-
-        // Update account with new hash and clear password change flag
-        // Note: We need a way to update only these fields in the repo or save the whole entity
-        account.passwordHash = newPasswordHash;
+        // Clear password change flag in Firestore
         account.needsPasswordChange = false;
-
         await this.accountRepository.save(account);
+
+        console.log('✅ Password change completed for user:', userId);
     }
 }

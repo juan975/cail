@@ -33,6 +33,8 @@ export interface RegisterRequestDto {
     nombreCompleto: string;
     telefono?: string;
     tipoUsuario: TipoUsuario;
+    // Firebase UID for candidates (created client-side)
+    firebaseUid?: string;
     // Datos adicionales según el tipo de usuario
     candidateData?: CandidateProfileData;
     employerData?: EmployerProfileData;

@@ -25,7 +25,9 @@ class ApplicationsService {
      * Solo disponible para usuarios tipo POSTULANTE
      */
     async applyToOffer(idOferta: string): Promise<Application> {
+        console.log('📝 [APPLY] applyToOffer called with idOferta:', idOferta);
         const payload: CreateApplicationDTO = { idOferta };
+        console.log('📝 [APPLY] Sending payload:', JSON.stringify(payload));
         const response = await apiService.post<ApplicationApiResponse<Application>>(
             '/matching/apply',
             payload

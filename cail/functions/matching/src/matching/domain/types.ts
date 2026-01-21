@@ -1,63 +1,209 @@
+// src/matching/domain/types.ts
+// Entidades y contratos del dominio de Matching - Clean Architecture
+
+// ============================================
+// CATÁLOGOS PERMITIDOS (Taxonomía CAIL)
+// ============================================
+
+export const SECTORES_INDUSTRIALES = [
+    'SEC_001', 'SEC_002', 'SEC_003', 'SEC_004', 'SEC_005',
+    'SEC_006', 'SEC_007', 'SEC_008', 'SEC_009', 'SEC_010'
+] as const;
+
+export const NIVELES_JERARQUICOS = [
+    'NIV_JUNIOR', 'NIV_SEMI_SENIOR', 'NIV_SENIOR',
+    'NIV_LEAD', 'NIV_MANAGER', 'NIV_DIRECTOR'
+] as const;
+
+export type SectorIndustrial = typeof SECTORES_INDUSTRIALES[number];
+export type NivelJerarquico = typeof NIVELES_JERARQUICOS[number];
+
+// ============================================
+// ENTIDADES DEL DOMINIO
+// ============================================
+
 /**
- * Tipos para el módulo de Matching
+ * Entidad Postulante - Basada en el Diccionario de Datos del SAD
+ * Representa al candidato en el contexto de matching
  */
-
 export interface Postulante {
-    idPostulante: string;
-    nombreCompleto: string;
-    email: string;
-    ciudad: string;
-    modalidad_preferida: string;
+    id: string;
+    nombre: string;
     habilidades_tecnicas: string[];
-    competencias: string[];
-    experiencia: ExperienciaLaboral[];
-    formacion: FormacionAcademica[];
+    id_nivel_actual: string;
+    id_sector_industrial: string;
+    embedding_habilidades?: number[];
 }
 
-export interface ExperienciaLaboral {
-    empresa: string;
-    cargo: string;
-    fechaInicio: string;
-    fechaFin?: string;
-    descripcion_responsabilidades: string;
-}
-
-export interface FormacionAcademica {
-    institucion: string;
-    titulo_carrera: string;
-    fechaInicio: string;
-    fechaFin?: string;
-    estado: string;
-}
-
+/**
+ * Entidad Oferta - Sincronizada con microservicio ofertas
+ * Campos requeridos para el motor de matching híbrido
+ */
 export interface Oferta {
-    idOferta: string;
+    id: string;
     titulo: string;
     descripcion: string;
-    empresa: string;
-    ciudad: string;
-    modalidad: string;
-    experiencia_requerida: string;
-    formacion_requerida: string;
-    competencias_requeridas: string[];
+    id_sector_industrial: string;
+    id_nivel_requerido: string;
+    // Campos adicionales sincronizados con ofertas microservice
+    modalidad?: string;
+    competencias_requeridas?: string[];
+    habilidades_obligatorias?: OfertaSkill[];
+    habilidades_deseables?: OfertaSkill[];
 }
 
+/**
+ * Relación Oferta-Habilidad con peso (REL_OFERTA_SKILL)
+ */
+export interface OfertaSkill {
+    nombre: string;
+    es_obligatorio: boolean;
+    peso: number; // 0.0 a 1.0
+}
+
+/**
+ * Entidad Postulación/Aplicación
+ */
+export interface Postulacion {
+    id: string;
+    id_postulante: string;
+    id_oferta: string;
+    fecha_postulacion: Date;
+    estado: 'PENDIENTE' | 'EN_REVISION' | 'ACEPTADO' | 'RECHAZADO';
+    match_score?: number;
+}
+
+/**
+ * Resultado del matching con score detallado
+ */
 export interface MatchResult {
     postulante: Postulante;
-    score: number;
-    detalles: {
-        habilidades: number;
-        experiencia: number;
-        logistica: number;
-        formacion: number;
+    match_score: number;
+    score_detalle: {
+        similitud_vectorial: number;
+        habilidades_obligatorias: number;
+        habilidades_deseables: number;
+        nivel_jerarquico: number;
     };
 }
 
-export interface Aplicacion {
-    idAplicacion: string;
-    idPostulante: string;
-    idOferta: string;
-    fechaAplicacion: Date;
-    estado: 'PENDIENTE' | 'EN_REVISION' | 'ACEPTADA' | 'RECHAZADA';
-    matchScore?: number;
+// ============================================
+// INTERFACES DE REPOSITORIO (Contratos)
+// ============================================
+
+/**
+ * Contrato para repositorio de matching
+ * La infraestructura implementará esto con Firestore
+ */
+export interface IMatchingRepository {
+    getOferta(id: string): Promise<Oferta | null>;
+    buscarCandidatosSimilares(
+        vector: number[],
+        sectorId: string,
+        limite: number
+    ): Promise<Postulante[]>;
+    updateVectorCandidato(id: string, vector: number[]): Promise<void>;
+}
+
+/**
+ * Contrato para repositorio de postulaciones
+ */
+export interface IPostulacionRepository {
+    crear(postulacion: Omit<Postulacion, 'id'>): Promise<string>;
+    getById(id: string): Promise<Postulacion | null>;
+    getByPostulante(idPostulante: string): Promise<Postulacion[]>;
+    getByOferta(idOferta: string): Promise<Postulacion[]>;
+    existePostulacion(idPostulante: string, idOferta: string): Promise<boolean>;
+    contarPostulacionesHoy(idPostulante: string): Promise<number>;
+}
+
+/**
+ * Contrato para validación de catálogos
+ */
+export interface ICatalogoRepository {
+    existeSector(id: string): Promise<boolean>;
+    existeNivel(id: string): Promise<boolean>;
+}
+
+// ============================================
+// INTERFAZ DE EMBEDDING PROVIDER (Clean Architecture)
+// ============================================
+
+/**
+ * Abstracción para generación de embeddings
+ * Permite desacoplar el servicio de la implementación de IA
+ */
+export interface IEmbeddingProvider {
+    /**
+     * Genera un vector de embedding para el texto dado
+     * @param text - Texto a vectorizar
+     * @returns Vector numérico de embeddings
+     * @throws EmbeddingError si hay fallo en la generación
+     */
+    generateEmbedding(text: string): Promise<number[]>;
+}
+
+// ============================================
+// ERRORES DEL DOMINIO
+// ============================================
+
+export class DomainError extends Error {
+    constructor(
+        public code: string,
+        message: string,
+        public statusCode: number = 400
+    ) {
+        super(message);
+        this.name = 'DomainError';
+    }
+}
+
+export class CatalogoInvalidoError extends DomainError {
+    constructor(tipo: string, id: string) {
+        super(
+            'CATALOGO_INVALIDO',
+            `El ID '${id}' no pertenece al catálogo ${tipo}`,
+            400
+        );
+    }
+}
+
+export class PostulacionDuplicadaError extends DomainError {
+    constructor() {
+        super(
+            'POSTULACION_DUPLICADA',
+            'Ya existe una postulación activa para esta oferta',
+            409
+        );
+    }
+}
+
+export class LimitePostulacionesError extends DomainError {
+    constructor() {
+        super(
+            'LIMITE_POSTULACIONES',
+            'Has alcanzado el límite de 10 postulaciones por día',
+            429
+        );
+    }
+}
+
+export class OfertaNoEncontradaError extends DomainError {
+    constructor(id: string) {
+        super(
+            'OFERTA_NO_ENCONTRADA',
+            `La oferta con ID '${id}' no existe`,
+            404
+        );
+    }
+}
+
+export class EmbeddingError extends DomainError {
+    constructor(message: string) {
+        super(
+            'EMBEDDING_ERROR',
+            `Error generando embedding: ${message}`,
+            503
+        );
+    }
 }

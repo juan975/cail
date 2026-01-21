@@ -1,13 +1,13 @@
 /**
- * Servicio de Autenticación
+ * Servicio de Autenticación para Web
  * 
- * Combina Firebase Auth (para autenticación) con nuestro backend (para perfiles).
+ * Sistema unificado usando Firebase Auth para todos los usuarios.
  * 
  * Flujos:
- *   - Login: Firebase Auth -> Obtener perfil del backend -> Validar rol
+ *   - Login: Firebase Auth -> Obtener perfil del backend
  *   - Registro POSTULANTE: Firebase Auth (frontend) -> Crear perfil en backend
- *   - Registro RECLUTADOR: Backend crea en Firebase Auth + envía email con link de reset
- *   - Cambio de contraseña: Firebase Auth -> Confirmar en backend
+ *   - Registro RECLUTADOR: Backend crea en Firebase Auth + envía email con temp password
+ *   - Cambio de contraseña: Backend (usa Firebase Admin para actualizar)
  */
 
 import { apiService } from './api.service';
@@ -19,91 +19,61 @@ import {
     RegisterResponse,
 } from '../types/auth.types';
 
-// Tipos de rol para la UI
-export type UIUserRole = 'candidate' | 'employer';
-
-// Error específico para rol incorrecto
-export class RoleMismatchError extends Error {
-    public readonly expectedRole: UIUserRole;
-    public readonly actualRole: UIUserRole;
-
-    constructor(expectedRole: UIUserRole, actualRole: UIUserRole) {
-        const message = expectedRole === 'candidate'
-            ? 'Esta cuenta es de Empleador. Por favor selecciona "Soy Empleador".'
-            : 'Esta cuenta es de Candidato. Por favor selecciona "Busco Empleo".';
-        super(message);
-        this.name = 'RoleMismatchError';
-        this.expectedRole = expectedRole;
-        this.actualRole = actualRole;
-    }
-}
-
 class AuthService {
     /**
-     * Login de usuario con validación de rol
-     * 
-     * @param email Email del usuario
-     * @param password Contraseña
-     * @param expectedRole Rol que el usuario seleccionó en la UI (candidate o employer)
-     * @throws RoleMismatchError si el rol del usuario no coincide con el esperado
+     * Login de usuario usando Firebase Auth
+     * Works for both candidates (POSTULANTE) and employers (RECLUTADOR)
      */
-    async login(email: string, password: string, expectedRole?: UIUserRole): Promise<LoginResponse> {
+    async login(email: string, password: string): Promise<LoginResponse> {
         // 1. Autenticar con Firebase Auth
         const { user, idToken } = await firebaseAuthService.login(email, password);
 
+        // 2. Guardar token para las peticiones al API
+        await apiService.saveToken(idToken);
+
         try {
-            // 2. Obtener perfil del backend
-            const profileResponse = await apiService.get<{ status: string; data: any }>('/auth/profile');
-
-            const tipoUsuario = profileResponse.data.tipoUsuario;
-            const actualRole: UIUserRole = tipoUsuario === 'POSTULANTE' ? 'candidate' : 'employer';
-
-            // 3. Validar que el rol coincida (si se especificó un rol esperado)
-            if (expectedRole && actualRole !== expectedRole) {
-                // Cerrar sesión de Firebase ANTES de lanzar el error
-                console.log('❌ Role mismatch: expected', expectedRole, 'got', actualRole);
-                await firebaseAuthService.logout();
-                throw new RoleMismatchError(expectedRole, actualRole);
-            }
+            // 3. Obtener perfil del backend
+            const profileResponse = await apiService.get<{ status: string; data: any }>('/users/profile');
 
             return {
                 idCuenta: user.uid,
                 email: user.email || email,
-                nombreCompleto: profileResponse.data.nombreCompleto,
-                tipoUsuario: tipoUsuario,
+                nombreCompleto: profileResponse.data.nombreCompleto || 'Usuario',
+                tipoUsuario: profileResponse.data.tipoUsuario || 'POSTULANTE',
                 token: idToken,
-                needsPasswordChange: profileResponse.data.needsPasswordChange,
+                needsPasswordChange: profileResponse.data.needsPasswordChange || false,
             };
-        } catch (error) {
-            // Si hay cualquier error después del login de Firebase, cerrar sesión
-            if (!(error instanceof RoleMismatchError)) {
-                // Solo hacer logout si no es un RoleMismatchError (ya hicimos logout en ese caso)
-                try {
-                    await firebaseAuthService.logout();
-                } catch (logoutError) {
-                    console.error('Error during cleanup logout:', logoutError);
-                }
-            }
-            throw error;
+        } catch (profileError) {
+            // Si falla obtener el perfil, usar datos básicos de Firebase
+            console.warn('Could not fetch profile, using Firebase data:', profileError);
+            return {
+                idCuenta: user.uid,
+                email: user.email || email,
+                nombreCompleto: 'Usuario',
+                tipoUsuario: 'POSTULANTE',
+                token: idToken,
+            };
         }
     }
 
     /**
      * Registro de nuevo usuario
      * - POSTULANTE: Crea en Firebase Auth desde frontend, luego crea perfil en backend
-     * - RECLUTADOR: Backend crea en Firebase Auth y envía link de activación por email
+     * - RECLUTADOR: Backend crea todo (Firebase Auth + perfil + envía email)
      */
     async register(data: RegisterRequest): Promise<RegisterResponse> {
         console.log('🚀 register() called with type:', data.tipoUsuario);
 
-        // Para POSTULANTES: crear usuario en Firebase Auth primero
         if (data.tipoUsuario === 'POSTULANTE') {
+            // For CANDIDATES: create in Firebase Auth first (client-side)
             console.log('👤 Registering CANDIDATE - Client side creation');
 
             const { user, idToken } = await firebaseAuthService.createAuthUser(
                 data.email,
                 data.password
             );
+
+            await apiService.saveToken(idToken);
 
             try {
                 console.log('✅ Auth User created, creating profile...', user.uid);
@@ -123,21 +93,21 @@ class AuthService {
                 console.error('❌ Profile creation failed, cleaning up...');
                 try {
                     await firebaseAuthService.logout();
+                    await apiService.removeToken();
                 } catch (cleanupError) {
                     console.error('Failed to cleanup:', cleanupError);
                 }
                 throw error;
             }
         } else if (data.tipoUsuario === 'RECLUTADOR') {
+            // For EMPLOYERS: backend creates everything (Firebase Auth + profile)
             console.log('🏢 Registering RECRUITER - Backend side creation');
 
-            // Para RECLUTADORES: el backend crea todo (Firebase Auth + perfil)
-            // No se pasa contraseña, el backend genera una configuración segura
             const response = await apiService.post<{ status: string; data: RegisterResponse }>(
                 API_CONFIG.ENDPOINTS.REGISTER,
                 {
                     ...data,
-                    password: undefined, // No enviar contraseña
+                    password: undefined, // Don't send password - backend generates temp password
                 }
             );
 
@@ -149,12 +119,41 @@ class AuthService {
 
     /**
      * Cambio de contraseña
-     * 1. Cambiar en Firebase Auth (desde el cliente)
-     * 2. Confirmar en backend (actualiza needsPasswordChange)
+     * Re-authenticates with Firebase, then calls backend to update password
+     * 
+     * @param currentPassword The current (or temporary) password
+     * @param newPassword The new password to set
+     * @param email Optional email - if not provided, gets from Firebase current user
      */
-    async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-        await firebaseAuthService.changePassword(currentPassword, newPassword);
-        await apiService.post('/auth/password-changed');
+    async changePassword(currentPassword: string, newPassword: string, email?: string): Promise<void> {
+        // Get email from parameter or from Firebase current user
+        const userEmail = email || firebaseAuthService.getCurrentUserEmail();
+        if (!userEmail) {
+            throw new Error('No user email available');
+        }
+
+        console.log('🔐 Changing password for:', userEmail);
+
+        // Re-authenticate with the current (temporary) password to get fresh token
+        const { idToken } = await firebaseAuthService.login(userEmail, currentPassword);
+        await apiService.saveToken(idToken);
+
+        // Call backend to update password in Firebase Auth via Admin SDK
+        await apiService.post('/auth/change-password', {
+            currentPassword,
+            newPassword,
+        });
+
+        console.log('✅ Password changed, re-logging in with new password');
+
+        // After password is changed, sign out and re-login with new password
+        await firebaseAuthService.logout();
+
+        // Re-login with new password
+        const { idToken: newToken } = await firebaseAuthService.login(userEmail, newPassword);
+        await apiService.saveToken(newToken);
+
+        console.log('✅ Re-logged in with new password');
     }
 
     /**
@@ -162,13 +161,18 @@ class AuthService {
      */
     async logout(): Promise<void> {
         await firebaseAuthService.logout();
+        await apiService.removeToken();
     }
 
     /**
      * Obtener token actual (Firebase ID Token)
      */
     async getStoredToken(): Promise<string | null> {
-        return await firebaseAuthService.getIdToken();
+        const firebaseToken = await firebaseAuthService.getIdToken();
+        if (firebaseToken) {
+            return firebaseToken;
+        }
+        return await apiService.getToken();
     }
 
     /**

@@ -4,7 +4,7 @@
  * Combina Firebase Auth (para autenticación) con nuestro backend (para perfiles).
  * 
  * Flujos:
- *   - Login: Firebase Auth -> Obtener perfil del backend -> Validar rol
+ *   - Login: Firebase Auth -> Obtener perfil del backend
  *   - Registro POSTULANTE: Firebase Auth (frontend) -> Crear perfil en backend
  *   - Registro RECLUTADOR: Backend crea en Firebase Auth + envía email con link de reset
  *   - Cambio de contraseña: Firebase Auth -> Confirmar en backend
@@ -19,73 +19,27 @@ import {
     RegisterResponse,
 } from '@/types/auth.types';
 
-// Tipos de rol para la UI
-export type UIUserRole = 'candidate' | 'employer';
-
-// Error específico para rol incorrecto
-export class RoleMismatchError extends Error {
-    public readonly expectedRole: UIUserRole;
-    public readonly actualRole: UIUserRole;
-
-    constructor(expectedRole: UIUserRole, actualRole: UIUserRole) {
-        const message = expectedRole === 'candidate'
-            ? 'Esta cuenta es de Empleador. Por favor selecciona "Soy Empleador".'
-            : 'Esta cuenta es de Candidato. Por favor selecciona "Busco Empleo".';
-        super(message);
-        this.name = 'RoleMismatchError';
-        this.expectedRole = expectedRole;
-        this.actualRole = actualRole;
-    }
-}
-
 class AuthService {
     /**
-     * Login de usuario con validación de rol
-     * 
-     * @param email Email del usuario
-     * @param password Contraseña
-     * @param expectedRole Rol que el usuario seleccionó en la UI (candidate o employer)
-     * @throws RoleMismatchError si el rol del usuario no coincide con el esperado
+     * Login de usuario
+     * 1. Autenticar con Firebase Auth
+     * 2. Obtener perfil del backend
      */
-    async login(email: string, password: string, expectedRole?: UIUserRole): Promise<LoginResponse> {
+    async login(email: string, password: string): Promise<LoginResponse> {
         // 1. Autenticar con Firebase Auth
         const { user, idToken } = await firebaseAuthService.login(email, password);
 
-        try {
-            // 2. Obtener perfil del backend
-            const profileResponse = await apiService.get<{ status: string; data: any }>('/auth/profile');
+        // 2. Obtener perfil del backend
+        const profileResponse = await apiService.get<{ status: string; data: any }>('/users/profile');
 
-            const tipoUsuario = profileResponse.data.tipoUsuario;
-            const actualRole: UIUserRole = tipoUsuario === 'POSTULANTE' ? 'candidate' : 'employer';
-
-            // 3. Validar que el rol coincida (si se especificó un rol esperado)
-            if (expectedRole && actualRole !== expectedRole) {
-                // Cerrar sesión de Firebase ANTES de lanzar el error
-                console.log('❌ Role mismatch: expected', expectedRole, 'got', actualRole);
-                await firebaseAuthService.logout();
-                throw new RoleMismatchError(expectedRole, actualRole);
-            }
-
-            return {
-                idCuenta: user.uid,
-                email: user.email || email,
-                nombreCompleto: profileResponse.data.nombreCompleto,
-                tipoUsuario: tipoUsuario,
-                token: idToken,
-                needsPasswordChange: profileResponse.data.needsPasswordChange,
-            };
-        } catch (error) {
-            // Si hay cualquier error después del login de Firebase, cerrar sesión
-            if (!(error instanceof RoleMismatchError)) {
-                // Solo hacer logout si no es un RoleMismatchError (ya hicimos logout en ese caso)
-                try {
-                    await firebaseAuthService.logout();
-                } catch (logoutError) {
-                    console.error('Error during cleanup logout:', logoutError);
-                }
-            }
-            throw error;
-        }
+        return {
+            idCuenta: user.uid,
+            email: user.email || email,
+            nombreCompleto: profileResponse.data.nombreCompleto,
+            tipoUsuario: profileResponse.data.tipoUsuario,
+            token: idToken,
+            needsPasswordChange: profileResponse.data.needsPasswordChange,
+        };
     }
 
     /**

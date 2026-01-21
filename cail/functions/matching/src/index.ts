@@ -6,9 +6,11 @@
  * 
  * Puerto: 8084
  * Endpoints:
- *   - GET  /matching/oferta/:idOferta  (candidatos compatibles)
- *   - POST /matching/apply             (aplicar a oferta)
- *   - GET  /matching/applications      (mis aplicaciones)
+ *   - GET  /matching/oferta/:idOferta          (candidatos compatibles - RECLUTADOR/ADMIN)
+ *   - GET  /matching/oferta/:id/applications   (postulaciones de oferta - RECLUTADOR/ADMIN)
+ *   - POST /matching/apply                     (aplicar a oferta - CANDIDATO)
+ *   - GET  /matching/my-applications           (mis aplicaciones - CANDIDATO)
+ *   - GET  /matching/applications              (alias - CANDIDATO)
  */
 
 import express, { Application, Request, Response } from 'express';
@@ -19,13 +21,66 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { config } from './config/env.config';
-import { initializeFirebase } from './config/firebase.config';
+import { initializeFirebase, getFirestore } from './config/firebase.config';
 import matchingRoutes from './matching/infrastructure/routes/matching.routes';
 import { errorHandler } from './shared/middleware/error.middleware';
 import { applySecurityMiddleware } from './shared/middleware/security.middleware';
 
+// Importar componentes para inicialización
+import { MatchingService } from './matching/services/matching.service';
+import { FirestoreAplicacionRepository } from './matching/infrastructure/repositories/FirestoreAplicacionRepository';
+import {
+    FirestorePostulacionRepository,
+    CatalogoValidator
+} from './matching/infrastructure/repositories/FirestorePostulacionRepository';
+import { createEmbeddingProvider } from './matching/infrastructure/providers/VertexAIEmbeddingProvider';
+import { setMatchingService } from './matching/infrastructure/controllers/Matching.controller';
+
 // Inicializar Firebase
 initializeFirebase();
+
+// ============================================
+// INICIALIZACIÓN DE DEPENDENCIAS (Clean Architecture)
+// ============================================
+
+const initializeServices = (): void => {
+    const db = getFirestore();
+
+    // Crear repositorios (Infraestructura)
+    const matchingRepository = new FirestoreAplicacionRepository(db);
+    const postulacionRepository = new FirestorePostulacionRepository(db);
+    const catalogoRepository = new CatalogoValidator();
+
+    // Crear provider de embeddings (Infraestructura)
+    const embeddingProvider = createEmbeddingProvider(
+        config.firebase.projectId,
+        'us-central1'
+    );
+
+    // Crear servicio con inyección de dependencias
+    const matchingService = new MatchingService(
+        matchingRepository,
+        postulacionRepository,
+        catalogoRepository,
+        embeddingProvider
+    );
+
+    // Registrar servicio globalmente para los controllers
+    setMatchingService(matchingService);
+
+    console.log('✅ MatchingService inicializado con todas las dependencias');
+};
+
+// Inicializar servicios
+try {
+    initializeServices();
+} catch (error) {
+    console.error('❌ Error inicializando servicios:', error);
+}
+
+// ============================================
+// CONFIGURACIÓN DE EXPRESS
+// ============================================
 
 const app: Application = express();
 
@@ -37,7 +92,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Aplicar middleware de seguridad (helmet + rate-limit) - Agregado por Erick Gaona
+// Aplicar middleware de seguridad (helmet + rate-limit)
 applySecurityMiddleware(app);
 
 // Health Check
@@ -47,7 +102,13 @@ app.get('/health', (_req: Request, res: Response) => {
         service: 'matching-function',
         timestamp: new Date().toISOString(),
         environment: config.nodeEnv,
-        version: '1.0.0'
+        version: '2.0.0',
+        features: [
+            'hybrid-matching',
+            'rbac-authorization',
+            'duplicate-validation',
+            'daily-limit-10'
+        ]
     });
 });
 
@@ -72,6 +133,7 @@ if (!isTest && !isProduction && !isCloudFunction) {
         console.log(`📍 Environment: ${config.nodeEnv}`);
         console.log(`❤️  Health check: http://localhost:${PORT}/health`);
         console.log(`🎯 Matching endpoints: http://localhost:${PORT}/matching/*`);
+        console.log(`🔒 RBAC: CANDIDATO, RECLUTADOR, ADMIN`);
     });
 }
 
