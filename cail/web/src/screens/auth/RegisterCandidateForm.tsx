@@ -4,6 +4,7 @@ import { LoadingSplash } from '../../components/ui/LoadingSplash';
 import { useNotifications } from '../../components/ui/Notifications';
 import { PasswordStrength, validatePassword } from '../../components/ui/PasswordStrength';
 import { authService } from '../../services/auth.service';
+import { TermsModal } from '../../components/legal/TermsModal';
 
 interface RegisterCandidateFormProps {
   onSuccess: (data: any) => void;
@@ -44,6 +45,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
   const [experienceSummary, setExperienceSummary] = useState('');
 
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
   const [splashSuccess, setSplashSuccess] = useState(false);
@@ -1168,7 +1170,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                       href="#"
                       onClick={(e) => {
                         e.preventDefault();
-                        notifications.info('Términos y condiciones - Próximamente');
+                        setShowTermsModal(true);
                       }}
                       style={{
                         color: '#10B981',
@@ -1247,6 +1249,11 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
           </div>
         </div>
       </div>
+      <TermsModal 
+        isOpen={showTermsModal} 
+        onClose={() => setShowTermsModal(false)} 
+        variant="candidate"
+      />
     </>
   );
 }

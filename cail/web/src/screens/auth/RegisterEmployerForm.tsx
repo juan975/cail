@@ -4,6 +4,7 @@ import { LoadingSplash } from '../../components/ui/LoadingSplash';
 import { useNotifications } from '../../components/ui/Notifications';
 import { authService } from '../../services/auth.service';
 import { PasswordStrength, validatePassword } from '../../components/ui/PasswordStrength';
+import { TermsModal } from '../../components/legal/TermsModal';
 
 interface RegisterEmployerFormProps {
   onSuccess: (data: any) => void;
@@ -27,6 +28,7 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
   const [website, setWebsite] = useState('');
   const [description, setDescription] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   // Company selection state
   const [companies, setCompanies] = useState<any[]>([]);
@@ -641,7 +643,7 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
                     href="#"
                     onClick={(e) => {
                       e.preventDefault();
-                      notifications.info('Términos y condiciones - Próximamente');
+                      setShowTermsModal(true);
                     }}
                     style={{
                       color: '#F59E0B',
@@ -719,6 +721,11 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
           </div>
         </div>
       </div>
+      <TermsModal 
+        isOpen={showTermsModal} 
+        onClose={() => setShowTermsModal(false)} 
+        variant="employer"
+      />
     </>
   );
 }
