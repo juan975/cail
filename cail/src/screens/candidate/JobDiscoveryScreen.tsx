@@ -24,6 +24,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { JobOffer } from '@/types';
 import { offersService } from '@/services/offers.service';
 import { applicationsService } from '@/services/applications.service';
+import { userService } from '@/services/user.service';
 import { Offer } from '@/types/offers.types';
 import { Application, ApplicationStatusColors } from '@/types/applications.types';
 import { colors } from '@/theme/colors';
@@ -62,15 +63,15 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
     company: offer.empresa,
     description: offer.descripcion,
     location: offer.ciudad,
-    modality: modalityMap[offer.modalidad] || 'Presencial',
+    modality: modalityMap[offer.modalidad] || offer.modalidad || 'Presencial',
     salaryRange: offer.salarioMin && offer.salarioMax
       ? `$${offer.salarioMin} - $${offer.salarioMax}`
       : offer.salarioMin
         ? `$${offer.salarioMin}+`
         : 'A convenir',
-    employmentType: employmentTypeMap[offer.tipoContrato] || 'Tiempo completo',
+    employmentType: employmentTypeMap[offer.tipoContrato] || offer.tipoContrato || 'Tiempo completo',
     industry: offer.empresa || 'General',
-    hierarchyLevel: 'Semi-Senior',
+    hierarchyLevel: offer.nivelJerarquico || 'Junior',
     requiredCompetencies: offer.competencias_requeridas || [],
     requiredExperience: offer.experiencia_requerida || 'No especificada',
     requiredEducation: offer.formacion_requerida || 'No especificada',
@@ -99,6 +100,10 @@ export function JobDiscoveryScreen() {
   // Estados para postulaciones
   const [appliedOffers, setAppliedOffers] = useState<Map<string, Application>>(new Map());
   const [isApplying, setIsApplying] = useState(false);
+
+  // Estado para verificar CV del usuario
+  const [userCvUrl, setUserCvUrl] = useState<string | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
   // Cargar ofertas del API
   const loadOffers = useCallback(async (showRefresh = false) => {
@@ -133,10 +138,23 @@ export function JobDiscoveryScreen() {
     }
   }, []);
 
+  // Cargar perfil del usuario para verificar CV
+  const loadUserProfile = useCallback(async () => {
+    try {
+      const profile = await userService.getProfile();
+      setUserCvUrl(profile.candidateProfile?.cvUrl || null);
+    } catch (err) {
+      console.log('Could not load user profile:', err);
+    } finally {
+      setLoadingProfile(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadOffers();
     loadAppliedOffers();
-  }, [loadOffers, loadAppliedOffers]);
+    loadUserProfile();
+  }, [loadOffers, loadAppliedOffers, loadUserProfile]);
 
   const handleRefresh = () => {
     loadOffers(true);
@@ -185,6 +203,25 @@ export function JobDiscoveryScreen() {
 
   const handleApply = async () => {
     if (!selectedOffer) return;
+
+    // Validar que el usuario tenga un CV subido antes de aplicar
+    if (!userCvUrl) {
+      Alert.alert(
+        'CV Requerido',
+        'Debes subir tu CV antes de postularte a ofertas. Ve a tu perfil para cargar tu currículum.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Ir a Perfil',
+            onPress: () => {
+              resetModal();
+              // TODO: Navegar a la pantalla de perfil (requiere navigation prop)
+            }
+          }
+        ]
+      );
+      return;
+    }
 
     setIsApplying(true);
     try {
@@ -270,7 +307,7 @@ export function JobDiscoveryScreen() {
 
         <View style={styles.tagList}>
           <Chip label={item.employmentType} />
-          {item.requiredCompetencies.slice(0, 3).map((competency) => (
+          {item.requiredCompetencies.map((competency) => (
             <Chip key={competency} label={competency} />
           ))}
         </View>
@@ -446,7 +483,7 @@ export function JobDiscoveryScreen() {
                     <View style={styles.requirementItem}>
                       <Text style={styles.requirementBullet}>•</Text>
                       <Text style={styles.requirementText}>
-                        Competencias: {selectedOffer.requiredCompetencies.slice(0, 3).join(', ')}
+                        Competencias: {selectedOffer.requiredCompetencies.join(', ')}
                       </Text>
                     </View>
                   </View>
