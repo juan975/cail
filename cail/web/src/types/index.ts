@@ -120,12 +120,18 @@ export interface CandidateProfileForm {
 
 export interface EmployerProfileForm {
   companyName: string;
-  contactName: string;
-  email: string;
-  phone: string;
+  commercialName: string;
+  razonSocial: string;
+  ruc: string;
   industry: string;
+  companyType: string;
   numberOfEmployees: string;
   description: string;
   website: string;
   address: string;
+  city: string;
+  contactName: string;
+  cargo: string;
+  email: string;
+  phone: string;
 }

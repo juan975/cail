@@ -3,24 +3,33 @@ import { InputField } from '../../components/ui/InputField';
 import { colors } from '../../theme/colors';
 import { EmployerProfileForm } from '../../types';
 import { userService } from '../../services/user.service';
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { useNotifications } from '../../components/ui/Notifications';
 
 // Estado inicial vacío para el formulario
 const emptyEmployerProfile: EmployerProfileForm = {
   companyName: '',
-  contactName: '',
-  email: '',
-  phone: '',
+  commercialName: '',
+  razonSocial: '',
+  ruc: '',
   industry: '',
+  companyType: '',
   numberOfEmployees: '',
   description: '',
   website: '',
   address: '',
+  city: '',
+  contactName: '',
+  cargo: '',
+  email: '',
+  phone: '',
 };
 
 export function EmployerProfileScreen() {
   const [form, setForm] = useState<EmployerProfileForm>(emptyEmployerProfile);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { success, error: showError } = useNotifications();
 
   useEffect(() => {
     loadProfile();
@@ -31,16 +40,23 @@ export function EmployerProfileScreen() {
       const profile = await userService.getProfile();
 
       if (profile.employerProfile) {
+        const ep = profile.employerProfile as any;
         setForm({
-          companyName: profile.employerProfile.nombreEmpresa || '',
-          contactName: profile.employerProfile.nombreContacto || '',
-          email: profile.email,
-          phone: profile.telefono || '',
-          industry: profile.employerProfile.industry || '',
-          numberOfEmployees: profile.employerProfile.numberOfEmployees || '',
-          description: profile.employerProfile.description || '',
-          website: profile.employerProfile.website || '',
-          address: profile.employerProfile.address || '',
+          companyName: ep.nombreEmpresa || ep.razon_social || ep.razonSocial || ep.nombre_comercial || ep.nombreComercial || '',
+          commercialName: ep.nombreComercial || ep.nombre_comercial || ep.nombreEmpresa || ep.razon_social || '',
+          razonSocial: ep.razonSocial || ep.razon_social || ep.nombreEmpresa || '',
+          ruc: ep.ruc || '',
+          industry: ep.industry || ep.id_sector_industrial || ep.sector_industrial || '',
+          companyType: ep.tipoEmpresa || ep.tipo_empresa || 'Privada',
+          numberOfEmployees: ep.numberOfEmployees || ep.numero_colaboradores || '',
+          description: ep.description || ep.descripcion || ep.resumen || '',
+          website: ep.website || ep.sitioWeb || ep.sitio_web || '',
+          address: ep.address || ep.direccion || '',
+          city: ep.city || ep.ciudad || '',
+          contactName: ep.nombreContacto || profile.nombreCompleto || '',
+          cargo: ep.cargo || '',
+          email: profile.email || '',
+          phone: profile.telefono || ep.telefono || '',
         });
       }
     } catch (error: any) {
@@ -62,203 +78,244 @@ export function EmployerProfileScreen() {
         telefono: form.phone,
         employerProfile: {
           nombreEmpresa: form.companyName,
-          cargo: '',
+          nombreComercial: form.commercialName,
+          razonSocial: form.razonSocial,
+          ruc: form.ruc,
+          cargo: form.cargo,
           nombreContacto: form.contactName,
           industry: form.industry,
+          tipoEmpresa: form.companyType,
           numberOfEmployees: form.numberOfEmployees,
           description: form.description,
           website: form.website,
           address: form.address,
+          city: form.city,
         },
       });
+      success('Perfil empresarial actualizado corectamente');
     } catch (error: any) {
       console.error('Error saving profile:', error);
+      showError('No se pudo guardar el perfil. Inténtalo de nuevo.');
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: 40 }}>
-        <div style={{ color: colors.textSecondary }}>Cargando perfil...</div>
-      </div>
-    );
+    return <LoadingSpinner message="Cargando perfil empresarial..." />;
   }
 
   return (
     <div style={{ display: 'grid', gap: 16, padding: '32px' }}>
-      {/* Header */}
+      {/* Header with Glassmorphism and Badge */}
       <div
         style={{
-          background: '#F1842D',
+          background: 'linear-gradient(135deg, #F1842D 0%, #EA580C 100%)',
           borderRadius: 16,
-          padding: 20,
+          padding: '20px',
           color: '#fff',
           display: 'flex',
-          gap: 16,
+          justifyContent: 'space-between',
           alignItems: 'center',
+          gap: 16,
+          boxShadow: '0 4px 12px rgba(241, 132, 45, 0.2)',
+          position: 'relative',
+          overflow: 'hidden'
         }}
       >
-        <div
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: 12,
-            background: 'rgba(255,255,255,0.2)',
-            display: 'grid',
-            placeItems: 'center',
-          }}
-        >
-          <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-            />
-          </svg>
-        </div>
-        <div>
-          <div style={{ fontSize: 18, fontWeight: 700 }}>Perfil empresarial</div>
-          <div style={{ fontSize: 13, opacity: 0.9 }}>Mantén tus datos actualizados para generar confianza</div>
-        </div>
-      </div>
-
-      {/* Info Banner */}
-      <div
-        style={{
-          background: '#FFF7ED',
-          borderRadius: 14,
-          padding: 14,
-          border: '1px solid #FDE68A',
-          display: 'flex',
-          gap: 12,
-          alignItems: 'flex-start',
-        }}
-      >
-
-        <div>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>Identidad empresarial al día</div>
-          <div style={{ fontSize: 13, color: colors.textSecondary }}>
-            Mantén tus datos consistentes para generar confianza con los candidatos
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-            <span
-              style={{
-                padding: '4px 8px',
-                borderRadius: 999,
-                background: '#FFF1DA',
-                color: '#EA580C',
-                fontSize: 11,
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-              {form.industry || 'Industria'}
-            </span>
-            <span
-              style={{
-                padding: '4px 8px',
-                borderRadius: 999,
-                background: '#FFF1DA',
-                color: '#EA580C',
-                fontSize: 11,
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-              {form.numberOfEmployees || 'Colaboradores'}
-            </span>
-            <span
-              style={{
-                padding: '4px 8px',
-                borderRadius: 999,
-                background: '#FFF1DA',
-                color: '#EA580C',
-                fontSize: 11,
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              {form.address || 'Ubicación'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Form */}
-      <div style={{ background: '#fff', borderRadius: 14, padding: 20, border: '1px solid #E5E7EB' }}>
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 16, fontWeight: 700 }}>Información de la empresa</div>
-          <div style={{ fontSize: 13, color: colors.textSecondary }}>Información visible para candidatos</div>
-        </div>
-        <div style={{ display: 'grid', gap: 12 }}>
-          <InputField label="Razón social" value={form.companyName} onChange={(e) => updateField('companyName', e.target.value)} />
-          <InputField label="Industria" value={form.industry} onChange={(e) => updateField('industry', e.target.value)} />
-          <InputField
-            label="Número de colaboradores"
-            value={form.numberOfEmployees}
-            onChange={(e) => updateField('numberOfEmployees', e.target.value)}
-          />
-          <InputField label="Nombre de contacto" value={form.contactName} onChange={(e) => updateField('contactName', e.target.value)} />
-          <InputField label="Correo" value={form.email} onChange={(e) => updateField('email', e.target.value)} />
-          <InputField label="Teléfono" value={form.phone} onChange={(e) => updateField('phone', e.target.value)} />
-          <InputField label="Sitio web" value={form.website} onChange={(e) => updateField('website', e.target.value)} />
-          <InputField label="Dirección" value={form.address} onChange={(e) => updateField('address', e.target.value)} />
-          <div>
-            <label style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, display: 'block' }}>Descripción</label>
-            <textarea
-              value={form.description}
-              onChange={(e) => updateField('description', e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: 12,
-                border: '1px solid #E5E7EB',
-                fontSize: 14,
-                outline: 'none',
-                minHeight: '100px',
-                fontFamily: 'inherit',
-              }}
-            />
-          </div>
-        </div>
-        <div style={{ marginTop: 16 }}>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', zIndex: 1 }}>
+          <div
             style={{
-              width: '100%',
-              padding: '12px',
+              width: 48,
+              height: 48,
               borderRadius: 12,
-              border: 'none',
-              background: saving ? '#9CA3AF' : '#F1842D',
-              color: '#fff',
-              cursor: saving ? 'not-allowed' : 'pointer',
-              fontWeight: 600,
+              background: 'rgba(255,255,255,0.2)',
+              display: 'grid',
+              placeItems: 'center',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255,255,255,0.1)'
             }}
           >
-            {saving ? 'Guardando...' : 'Guardar cambios'}
-          </button>
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 700 }}>{form.commercialName || form.companyName || 'Perfil empresarial'}</div>
+            <div style={{ fontSize: 13, opacity: 0.9 }}>{form.industry || 'Industria'} • {form.city || 'Ciudad'} • RUC: {form.ruc || 'N/A'}</div>
+          </div>
         </div>
+
+        <div 
+          style={{ 
+            background: 'rgba(209, 250, 229, 0.9)', 
+            color: '#065F46', 
+            padding: '6px 12px', 
+            borderRadius: 999, 
+            fontSize: 11, 
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            zIndex: 1
+          }}
+        >
+          <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          VERIFICADA
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 24 }}>
+        
+        {/* Left Column - Main Info */}
+        <div style={{ gridColumn: 'span 8', display: 'grid', gap: 24 }}>
+          
+          {/* Company Identity Card */}
+          <div style={{ background: '#fff', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ background: '#FFF7ED', color: '#F1842D', padding: 10, borderRadius: 12 }}>
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Identidad Empresarial</h3>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+              <InputField label="Nombre Comercial" value={form.commercialName} readonly onChange={(e) => updateField('commercialName', e.target.value)} />
+              <InputField label="Razón Social" value={form.razonSocial} readonly onChange={(e) => updateField('razonSocial', e.target.value)} />
+              <InputField label="RUC" value={form.ruc} readonly onChange={(e) => updateField('ruc', e.target.value)} />
+              <InputField label="Tipo de Empresa" value={form.companyType} readonly onChange={(e) => updateField('companyType', e.target.value)} />
+              <InputField label="Sector Industrial" value={form.industry} onChange={(e) => updateField('industry', e.target.value)} />
+              <InputField label="Tamaño (Colaboradores)" value={form.numberOfEmployees} onChange={(e) => updateField('numberOfEmployees', e.target.value)} />
+            </div>
+
+            <div style={{ marginTop: 20 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#4B5563', marginBottom: 8, display: 'block' }}>Descripción de la Empresa</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => updateField('description', e.target.value)}
+                placeholder="Cuenta la historia y misión de tu empresa..."
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: 14,
+                  border: '1px solid #E5E7EB',
+                  fontSize: 14,
+                  outline: 'none',
+                  minHeight: 120,
+                  fontFamily: 'inherit',
+                  transition: 'border-color 0.2s',
+                  lineHeight: '1.5'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#F1842D'}
+                onBlur={(e) => e.target.style.borderColor = '#E5E7EB'}
+              />
+            </div>
+          </div>
+
+          {/* Location Card */}
+          <div style={{ background: '#fff', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ background: '#EFF6FF', color: '#3B82F6', padding: 10, borderRadius: 12 }}>
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Ubicación y Canales Digitales</h3>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+              <InputField label="Ciudad" value={form.city} onChange={(e) => updateField('city', e.target.value)} />
+              <InputField label="Sitio Web" value={form.website} onChange={(e) => updateField('website', e.target.value)} />
+              <div style={{ gridColumn: 'span 2' }}>
+                <InputField label="Dirección Principal" value={form.address} onChange={(e) => updateField('address', e.target.value)} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Contact & Save */}
+        <div style={{ gridColumn: 'span 4', display: 'grid', gap: 24, alignContent: 'start' }}>
+          
+          {/* Contact Person Card */}
+          <div style={{ background: '#fff', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ background: '#ECFDF5', color: '#10B981', padding: 10, borderRadius: 12 }}>
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Contacto Directo</h3>
+            </div>
+
+            <div style={{ display: 'grid', gap: 16 }}>
+              <InputField label="Nombre de Contacto" value={form.contactName} onChange={(e) => updateField('contactName', e.target.value)} />
+              <InputField label="Cargo / Posición" value={form.cargo} onChange={(e) => updateField('cargo', e.target.value)} />
+              <InputField label="Correo Electrónico" value={form.email} onChange={(e) => updateField('email', e.target.value)} />
+              <InputField label="Teléfono / WhatsApp" value={form.phone} onChange={(e) => updateField('phone', e.target.value)} />
+            </div>
+          </div>
+
+          {/* Save Card */}
+          <div style={{ background: '#FFF7ED', borderRadius: 20, padding: 24, border: '1px solid #FDE68A', display: 'grid', gap: 16 }}>
+            <div style={{ fontSize: 14, color: '#9A3412', fontWeight: 500, textAlign: 'center' }}>
+              Los cambios se aplicarán de inmediato y serán visibles para los candidatos.
+            </div>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                width: '100%',
+                padding: '16px',
+                borderRadius: 16,
+                border: 'none',
+                background: saving ? '#9CA3AF' : '#F1842D',
+                color: '#fff',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                fontWeight: 700,
+                fontSize: 16,
+                boxShadow: saving ? 'none' : '0 4px 6px -1px rgba(241, 132, 45, 0.4)',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10
+              }}
+              onMouseEnter={(e) => {
+                if (!saving) {
+                  e.currentTarget.style.background = '#EA580C';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!saving) {
+                  e.currentTarget.style.background = '#F1842D';
+                  e.currentTarget.style.transform = 'none';
+                }
+              }}
+            >
+              {saving ? (
+                <>
+                  <div style={{ animation: 'spin 1s linear infinite', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', width: 18, height: 18 }} />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Guardar Perfil
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   );

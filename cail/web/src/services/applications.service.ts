@@ -15,7 +15,8 @@ import {
     ApplicationWithOffer,
     ApplicationWithCandidate,
     CreateApplicationDTO,
-    ApplicationApiResponse
+    ApplicationApiResponse,
+    ApplicationStatus
 } from '../types/applications.types';
 import { offersService } from './offers.service';
 
@@ -136,7 +137,7 @@ class ApplicationsService {
     /**
      * Actualiza el estado de una aplicación (Reclutador)
      */
-    async updateApplicationStatus(idAplicacion: string, status: 'ACEPTADA' | 'RECHAZADA'): Promise<void> {
+    async updateApplicationStatus(idAplicacion: string, status: ApplicationStatus): Promise<void> {
         await apiService.patch(`/matching/postulacion/${idAplicacion}/status`, { estado: status });
     }
 }

@@ -7,6 +7,7 @@ import { Application, ApplicationStatusColors } from '../../types/applications.t
 import { colors } from '../../theme/colors';
 import { InputField } from '../../components/ui/InputField';
 import { Button } from '../../components/ui/Button';
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 
 // Lista de competencias comunes para autocompletado
 const COMMON_COMPETENCIES = [
@@ -101,7 +102,11 @@ const mapApiOfferToUI = (offer: Offer): JobOffer => {
   };
 };
 
-export function OffersManagementScreen() {
+interface OffersManagementScreenProps {
+  searchQuery?: string;
+}
+
+export function OffersManagementScreen({ searchQuery = '' }: OffersManagementScreenProps) {
   const [selectedTab, setSelectedTab] = useState<OfferStatus>('active');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -177,7 +182,15 @@ export function OffersManagementScreen() {
     loadRecruiterProfile();
   }, []);
 
-  const filteredOffers = offers.filter((offer) => offer.status === selectedTab);
+  const filteredOffers = offers.filter((offer) => {
+    const matchesTab = offer.status === selectedTab;
+    const matchesSearch =
+      searchQuery === '' ||
+      offer.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      offer.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
   const activeCount = offers.filter((o) => o.status === 'active').length;
   const archivedCount = offers.filter((o) => o.status === 'archived').length;
   const deletedCount = offers.filter((o) => o.status === 'deleted').length;
@@ -700,11 +713,7 @@ export function OffersManagementScreen() {
   ];
 
   if (isLoading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
-        <div style={{ color: '#6B7280' }}>Cargando ofertas...</div>
-      </div>
-    );
+    return <LoadingSpinner message="Cargando ofertas laborales..." />;
   }
 
   if (error) {

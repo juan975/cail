@@ -27,13 +27,19 @@ export interface UserProfile {
     };
     employerProfile?: {
         nombreEmpresa: string;
+        nombreComercial?: string;
+        razonSocial?: string;
+        ruc?: string;
         cargo: string;
         nombreContacto: string;
         industry?: string;
+        tipoEmpresa?: string;
         numberOfEmployees?: string;
         description?: string;
         website?: string;
         address?: string;
+        city?: string;
+        validationStatus?: 'PENDIENTE' | 'VERIFICADA' | 'RECHAZADA';
     };
 }
 

@@ -15,6 +15,13 @@ type ModalOptions = {
   title: string;
   message: string;
   primaryLabel?: string;
+  secondaryLabel?: string;
+  onConfirm?: () => void;
+  onCancel?: () => void;
+};
+
+type ConfirmOptions = Omit<ModalOptions, 'variant' | 'onConfirm' | 'onCancel'> & {
+  variant?: NotificationVariant;
 };
 
 type NotificationsApi = {
@@ -24,16 +31,13 @@ type NotificationsApi = {
   warning: (message: string, title?: string) => void;
   error: (message: string, title?: string) => void;
   alert: (message: string, title?: string) => void;
+  confirm: (options: ConfirmOptions) => Promise<boolean>;
 };
 
 type Toast = ToastOptions & { id: string; durationMs: number };
 
-type ModalState = {
+type ModalState = ModalOptions & {
   open: boolean;
-  variant: NotificationVariant;
-  title: string;
-  message: string;
-  primaryLabel: string;
 };
 
 const NotificationsContext = createContext<NotificationsApi | null>(null);
@@ -115,13 +119,32 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const showModal = useCallback((options: ModalOptions) => {
     setModal({
+      ...options,
       open: true,
-      variant: options.variant,
-      title: options.title,
-      message: options.message,
-      primaryLabel: options.primaryLabel ?? 'Aceptar',
     });
   }, []);
+
+  const closeModal = useCallback(() => setModal(null), []);
+
+  const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
+    return new Promise((resolve) => {
+      showModal({
+        variant: options.variant ?? 'warning',
+        title: options.title,
+        message: options.message,
+        primaryLabel: options.primaryLabel ?? 'Confirmar',
+        secondaryLabel: options.secondaryLabel ?? 'Cancelar',
+        onConfirm: () => {
+          setModal(null);
+          resolve(true);
+        },
+        onCancel: () => {
+          setModal(null);
+          resolve(false);
+        },
+      });
+    });
+  }, [showModal]);
 
   const api: NotificationsApi = useMemo(
     () => ({
@@ -131,83 +154,16 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       warning: (message, title) => toast({ variant: 'warning', title, message }),
       error: (message, title) => showModal({ variant: 'danger', title: title ?? 'Ocurrió un error', message }),
       alert: (message, title) => showModal({ variant: 'warning', title: title ?? 'Atención', message }),
+      confirm,
     }),
-    [showModal, toast]
+    [confirm, showModal, toast]
   );
-
-  const closeModal = () => setModal(null);
 
   return (
     <NotificationsContext.Provider value={api}>
       {children}
 
-      {/* Toasts */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 16,
-          right: 16,
-          display: 'grid',
-          gap: 10,
-          zIndex: 2000,
-          width: 'min(420px, calc(100vw - 32px))',
-          pointerEvents: 'none',
-        }}
-      >
-        {toasts.map((t) => {
-          const v = variantStyles[t.variant];
-          return (
-            <div
-              key={t.id}
-              style={{
-                background: '#FFFFFF',
-                borderRadius: 14,
-                border: `1px solid ${v.soft}`,
-                boxShadow: '0 12px 40px rgba(15, 23, 42, 0.12)',
-                overflow: 'hidden',
-                pointerEvents: 'auto',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 12,
-                  alignItems: 'flex-start',
-                  padding: 14,
-                  borderLeft: `4px solid ${v.accent}`,
-                }}
-              >
-                <div style={{ color: v.accent, marginTop: 2 }}>{v.icon}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {t.title && (
-                    <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 2 }}>
-                      {t.title}
-                    </div>
-                  )}
-                  <div style={{ fontSize: 13, color: '#374151', lineHeight: '18px' }}>{t.message}</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeToast(t.id)}
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    padding: 6,
-                    borderRadius: 10,
-                    color: '#9CA3AF',
-                    display: 'grid',
-                    placeItems: 'center',
-                  }}
-                  aria-label="Cerrar"
-                >
-                  <FiX size={18} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* Toasts removed as per user request */}
 
       {/* Modal */}
       {modal?.open && (
@@ -222,9 +178,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             alignItems: 'center',
             justifyContent: 'center',
             padding: 20,
-            zIndex: 2500,
+            zIndex: 20000,
           }}
-          onClick={closeModal}
+          onClick={() => {
+            modal.onCancel?.();
+            closeModal();
+          }}
         >
           <div
             style={{
@@ -232,7 +191,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
               background: '#FFFFFF',
               borderRadius: 24,
               padding: 24,
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -261,7 +220,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
               </div>
               <button
                 type="button"
-                onClick={closeModal}
+                onClick={() => {
+                  modal.onCancel?.();
+                  closeModal();
+                }}
                 style={{
                   width: 40,
                   height: 40,
@@ -279,21 +241,47 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
               </button>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+              {modal.secondaryLabel && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    modal.onCancel?.();
+                    closeModal();
+                  }}
+                  style={{
+                    padding: '12px 20px',
+                    borderRadius: 12,
+                    border: '1px solid #E2E8F0',
+                    background: '#FFFFFF',
+                    color: '#64748B',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontSize: 14,
+                  }}
+                >
+                  {modal.secondaryLabel}
+                </button>
+              )}
               <button
                 type="button"
-                onClick={closeModal}
+                onClick={() => {
+                  modal.onConfirm?.();
+                  closeModal();
+                }}
                 style={{
-                  padding: '12px 16px',
+                  padding: '12px 24px',
                   borderRadius: 12,
                   border: 'none',
                   background: variantStyles[modal.variant].accent,
                   color: '#FFFFFF',
                   fontWeight: 800,
                   cursor: 'pointer',
+                  fontSize: 14,
+                  boxShadow: `0 4px 12px ${variantStyles[modal.variant].accent}33`,
                 }}
               >
-                {modal.primaryLabel}
+                {modal.primaryLabel ?? 'Aceptar'}
               </button>
             </div>
           </div>

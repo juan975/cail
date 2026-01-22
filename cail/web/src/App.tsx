@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { AuthScreen } from './screens/auth/AuthScreen';
 import { ChangePasswordScreen } from './screens/auth/ChangePasswordScreen';
 import { CandidateShell } from './screens/candidate/CandidateShell';
@@ -118,18 +119,12 @@ export default function App() {
   // Mostrar loading mientras se verifica el estado inicial
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-      }}>
-        <div style={{ textAlign: 'center', color: '#fff' }}>
-          <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>CAIL</div>
-          <div style={{ fontSize: 14 }}>Cargando...</div>
-        </div>
-      </div>
+      <LoadingSpinner 
+        fullPage 
+        message="CAIL está despegando..." 
+        background="linear-gradient(135deg, #10B981 0%, #059669 100%)"
+        color="#fff"
+      />
     );
   }
 
