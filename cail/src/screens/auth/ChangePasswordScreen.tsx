@@ -297,7 +297,7 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
             <View style={styles.modalInfoBox}>
               <Feather name="mail" size={16} color="#3B82F6" />
               <Text style={styles.modalInfoText}>
-                Te hemos enviado un correo con tu contraseña temporal. Ingrésala a continuación para establecer tu nueva contraseña.
+                El administrador o el encargado autorizado de la empresa ha sido notificado de tu cuenta como reclutador y estás en proceso de validación.
               </Text>
             </View>
 

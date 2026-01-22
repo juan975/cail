@@ -387,7 +387,7 @@ export default function ApplicationsScreen() {
             style={[
               styles.modalContent,
               isDesktop ? styles.modalContentDesktop : styles.modalContentMobile,
-              { maxWidth: isDesktop ? 980 : contentWidth },
+              { maxWidth: isDesktop ? 980 : '100%' },
             ]}
           >
             <View style={styles.modalHeader}>

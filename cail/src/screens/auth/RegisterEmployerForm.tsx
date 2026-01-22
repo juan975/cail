@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Alert, StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { Alert, StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Modal } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { authService } from '@/services/auth.service';
 
@@ -24,9 +24,16 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
   const [description, setDescription] = useState('');
   const [ruc, setRuc] = useState('');
 
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [showDropdown, setShowDropdown] = useState(false);
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState('');
   const [loading, setLoading] = useState(false);
+  const [successData, setSuccessData] = useState<any>(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [companies, setCompanies] = useState<any[]>([]);
 
   useEffect(() => {
@@ -62,8 +69,18 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
   };
 
   const handleSubmit = async () => {
-    if (!empresaNombre || !cargo || !contacto || !telefono || !correo) {
+    if (!empresaNombre || !cargo || !contacto || !telefono || !correo || !password || !confirmPassword) {
       Alert.alert('Campos incompletos', 'Completa todos los campos del formulario.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Las contraseñas no coinciden.');
+      return;
+    }
+
+    if (password.length < 8) {
+      Alert.alert('Error', 'La contraseña debe tener al menos 8 caracteres.');
       return;
     }
 
@@ -72,7 +89,7 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
     try {
       const response = await authService.register({
         email: correo,
-        password: 'TempPassword123!', // Temporary password
+        password: password,
         nombreCompleto: contacto,
         telefono: telefono,
         tipoUsuario: 'RECLUTADOR',
@@ -88,20 +105,28 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
         },
       });
 
-      // Go directly to password change screen with success info
+      // Store data and show modal
       setLoading(false);
-      onSuccess({
+      setSuccessData({
         id: response.idCuenta,
         company: empresaNombre,
         contactName: contacto,
         email: correo,
-        needsPasswordChange: true,
+        needsPasswordChange: false, // SKIP ChangePassword Screen
         isEmailVerified: false,
-        showWelcomeModal: true, // Flag to show modal on ChangePasswordScreen
       });
+      setShowWelcomeModal(true);
     } catch (error: any) {
       setLoading(false);
       Alert.alert('Error', error.message || 'Error al crear la cuenta');
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowWelcomeModal(false);
+    // Do not auto-login (onSuccess). Redirect to Login screen instead.
+    if (onSwitchToLogin) {
+      onSwitchToLogin();
     }
   };
 
@@ -192,46 +217,50 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
                 )}
               </View>
 
-              {/* Campos Solo Lectura (Auto-completados) */}
+              {/* Campos Editables (Auto-completados pero modificables) */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Dirección</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: '#F3F4F6', color: '#6B7280' }]}
+                  style={styles.input}
                   value={address}
-                  editable={false}
+                  onChangeText={setAddress}
                   placeholder="Dirección de la empresa"
+                  placeholderTextColor="#9CA3AF"
                 />
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Ciudad</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: '#F3F4F6', color: '#6B7280' }]}
+                  style={styles.input}
                   value={city}
-                  editable={false}
+                  onChangeText={setCity}
                   placeholder="Ciudad"
+                  placeholderTextColor="#9CA3AF"
                 />
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Sitio Web</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: '#F3F4F6', color: '#6B7280' }]}
+                  style={styles.input}
                   value={website}
-                  editable={false}
+                  onChangeText={setWebsite}
                   placeholder="Sitio Web"
+                  placeholderTextColor="#9CA3AF"
                 />
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Descripción</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: '#F3F4F6', color: '#6B7280' }]}
+                  style={styles.input}
                   value={description}
-                  editable={false}
+                  onChangeText={setDescription}
                   multiline
                   numberOfLines={3}
                   placeholder="Descripción"
+                  placeholderTextColor="#9CA3AF"
                 />
               </View>
             </View>
@@ -297,6 +326,46 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Contraseña *</Text>
+                <View style={styles.dropdownInput}>
+                  <TextInput
+                    style={styles.input}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Contraseña segura"
+                    secureTextEntry={!showPassword}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.dropdownIcon}
+                  >
+                    <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#6B7280" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Confirmar Contraseña *</Text>
+                <View style={styles.dropdownInput}>
+                  <TextInput
+                    style={styles.input}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Repite la contraseña"
+                    secureTextEntry={!showConfirmPassword}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.dropdownIcon}
+                  >
+                    <Feather name={showConfirmPassword ? "eye" : "eye-off"} size={20} color="#6B7280" />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
 
             {/* Info Box */}
@@ -336,6 +405,52 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
           </View>
         </View>
       </View>
+
+      {/* Welcome Modal */}
+      <Modal
+        visible={showWelcomeModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={handleCloseModal}
+            >
+              <Feather name="x" size={20} color="#6B7280" />
+            </TouchableOpacity>
+
+            <View style={styles.successIcon}>
+              <Feather name="check" size={40} color="#fff" />
+            </View>
+
+            <Text style={styles.modalTitle}>¡Registro Exitoso!</Text>
+
+            <View style={styles.successBadge}>
+              <Feather name="check-square" size={16} color="#059669" />
+              <Text style={styles.successText}>Empresa registrada con éxito</Text>
+            </View>
+
+            <Text style={styles.modalEmpresa}>{empresaNombre}</Text>
+
+            <View style={styles.modalInfoBox}>
+              <Feather name="info" size={16} color="#3B82F6" />
+              <Text style={styles.modalInfoText}>
+                El administrador o el encargado autorizado de la empresa ha sido notificado de tu cuenta como reclutador y estás en proceso de validación.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={handleCloseModal}
+            >
+              <Text style={styles.modalButtonText}>Entendido</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -666,5 +781,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
     fontStyle: 'italic',
+  },
+  modalButton: {
+    backgroundColor: '#F59E0B',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

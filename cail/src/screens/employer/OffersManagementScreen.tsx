@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, TouchableWithoutFeedback, KeyboardAvoidingView, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
+import { AutocompleteInput } from '@/components/ui/AutocompleteInput';
 import { offersService } from '@/services/offers.service';
+import { userService } from '@/services/user.service';
 import { applicationsService } from '@/services/applications.service';
 import { Offer, CreateOfferDTO, OfferStatus as ApiOfferStatus } from '@/types/offers.types';
-import { Application, ApplicationStatusColors } from '@/types/applications.types';
+import { Application, ApplicationWithCandidate, ApplicationStatusColors } from '@/types/applications.types';
 
 type OfferStatus = 'active' | 'archived' | 'deleted';
 type OfferAction = 'archive' | 'restore' | 'delete';
@@ -26,6 +28,8 @@ interface JobOffer {
   requiredCompetencies: string[];
   requiredEducation: string[];
   requiredExperience: string;
+  salaryMin?: number;
+  salaryMax?: number;
   // Campos adicionales para sincronización con API
   apiId?: string;
   apiEstado?: ApiOfferStatus;
@@ -78,6 +82,8 @@ const mapApiOfferToUI = (offer: Offer): JobOffer => {
     requiredCompetencies: offer.competencias_requeridas || [],
     requiredEducation: offer.formacion_requerida ? [offer.formacion_requerida] : [],
     requiredExperience: offer.experiencia_requerida || '',
+    salaryMin: offer.salarioMin,
+    salaryMax: offer.salarioMax,
     apiEstado: offer.estado,
   };
 };
@@ -98,9 +104,18 @@ export function OffersManagementScreen() {
 
   // Estado para modal de aplicaciones
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
-  const [selectedOfferApplications, setSelectedOfferApplications] = useState<Application[]>([]);
+  const [selectedOfferApplications, setSelectedOfferApplications] = useState<ApplicationWithCandidate[]>([]);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [applicationsOffer, setApplicationsOffer] = useState<JobOffer | null>(null);
+
+  // Profile State
+  const [userCompany, setUserCompany] = useState('');
+
+  // Selection Modal State
+  const [selectionModalVisible, setSelectionModalVisible] = useState(false);
+  const [selectionTitle, setSelectionTitle] = useState('');
+  const [selectionOptions, setSelectionOptions] = useState<string[]>([]);
+  const [onSelectOption, setOnSelectOption] = useState<((option: string) => void) | null>(null);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -137,7 +152,19 @@ export function OffersManagementScreen() {
 
   useEffect(() => {
     loadOffers();
+    loadUserProfile();
   }, [loadOffers]);
+
+  const loadUserProfile = async () => {
+    try {
+      const profile = await userService.getProfile();
+      if (profile.employerProfile?.nombreEmpresa) {
+        setUserCompany(profile.employerProfile.nombreEmpresa);
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
 
   const filteredOffers = offers.filter((offer) => offer.status === selectedTab);
   const activeCount = offers.filter((o) => o.status === 'active').length;
@@ -151,6 +178,9 @@ export function OffersManagementScreen() {
 
   const openCreateModal = () => {
     resetForm();
+    if (userCompany) {
+      setDepartment(userCompany);
+    }
     setShowCreateModal(true);
   };
 
@@ -160,6 +190,8 @@ export function OffersManagementScreen() {
     setDescription(offer.description);
     setDepartment(offer.department);
     setSalary(offer.salary);
+    setSalaryMin(offer.salaryMin?.toString() || '');
+    setSalaryMax(offer.salaryMax?.toString() || '');
     setModality(offer.modality);
     setLocation(offer.location);
     setCompetencies(offer.requiredCompetencies);
@@ -171,7 +203,7 @@ export function OffersManagementScreen() {
   const resetForm = () => {
     setTitle('');
     setDescription('');
-    setDepartment('');
+    setDepartment(userCompany); // Reset to user company
     setPriority('Media');
     setSalary('');
     setSalaryMin('');
@@ -240,6 +272,8 @@ export function OffersManagementScreen() {
         experiencia_requerida: experiencia,
         formacion_requerida: education.join(', '),
         competencias_requeridas: competencies,
+        salarioMin: salaryMin ? parseInt(salaryMin) : undefined,
+        salarioMax: salaryMax ? parseInt(salaryMax) : undefined,
       };
 
       const updated = await offersService.updateOffer(selectedOffer.apiId, updateData);
@@ -269,7 +303,7 @@ export function OffersManagementScreen() {
     setLoadingApplications(true);
 
     try {
-      const apps = await applicationsService.getOfferApplications(offer.apiId);
+      const apps = await applicationsService.getOfferApplicationsWithCandidates(offer.apiId);
       setSelectedOfferApplications(apps);
     } catch (err: any) {
       console.error('Error loading applications:', err);
@@ -425,13 +459,17 @@ export function OffersManagementScreen() {
       </ScrollView>
 
       {/* Modal Crear Oferta */}
-      <Modal visible={showCreateModal} animationType="slide" transparent onRequestClose={() => setShowCreateModal(false)}>
-        <View style={[styles.modalOverlay, isDesktop ? styles.modalOverlayDesktop : styles.modalOverlayMobile]}>
+      {showCreateModal && (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+          style={[styles.modalOverlay, isDesktop ? styles.modalOverlayDesktop : styles.modalOverlayMobile, { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 50 }]}
+        >
           <View
             style={[
               styles.modalContent,
               isDesktop ? styles.modalContentDesktop : styles.modalContentMobile,
-              { maxWidth: isDesktop ? 980 : contentWidth },
+              { maxWidth: isDesktop ? 980 : contentWidth, flex: isDesktop ? undefined : 1 },
             ]}
           >
             <View style={styles.modalHeader}>
@@ -482,6 +520,14 @@ export function OffersManagementScreen() {
               }}
               removeCompetency={(idx) => setCompetencies(competencies.filter((_, i) => i !== idx))}
               removeEducation={(idx) => setEducation(education.filter((_, i) => i !== idx))}
+              onOpenSelection={(title, options, onSelect) => {
+                setSelectionTitle(title);
+                setSelectionOptions(options);
+                setOnSelectOption(() => onSelect);
+                setSelectionModalVisible(true);
+              }}
+              setCompetencies={setCompetencies}
+              setEducation={setEducation}
             />
             <TouchableOpacity
               style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
@@ -495,17 +541,21 @@ export function OffersManagementScreen() {
               )}
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+        </KeyboardAvoidingView>
+      )}
 
       {/* Modal Editar Oferta */}
-      <Modal visible={showEditModal} animationType="slide" transparent onRequestClose={() => setShowEditModal(false)}>
-        <View style={[styles.modalOverlay, isDesktop ? styles.modalOverlayDesktop : styles.modalOverlayMobile]}>
+      {showEditModal && (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+          style={[styles.modalOverlay, isDesktop ? styles.modalOverlayDesktop : styles.modalOverlayMobile, { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 50 }]}
+        >
           <View
             style={[
               styles.modalContent,
               isDesktop ? styles.modalContentDesktop : styles.modalContentMobile,
-              { maxWidth: isDesktop ? 980 : contentWidth },
+              { maxWidth: isDesktop ? 980 : contentWidth, flex: isDesktop ? undefined : 1 },
             ]}
           >
             <View style={styles.modalHeader}>
@@ -556,6 +606,14 @@ export function OffersManagementScreen() {
               }}
               removeCompetency={(idx) => setCompetencies(competencies.filter((_, i) => i !== idx))}
               removeEducation={(idx) => setEducation(education.filter((_, i) => i !== idx))}
+              onOpenSelection={(title, options, onSelect) => {
+                setSelectionTitle(title);
+                setSelectionOptions(options);
+                setOnSelectOption(() => onSelect);
+                setSelectionModalVisible(true);
+              }}
+              setCompetencies={setCompetencies}
+              setEducation={setEducation}
             />
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.cancelButton} onPress={() => setShowEditModal(false)}>
@@ -574,8 +632,8 @@ export function OffersManagementScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </Modal>
+        </KeyboardAvoidingView>
+      )}
 
       {/* Modal Confirmar Acción */}
       <Modal visible={!!pendingAction} animationType="fade" transparent onRequestClose={closeActionModal}>
@@ -661,23 +719,33 @@ export function OffersManagementScreen() {
                 style={styles.applicationsList}
                 renderItem={({ item }) => {
                   const statusInfo = ApplicationStatusColors[item.estado];
-                  const fechaApp = item.fechaAplicacion instanceof Date
-                    ? item.fechaAplicacion
-                    : new Date(item.fechaAplicacion);
+                  const candidateName = item.candidato?.nombreCompleto || 'Candidato sin nombre';
+                  const rawDate = item.fechaAplicacion;
+                  let fechaApp: Date;
+                  if (rawDate instanceof Date) {
+                    fechaApp = rawDate;
+                  } else if (typeof rawDate === 'string' && rawDate) {
+                    fechaApp = new Date(rawDate);
+                  } else {
+                    fechaApp = new Date();
+                  }
+                  const isValidDate = !isNaN(fechaApp.getTime());
 
                   return (
                     <View style={styles.applicationItem}>
                       <View style={styles.applicationItemHeader}>
                         <View style={styles.applicationItemInfo}>
                           <Text style={styles.applicationItemId}>
-                            Candidato: {item.idPostulante.slice(0, 8)}...
+                            {candidateName}
                           </Text>
                           <Text style={styles.applicationItemDate}>
-                            {fechaApp.toLocaleDateString('es-EC', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric'
-                            })}
+                            {isValidDate
+                              ? fechaApp.toLocaleDateString('es-EC', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                              })
+                              : 'Fecha no disponible'}
                           </Text>
                         </View>
                         <View style={[styles.applicationItemBadge, { backgroundColor: statusInfo.bg }]}>
@@ -699,6 +767,42 @@ export function OffersManagementScreen() {
             )}
           </View>
         </View>
+      </Modal>
+
+      {/* Selection Modal */}
+      <Modal
+        visible={selectionModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectionModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.selectionModalOverlay}
+          activeOpacity={1}
+          onPress={() => setSelectionModalVisible(false)}
+        >
+          <View style={styles.selectionModalContent}>
+            <Text style={styles.selectionModalTitle}>{selectionTitle}</Text>
+            <FlatList
+              data={selectionOptions}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.selectionOption}
+                  onPress={() => {
+                    if (onSelectOption) {
+                      onSelectOption(item);
+                    }
+                    setSelectionModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.selectionOptionText}>{item}</Text>
+                  <Feather name="chevron-right" size={20} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -832,6 +936,9 @@ function OfferForm({
   addEducation,
   removeCompetency,
   removeEducation,
+  onOpenSelection,
+  setCompetencies,
+  setEducation,
 }: {
   title: string;
   description: string;
@@ -863,9 +970,49 @@ function OfferForm({
   addEducation: () => void;
   removeCompetency: (index: number) => void;
   removeEducation: (index: number) => void;
+  onOpenSelection: (title: string, options: string[], onSelect: (option: string) => void) => void;
+  setCompetencies: (items: string[]) => void;
+  setEducation: (items: string[]) => void;
 }) {
+  const MODALITY_OPTIONS = ['Presencial', 'Híbrido', 'Remoto'];
+  const CONTRACT_OPTIONS = ['Tiempo Completo', 'Medio Tiempo', 'Por Horas', 'Temporal', 'Freelance', 'Pasantía'];
+
+  // Reuse Web lists
+  const COMMON_COMPETENCIES = [
+    'JavaScript', 'TypeScript', 'React', 'React Native', 'Angular', 'Vue.js', 'Node.js',
+    'Python', 'Java', 'C#', 'C++', 'PHP', 'Ruby', 'Go', 'Rust', 'Swift', 'Kotlin',
+    'SQL', 'MySQL', 'PostgreSQL', 'MongoDB', 'Firebase', 'Redis', 'GraphQL',
+    'AWS', 'Google Cloud', 'Azure', 'Docker', 'Kubernetes', 'CI/CD', 'DevOps',
+    'Git', 'GitHub', 'GitLab', 'Jira', 'Agile', 'Scrum', 'Kanban',
+    'HTML', 'CSS', 'SASS', 'Tailwind CSS', 'Bootstrap', 'Material UI',
+    'REST API', 'Microservicios', 'Arquitectura de Software',
+    'Machine Learning', 'Inteligencia Artificial', 'Data Science', 'Big Data',
+    'Seguridad Informática', 'Pentesting', 'Ciberseguridad',
+    'Comunicación', 'Trabajo en Equipo', 'Liderazgo', 'Resolución de Problemas',
+    'Gestión de Proyectos', 'Negociación', 'Presentaciones', 'Ventas',
+    'Inglés', 'Español', 'Portugués', 'Francés', 'Alemán',
+    'Excel', 'Power BI', 'Tableau', 'SAP', 'ERP', 'CRM', 'Salesforce',
+    'Marketing Digital', 'SEO', 'SEM', 'Google Analytics', 'Redes Sociales',
+    'Diseño Gráfico', 'UI/UX', 'Figma', 'Adobe Photoshop', 'Adobe Illustrator',
+    'Contabilidad', 'Finanzas', 'Recursos Humanos', 'Administración de Empresas',
+    'Atención al Cliente', 'Soporte Técnico', 'Help Desk',
+  ];
+
+  const COMMON_EDUCATION = [
+    'Ingeniería en Sistemas', 'Ingeniería de Software', 'Ingeniería Informática',
+    'Licenciatura en Ciencias de la Computación', 'Tecnólogo en Desarrollo de Software',
+    'Administración de Empresas', 'Contabilidad y Auditoría', 'Economía',
+    'Ingeniería Comercial', 'Marketing', 'Diseño Gráfico',
+    'Comunicación Social', 'Derecho', 'Psicología',
+    'Ingeniería Industrial', 'Ingeniería Civil', 'Arquitectura',
+    'Medicina', 'Enfermería', 'Educación',
+  ];
   return (
-    <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.modalForm}
+      contentContainerStyle={{ paddingBottom: 100 }}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Título del Puesto *</Text>
         <TextInput
@@ -891,9 +1038,9 @@ function OfferForm({
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Empresa / Departamento</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, styles.readonlyInput]}
           value={department}
-          onChangeText={setDepartment}
+          editable={false}
           placeholder="Ej: Mi Empresa S.A."
           placeholderTextColor="#9CA3AF"
         />
@@ -925,17 +1072,23 @@ function OfferForm({
       <View style={styles.row}>
         <View style={[styles.inputGroup, styles.flex1]}>
           <Text style={styles.label}>Modalidad</Text>
-          <View style={styles.selectContainer}>
+          <TouchableOpacity
+            style={styles.selectContainer}
+            onPress={() => onOpenSelection('Selecciona Modalidad', MODALITY_OPTIONS, setModality)}
+          >
             <Text style={styles.selectText}>{modality}</Text>
             <Feather name="chevron-down" size={20} color="#6B7280" />
-          </View>
+          </TouchableOpacity>
         </View>
         <View style={[styles.inputGroup, styles.flex1]}>
           <Text style={styles.label}>Tipo de Contrato</Text>
-          <View style={styles.selectContainer}>
+          <TouchableOpacity
+            style={styles.selectContainer}
+            onPress={() => onOpenSelection('Tipo de Contrato', CONTRACT_OPTIONS, setTipoContrato)}
+          >
             <Text style={styles.selectText}>{tipoContrato}</Text>
             <Feather name="chevron-down" size={20} color="#6B7280" />
-          </View>
+          </TouchableOpacity>
         </View>
       </View>
       <View style={styles.inputGroup}>
@@ -961,55 +1114,27 @@ function OfferForm({
 
       <Text style={styles.sectionTitle}>Perfiles Requeridos</Text>
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Competencias Requeridas</Text>
-        <View style={styles.addInputRow}>
-          <TextInput
-            style={[styles.input, styles.flex1]}
-            value={newCompetency}
-            onChangeText={setNewCompetency}
-            placeholder="Ej: Trabajo en equipo, Liderazgo..."
-            placeholderTextColor="#9CA3AF"
-          />
-          <TouchableOpacity style={styles.addButton} onPress={addCompetency}>
-            <Feather name="plus" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.chipContainer}>
-          {competencies.map((comp, index) => (
-            <View key={comp + index} style={styles.chip}>
-              <Text style={styles.chipText}>{comp}</Text>
-              <TouchableOpacity onPress={() => removeCompetency(index)}>
-                <Feather name="x" size={14} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
+        <AutocompleteInput
+          label="Competencias Requeridas"
+          placeholder="Ej: Trabajo en equipo, Liderazgo..."
+          selectedItems={competencies}
+          suggestions={COMMON_COMPETENCIES}
+          onChange={setCompetencies}
+          maxItems={10}
+          chipColor="#3B82F6"
+        />
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Formación Requerida</Text>
-        <View style={styles.addInputRow}>
-          <TextInput
-            style={[styles.input, styles.flex1]}
-            value={newEducation}
-            onChangeText={setNewEducation}
-            placeholder="Ej: Ingeniería en Sistemas, Licenciatura en Administración..."
-            placeholderTextColor="#9CA3AF"
-          />
-          <TouchableOpacity style={styles.addButton} onPress={addEducation}>
-            <Feather name="plus" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.chipContainer}>
-          {education.map((edu, index) => (
-            <View key={edu + index} style={styles.chip}>
-              <Text style={styles.chipText}>{edu}</Text>
-              <TouchableOpacity onPress={() => removeEducation(index)}>
-                <Feather name="x" size={14} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
+      <View style={[styles.inputGroup, { zIndex: 10 }]}>
+        <AutocompleteInput
+          label="Formación Requerida"
+          placeholder="Ej: Ingeniería en Sistemas..."
+          selectedItems={education}
+          suggestions={COMMON_EDUCATION}
+          onChange={setEducation}
+          maxItems={5}
+          chipColor="#8B5CF6"
+        />
       </View>
     </ScrollView>
   );
@@ -1594,10 +1719,53 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
   },
+  readonlyInput: {
+    backgroundColor: '#F3F4F6',
+    color: '#6B7280',
+  },
+  selectionModalContent: {
+    width: '80%',
+    maxHeight: '60%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  selectionModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  selectionModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  selectionOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  selectionOptionText: {
+    fontSize: 16,
+    color: '#374151',
+  },
   applicationItemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 8,
   },
   applicationItemInfo: {
     flex: 1,

@@ -122,7 +122,6 @@ class AuthService {
                 API_CONFIG.ENDPOINTS.REGISTER,
                 {
                     ...data,
-                    password: undefined, // No enviar contraseña
                 }
             );
 
