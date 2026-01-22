@@ -97,6 +97,11 @@ export interface EmployerProfileData {
     description?: string;
     website?: string;
     address?: string;
+    direccion?: string;
+    ciudad?: string;
+    sitioWeb?: string;
+    descripcion?: string;
+    ruc?: string;
 }
 
 // =========================================

@@ -44,6 +44,16 @@ export class AuthController {
     });
 
     /**
+     * GET /auth/companies
+     * Obtiene lista de empresas validadas para el registro
+     */
+    getCompanies = asyncHandler(async (req: Request, res: Response) => {
+        const empresaRepository = new FirestoreEmpresaRepository();
+        const companies = await empresaRepository.getAll();
+        ApiResponse.success(res, companies, 'Companies retrieved successfully');
+    });
+
+    /**
      * GET /auth/profile (requiere autenticación)
      * Obtiene el perfil del usuario autenticado
      * 
@@ -166,6 +176,52 @@ export class AuthController {
 
         // Redirigir a página de éxito
         return res.send(this.getVerificationSuccessPage(account.nombreCompleto));
+    });
+
+    /**
+     * GET /auth/test-email?email=xxx
+     * Endpoint de prueba para verificar envío de correos
+     */
+    testEmail = asyncHandler(async (req: Request, res: Response) => {
+        const email = req.query.email as string;
+        if (!email) {
+            throw new AppError(400, 'Query param email is required');
+        }
+
+        try {
+            // Importar emailService localmente para este test si es necesario, 
+            // pero mejor usar el import global
+            const { emailService } = require('../../../shared/services/email.service');
+
+            console.log('🧪 Attempting to send test email to:', email);
+
+            await emailService.sendAuthorizationRequest(
+                email,
+                'TEST RECRUITER',
+                'TEST COMPANY',
+                '1234567890001',
+                'test_token_123'
+            );
+
+            res.status(200).json({
+                status: 'success',
+                message: 'Test email sent successfully',
+                data: { sentTo: email }
+            });
+        } catch (error: any) {
+            console.error('🧪 Test email failed:', error);
+            res.status(500).json({
+                status: 'error',
+                message: 'Test email failed',
+                error: error.message,
+                details: error,
+                env: {
+                    userConfigured: !!process.env.GMAIL_USER,
+                    passConfigured: !!process.env.GMAIL_APP_PASSWORD,
+                    userLen: process.env.GMAIL_USER?.length,
+                }
+            });
+        }
     });
 
     /**

@@ -63,7 +63,16 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLogin
               needsPasswordChange: response.needsPasswordChange || false,
               isEmailVerified: true,
             };
-      } catch {
+      } catch (profileError: any) {
+        // CRITICAL: If getProfile returns 403 (unauthorized), we MUST throw this error
+        // This handles the case where recruiters are not yet verified by supervisor
+        if (profileError?.response?.status === 403 || profileError?.status === 403) {
+          console.error('🚫 Profile access denied (403):', profileError?.response?.data?.message || profileError?.message);
+          throw profileError; // Re-throw to outer catch block to show error to user
+        }
+
+        // For other errors (network issues, etc.), use fallback data
+        console.warn('⚠️ Profile fetch failed with non-403 error, using fallback:', profileError);
         userData =
           role === 'candidate'
             ? {
@@ -88,8 +97,15 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLogin
       // Manejar error de rol incorrecto con mensaje específico
       if (error instanceof RoleMismatchError) {
         setSplashErrorMessage(error.message);
+      } else if (error?.response?.status === 403 || error?.status === 403) {
+        // Handle 403 Forbidden (e.g., email not verified)
+        const backendMessage = error?.response?.data?.message || error?.message || 'Acceso denegado';
+        console.error('🚫 Access denied (403):', backendMessage);
+        setSplashErrorMessage(backendMessage);
       } else {
-        setSplashErrorMessage('Credenciales inválidas');
+        // Extract message from backend response or use generic
+        const errorMessage = error?.response?.data?.message || error?.message || 'Credenciales inválidas';
+        setSplashErrorMessage(errorMessage);
       }
       setSplashError(true);
     } finally {

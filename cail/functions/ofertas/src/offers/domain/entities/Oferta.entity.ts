@@ -12,9 +12,10 @@ export interface OfertaProps {
     tipoContrato: string;
     salarioMin?: number;
     salarioMax?: number;
-    experiencia_requerida: string;
-    formacion_requerida: string;
+    experiencia_requerida?: string;
+    formacion_requerida?: string;
     competencias_requeridas: string[];
+    nivelJerarquico?: 'Junior' | 'Semi-Senior' | 'Senior' | 'Gerencial';
     fechaPublicacion: Date;
     fechaCierre?: Date;
     estado: 'ACTIVA' | 'CERRADA' | 'PAUSADA';
@@ -22,7 +23,11 @@ export interface OfertaProps {
 }
 
 export class Oferta {
-    constructor(private props: OfertaProps) { }
+    constructor(private props: OfertaProps) {
+        // Ensure defaults for optional string fields
+        this.props.experiencia_requerida = this.props.experiencia_requerida || '';
+        this.props.formacion_requerida = this.props.formacion_requerida || '';
+    }
 
     get idOferta(): string { return this.props.idOferta; }
     get titulo(): string { return this.props.titulo; }
@@ -33,9 +38,10 @@ export class Oferta {
     get tipoContrato(): string { return this.props.tipoContrato; }
     get salarioMin(): number | undefined { return this.props.salarioMin; }
     get salarioMax(): number | undefined { return this.props.salarioMax; }
-    get experiencia_requerida(): string { return this.props.experiencia_requerida; }
-    get formacion_requerida(): string { return this.props.formacion_requerida; }
+    get experiencia_requerida(): string { return this.props.experiencia_requerida || ''; }
+    get formacion_requerida(): string { return this.props.formacion_requerida || ''; }
     get competencias_requeridas(): string[] { return this.props.competencias_requeridas; }
+    get nivelJerarquico(): string | undefined { return this.props.nivelJerarquico; }
     get fechaPublicacion(): Date { return this.props.fechaPublicacion; }
     get fechaCierre(): Date | undefined { return this.props.fechaCierre; }
     get estado(): string { return this.props.estado; }
@@ -47,3 +53,4 @@ export class Oferta {
         return { ...this.props };
     }
 }
+

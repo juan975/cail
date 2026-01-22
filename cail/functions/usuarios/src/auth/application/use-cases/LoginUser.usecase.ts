@@ -68,18 +68,23 @@ export class LoginUserUseCase {
             throw new AppError(404, 'User profile not found. Please complete registration.');
         }
 
-        // Para RECLUTADORES: verificar que el email haya sido verificado
+        // Para RECLUTADORES: verificar que emailVerified sea true (autorizado por supervisor)
         if (account.tipoUsuario === 'RECLUTADOR' && account.employerProfile) {
             const emailVerified = account.employerProfile.emailVerified;
 
-            // Si emailVerified es explícitamente false, bloquear acceso
-            if (emailVerified === false) {
+            console.log('🔐 Checking recruiter authorization. emailVerified:', emailVerified);
+
+            // CRITICAL: Recruiters MUST have emailVerified === true to access the system
+            // This is set to true when the supervisor clicks the authorization link
+            if (emailVerified !== true) {
+                console.warn('⚠️ Recruiter access denied - emailVerified is not true:', account.email.getValue());
                 throw new AppError(403,
-                    'Email no verificado. Por favor verifica tu correo electrónico haciendo clic en el enlace que te enviamos. ' +
-                    'Si no encuentras el correo, revisa tu carpeta de spam.',
+                    'Tu cuenta está pendiente de autorización. Un supervisor de tu empresa debe aprobar tu acceso haciendo clic en el enlace del correo de autorización.',
                     'EMAIL_NOT_VERIFIED'
                 );
             }
+
+            console.log('✅ Recruiter authorized - emailVerified is true');
         }
 
         return {

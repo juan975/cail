@@ -22,6 +22,24 @@ export const getProfile = asyncHandler(async (req: AuthRequest, res: Response) =
         throw new AppError(404, 'User profile not found');
     }
 
+    // CRITICAL: Verificar que reclutadores tengan emailVerified === true
+    // Esta validación bloquea reclutadores no autorizados por el supervisor
+    if (account.tipoUsuario === 'RECLUTADOR' && account.employerProfile) {
+        const emailVerified = account.employerProfile.emailVerified;
+
+        console.log('🔐 [/users/profile] Checking recruiter authorization. emailVerified:', emailVerified);
+
+        if (emailVerified !== true) {
+            console.warn('⚠️ [/users/profile] Recruiter access denied - emailVerified is not true:', account.email.getValue());
+            throw new AppError(403,
+                'Tu cuenta está pendiente de autorización. Un supervisor de tu empresa debe aprobar tu acceso haciendo clic en el enlace del correo de autorización.',
+                'EMAIL_NOT_VERIFIED'
+            );
+        }
+
+        console.log('✅ [/users/profile] Recruiter authorized - emailVerified is true');
+    }
+
     return ApiResponse.success(res, account.toJSON());
 });
 

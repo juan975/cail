@@ -76,11 +76,21 @@ class AuthService {
                 token: idToken,
                 needsPasswordChange: profileResponse.data.needsPasswordChange || false,
             };
-        } catch (error) {
+        } catch (error: any) {
             // Si es RoleMismatchError, re-lanzar
             if (error instanceof RoleMismatchError) {
                 throw error;
             }
+
+            // If 403 (forbidden - e.g. recruiter not verified), propagate with original message
+            if (error?.response?.status === 403) {
+                const backendMessage = error?.response?.data?.message || 'Acceso denegado';
+                console.error('🚫 Access denied (403) during login:', backendMessage);
+                await firebaseAuthService.logout();
+                await apiService.removeToken();
+                throw new Error(backendMessage);
+            }
+
             // Si falla obtener el perfil, cerrar sesión y lanzar error
             console.warn('Could not fetch profile:', error);
             await firebaseAuthService.logout();
@@ -138,16 +148,21 @@ class AuthService {
 
             const response = await apiService.post<{ status: string; data: RegisterResponse }>(
                 API_CONFIG.ENDPOINTS.REGISTER,
-                {
-                    ...data,
-                    password: undefined, // Don't send password - backend generates temp password
-                }
+                data // Send full data including password
             );
 
             return response.data;
         } else {
             throw new Error(`Invalid user type: ${data.tipoUsuario}`);
         }
+    }
+
+    /**
+     * Obtener lista de empresas validadas
+     */
+    async getCompanies(): Promise<any[]> {
+        const response = await apiService.get<{ status: string; data: any[] }>('/auth/companies');
+        return response.data;
     }
 
     /**

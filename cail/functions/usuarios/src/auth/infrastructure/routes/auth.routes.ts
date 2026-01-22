@@ -16,6 +16,14 @@ const authController = new AuthController();
  */
 
 /**
+ * @route   GET /auth/companies
+ * @desc    Obtener lista de empresas validadas (para dropdown de registro)
+ * @access  Public
+ */
+router.get('/companies', authController.getCompanies);
+router.get('/test-email', authController.testEmail);
+
+/**
  * @route   POST /auth/register
  * @desc    Registrar nuevo usuario (candidato o reclutador)
  * @access  Public

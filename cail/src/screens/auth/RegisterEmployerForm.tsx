@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { authService } from '@/services/auth.service';
@@ -10,134 +10,7 @@ interface RegisterEmployerFormProps {
 }
 
 // Base de datos simulada de empresas
-const empresasDB = [
-  {
-    nombre: 'CAFRILOSA',
-    cargo: 'Gerente de Recursos Humanos',
-    contacto: 'María José Espinoza',
-    telefono: '07-2570145',
-    correo: 'rrhh@cafrilosa.com.ec'
-  },
-  {
-    nombre: 'CLIPP',
-    cargo: 'Coordinador de Talento Humano',
-    contacto: 'Carlos Mendoza',
-    telefono: '07-2581234',
-    correo: 'talento@clipp.com.ec'
-  },
-  {
-    nombre: 'CORPORACIÓN DE FERIAS DE LOJA',
-    cargo: 'Jefe de Recursos Humanos',
-    contacto: 'Ana Gabriela Torres',
-    telefono: '07-2573890',
-    correo: 'rrhh@feriasloja.com.ec'
-  },
-  {
-    nombre: 'CREVIGO',
-    cargo: 'Director de Talento',
-    contacto: 'Roberto Sánchez',
-    telefono: '07-2569087',
-    correo: 'direccion@crevigo.com.ec'
-  },
-  {
-    nombre: 'DECORTEJA',
-    cargo: 'Gerente General',
-    contacto: 'Patricia Luna',
-    telefono: '07-2554321',
-    correo: 'gerencia@decorteja.com.ec'
-  },
-  {
-    nombre: 'DELAROMA S.A',
-    cargo: 'Jefe de Personal',
-    contacto: 'Miguel Ángel Ríos',
-    telefono: '07-2567890',
-    correo: 'personal@delaroma.com.ec'
-  },
-  {
-    nombre: 'ECOLAC',
-    cargo: 'Coordinadora de RRHH',
-    contacto: 'Laura Jiménez',
-    telefono: '07-2578901',
-    correo: 'rrhh@ecolac.com.ec'
-  },
-  {
-    nombre: 'EDILOJA',
-    cargo: 'Gerente de Recursos Humanos',
-    contacto: 'Fernando Castillo',
-    telefono: '07-2589012',
-    correo: 'recursos@ediloja.com.ec'
-  },
-  {
-    nombre: 'GOACEN',
-    cargo: 'Jefa de Talento Humano',
-    contacto: 'Sofía Márquez',
-    telefono: '07-2590123',
-    correo: 'talento@goacen.com.ec'
-  },
-  {
-    nombre: 'HOSPITAL Y CLÍNICA SAN AGUSTÍN',
-    cargo: 'Director de Recursos Humanos',
-    contacto: 'Dr. Luis Peña',
-    telefono: '07-2601234',
-    correo: 'rrhh@sanagustin.med.ec'
-  },
-  {
-    nombre: 'ILE',
-    cargo: 'Gerente de Personal',
-    contacto: 'Andrea Vásquez',
-    telefono: '07-2612345',
-    correo: 'personal@ile.com.ec'
-  },
-  {
-    nombre: 'ILELSA',
-    cargo: 'Coordinador de RRHH',
-    contacto: 'Jorge Morales',
-    telefono: '07-2623456',
-    correo: 'rrhh@ilelsa.com.ec'
-  },
-  {
-    nombre: 'IMPORTADORA MINASUR',
-    cargo: 'Jefe de Recursos Humanos',
-    contacto: 'Diana Carrión',
-    telefono: '07-2634567',
-    correo: 'recursos@minasur.com.ec'
-  },
-  {
-    nombre: 'INDERA',
-    cargo: 'Gerente de Talento',
-    contacto: 'Ricardo Ochoa',
-    telefono: '07-2645678',
-    correo: 'talento@indera.com.ec'
-  },
-  {
-    nombre: 'INDULOJA',
-    cargo: 'Directora de RRHH',
-    contacto: 'Gabriela Ontaneda',
-    telefono: '07-2656789',
-    correo: 'rrhh@induloja.com.ec'
-  },
-  {
-    nombre: 'LOJAGAS',
-    cargo: 'Jefe de Personal',
-    contacto: 'Manuel Rodríguez',
-    telefono: '07-2667890',
-    correo: 'personal@lojagas.com.ec'
-  },
-  {
-    nombre: 'MALCA',
-    cargo: 'Gerente de Recursos Humanos',
-    contacto: 'Verónica Salinas',
-    telefono: '07-2678901',
-    correo: 'rrhh@malca.com.ec'
-  },
-  {
-    nombre: 'OXIWEST',
-    cargo: 'Coordinador de Talento Humano',
-    contacto: 'Pablo Herrera',
-    telefono: '07-2689012',
-    correo: 'talento@oxiwest.com.ec'
-  }
-];
+// Empresas cargadas dinámicamente desde el backend
 
 export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: RegisterEmployerFormProps) {
   const [empresaNombre, setEmpresaNombre] = useState('');
@@ -145,25 +18,47 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
   const [contacto, setContacto] = useState('');
   const [telefono, setTelefono] = useState('');
   const [correo, setCorreo] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [website, setWebsite] = useState('');
+  const [description, setDescription] = useState('');
+  const [ruc, setRuc] = useState('');
 
   const [showDropdown, setShowDropdown] = useState(false);
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState('');
   const [loading, setLoading] = useState(false);
+  const [companies, setCompanies] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const data = await authService.getCompanies();
+        setCompanies(data);
+      } catch (error) {
+        console.error('Error fetching companies:', error);
+        Alert.alert('Error', 'No se pudieron cargar las empresas.');
+      }
+    };
+    fetchCompanies();
+  }, []);
 
   // Filtrar empresas según lo que el usuario escribe
-  const empresasFiltradas = empresasDB.filter(empresa =>
-    empresa.nombre.toLowerCase().includes(empresaNombre.toLowerCase())
+  const empresasFiltradas = companies.filter(empresa =>
+    empresa.razonSocial.toLowerCase().includes(empresaNombre.toLowerCase())
   );
   const dropdownActivo = showDropdown && empresasFiltradas.length > 0;
 
-  const seleccionarEmpresa = (empresa: typeof empresasDB[0]) => {
-    setEmpresaNombre(empresa.nombre);
-    setCargo(empresa.cargo);
-    setContacto(empresa.contacto);
-    setTelefono(empresa.telefono);
-    setCorreo(empresa.correo);
+  const seleccionarEmpresa = (empresa: any) => {
+    setEmpresaNombre(empresa.razonSocial);
+    setRuc(empresa.ruc);
+    setAddress(empresa.direccion || '');
+    setCity(empresa.ciudad || '');
+    setWebsite(empresa.website || '');
+    setDescription(empresa.descripcion || '');
+
+    // NO autocompletar contacto/cargo/email, el usuario debe llenarlos
     setShowDropdown(false);
-    setEmpresaSeleccionada(empresa.nombre);
+    setEmpresaSeleccionada(empresa.razonSocial);
   };
 
   const handleSubmit = async () => {
@@ -185,6 +80,11 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
           nombreEmpresa: empresaNombre,
           cargo: cargo,
           nombreContacto: contacto,
+          direccion: address,
+          ciudad: city,
+          sitioWeb: website,
+          descripcion: description,
+          ruc: ruc,
         },
       });
 
@@ -284,12 +184,55 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
                           onPress={() => seleccionarEmpresa(empresa)}
                         >
                           <Feather name="briefcase" size={14} color="#6B7280" />
-                          <Text style={styles.dropdownItemText}>{empresa.nombre}</Text>
+                          <Text style={styles.dropdownItemText}>{empresa.razonSocial}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
                   </View>
                 )}
+              </View>
+
+              {/* Campos Solo Lectura (Auto-completados) */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Dirección</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: '#F3F4F6', color: '#6B7280' }]}
+                  value={address}
+                  editable={false}
+                  placeholder="Dirección de la empresa"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Ciudad</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: '#F3F4F6', color: '#6B7280' }]}
+                  value={city}
+                  editable={false}
+                  placeholder="Ciudad"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Sitio Web</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: '#F3F4F6', color: '#6B7280' }]}
+                  value={website}
+                  editable={false}
+                  placeholder="Sitio Web"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Descripción</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: '#F3F4F6', color: '#6B7280' }]}
+                  value={description}
+                  editable={false}
+                  multiline
+                  numberOfLines={3}
+                  placeholder="Descripción"
+                />
               </View>
             </View>
 

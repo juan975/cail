@@ -33,6 +33,7 @@ export interface EmployerProfileData {
     website?: string;
     address?: string;
     companyValidationStatus?: 'PENDIENTE' | 'VERIFICADA' | 'RECHAZADA';
+    status?: 'ACTIVO' | 'PENDIENTE' | 'NO_AUTORIZADO';
     // Campos para verificación de email (Magic Link)
     emailVerified?: boolean;
     emailVerificationToken?: string;

@@ -12,10 +12,17 @@ export class FirestoreOfertaRepository implements IOfertaRepository {
     }
 
     async save(oferta: Oferta): Promise<Oferta> {
-        const data = {
-            ...oferta.toJSON(),
-            updatedAt: new Date(),
-        };
+        const rawData = oferta.toJSON();
+        // Remove undefined values to prevent Firestore errors
+        const data = Object.entries(rawData).reduce((acc, [key, value]) => {
+            if (value !== undefined) {
+                acc[key] = value;
+            }
+            return acc;
+        }, {} as any);
+
+        data.updatedAt = new Date();
+
         await this.getCollection().doc(oferta.idOferta).set(data, { merge: true });
         return oferta;
     }
@@ -108,9 +115,10 @@ export class FirestoreOfertaRepository implements IOfertaRepository {
             tipoContrato: data.tipoContrato,
             salarioMin: data.salarioMin,
             salarioMax: data.salarioMax,
-            experiencia_requerida: data.experiencia_requerida,
-            formacion_requerida: data.formacion_requerida,
+            experiencia_requerida: data.experiencia_requerida || '',
+            formacion_requerida: data.formacion_requerida || '',
             competencias_requeridas: data.competencias_requeridas || [],
+            nivelJerarquico: data.nivelJerarquico,
             fechaPublicacion: data.fechaPublicacion?.toDate?.() || new Date(data.fechaPublicacion),
             fechaCierre: data.fechaCierre?.toDate?.() || undefined,
             estado: data.estado,

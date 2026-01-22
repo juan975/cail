@@ -4,6 +4,7 @@
  */
 
 export type OfferStatus = 'ACTIVA' | 'CERRADA' | 'PAUSADA';
+export type HierarchyLevel = 'Junior' | 'Semi-Senior' | 'Senior' | 'Gerencial';
 
 export interface Offer {
     idOferta: string;
@@ -15,9 +16,10 @@ export interface Offer {
     tipoContrato: string;
     salarioMin?: number;
     salarioMax?: number;
-    experiencia_requerida: string;
-    formacion_requerida: string;
+    experiencia_requerida?: string;
+    formacion_requerida?: string;
     competencias_requeridas: string[];
+    nivelJerarquico?: HierarchyLevel;
     fechaPublicacion: Date | string;
     fechaCierre?: Date | string;
     estado: OfferStatus;
@@ -33,9 +35,10 @@ export interface CreateOfferDTO {
     tipoContrato: string;
     salarioMin?: number;
     salarioMax?: number;
-    experiencia_requerida: string;
-    formacion_requerida: string;
+    experiencia_requerida?: string;
+    formacion_requerida?: string;
     competencias_requeridas: string[];
+    nivelJerarquico?: HierarchyLevel;
     fechaCierre?: Date | string;
 }
 
@@ -55,3 +58,4 @@ export interface OfferApiResponse<T> {
     data: T;
     message?: string;
 }
+

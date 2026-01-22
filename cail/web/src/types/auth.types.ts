@@ -39,6 +39,7 @@ export interface EmployerProfileData {
     ciudad?: string;
     sitioWeb?: string;
     descripcion?: string;
+    ruc?: string;
 }
 
 export interface RegisterRequest {

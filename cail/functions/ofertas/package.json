@@ -2,6 +2,9 @@
     "name": "cail-ofertas-function",
     "version": "1.0.0",
     "description": "Cloud Function de Ofertas Laborales (CAIL)",
+    "engines": {
+        "node": "20"
+    },
     "main": "dist/index.js",
     "scripts": {
         "build": "tsc",

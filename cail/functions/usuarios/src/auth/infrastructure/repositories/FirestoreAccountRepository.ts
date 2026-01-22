@@ -85,6 +85,7 @@ export class FirestoreAccountRepository implements IAccountRepository {
     async markEmailAsVerified(userId: string): Promise<void> {
         await this.getCollection().doc(userId).update({
             'employerProfile.emailVerified': true,
+            'employerProfile.status': 'ACTIVO', // Autorización completada
             'employerProfile.emailVerificationToken': null, // Limpiar token usado
             'updatedAt': new Date(),
         });

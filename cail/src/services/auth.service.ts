@@ -133,6 +133,14 @@ class AuthService {
     }
 
     /**
+     * Obtener lista de empresas validadas
+     */
+    async getCompanies(): Promise<any[]> {
+        const response = await apiService.get<{ status: string; data: any[] }>('/auth/companies');
+        return response.data;
+    }
+
+    /**
      * Cambio de contraseña
      * 1. Cambiar en Firebase Auth (desde el cliente)
      * 2. Confirmar en backend (actualiza needsPasswordChange)

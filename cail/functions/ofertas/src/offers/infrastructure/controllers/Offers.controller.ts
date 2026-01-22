@@ -81,12 +81,33 @@ export const updateOffer = asyncHandler(async (req: AuthRequest, res: Response) 
         throw new AppError(403, 'Not authorized to update this offer');
     }
 
-    // Crear nueva oferta con datos actualizados
-    const updatedOferta = new Oferta({
-        ...oferta.toJSON(),
-        ...req.body,
-        idOferta: id, // Mantener el ID original
-    });
+    // Get current offer data
+    const currentData = oferta.toJSON();
+
+    // Merge only the fields that are provided in req.body
+    // Preserve fechaPublicacion and other system fields
+    const updateData = {
+        ...currentData,
+        titulo: req.body.titulo ?? currentData.titulo,
+        descripcion: req.body.descripcion ?? currentData.descripcion,
+        empresa: req.body.empresa ?? currentData.empresa,
+        ciudad: req.body.ciudad ?? currentData.ciudad,
+        modalidad: req.body.modalidad ?? currentData.modalidad,
+        tipoContrato: req.body.tipoContrato ?? currentData.tipoContrato,
+        salarioMin: req.body.salarioMin ?? currentData.salarioMin,
+        salarioMax: req.body.salarioMax ?? currentData.salarioMax,
+        experiencia_requerida: req.body.experiencia_requerida ?? currentData.experiencia_requerida,
+        formacion_requerida: req.body.formacion_requerida ?? currentData.formacion_requerida,
+        competencias_requeridas: req.body.competencias_requeridas ?? currentData.competencias_requeridas,
+        nivelJerarquico: req.body.nivelJerarquico ?? currentData.nivelJerarquico,
+        estado: req.body.estado ?? currentData.estado,
+        // Always preserve these system fields
+        idOferta: id,
+        idReclutador: currentData.idReclutador,
+        fechaPublicacion: currentData.fechaPublicacion,
+    };
+
+    const updatedOferta = new Oferta(updateData);
 
     const saved = await ofertaRepository.save(updatedOferta);
     return ApiResponse.success(res, saved.toJSON(), 'Offer updated successfully');

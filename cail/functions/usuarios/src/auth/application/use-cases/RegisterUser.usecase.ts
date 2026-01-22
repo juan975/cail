@@ -50,8 +50,12 @@ export class RegisterUserUseCase {
         // Para RECLUTADORES: crear (o recuperar) usuario en Firebase Auth y enviar magic link de verificación
         if (dto.tipoUsuario === TipoUsuario.RECLUTADOR) {
             const auth = getAuth();
-            const tempPassword = generatePassword(16); // Contraseña inicial compleja (no se envía)
-            needsPasswordChange = true;
+            // Use password provided by user (no more temp password)
+            const userPassword = dto.password;
+            if (!userPassword || userPassword.length < 6) {
+                throw new AppError(400, 'Password is required and must be at least 6 characters');
+            }
+            needsPasswordChange = false; // User already set their password
 
             // 🔐 VALIDACIÓN DE RUC contra colección empresas
             if (this.empresaRepository && dto.employerData?.ruc) {
@@ -86,11 +90,11 @@ export class RegisterUserUseCase {
 
                 } catch (error: any) {
                     if (error.code === 'auth/user-not-found') {
-                        // Usuario no existe, lo creamos
+                        // Usuario no existe, lo creamos con la contraseña del usuario
                         console.log('User not found in Auth, creating new...');
                         const userRecord = await auth.createUser({
                             email: dto.email,
-                            password: tempPassword,
+                            password: userPassword,
                             displayName: dto.nombreCompleto,
                             emailVerified: false, // Se marcará true al hacer clic en el magic link
                         });
@@ -110,19 +114,43 @@ export class RegisterUserUseCase {
                 // Se guardará junto con el perfil del usuario más abajo
 
                 try {
-                    await emailService.sendVerificationMagicLink(
-                        dto.email,
-                        verificationToken,
-                        dto.employerData?.nombreEmpresa || dto.nombreCompleto
-                    );
-                    console.log('✅ Verification magic link sent to:', dto.email);
+                    // Determinar email del supervisor (Fallback a admin hardcoded si no hay env var)
+                    let supervisorEmail = process.env.SUPERVISOR_EMAIL || 'admin@cail.com';
 
-                    // Guardar los datos del token para usarlos al crear la cuenta
+                    // Intentar obtener el email de contacto de la empresa para autorización corporativa
+                    if (dto.employerData?.ruc && this.empresaRepository) {
+                        try {
+                            const empresa = await this.empresaRepository.getByRuc(dto.employerData.ruc);
+                            if (empresa?.emailContacto) {
+                                supervisorEmail = empresa.emailContacto;
+                                console.log('🏢 Using Company Contact Email for Authorization:', supervisorEmail);
+                            } else {
+                                console.log('⚠️ Company found but has no contact email, using default Supervisor Email:', supervisorEmail);
+                            }
+                        } catch (err) {
+                            console.warn('⚠️ Error fetching company email:', err);
+                        }
+                    }
+
+                    // Enviar solicitud de autorización al Supervisor (o Email de Empresa)
+
+                    // Enviar solicitud de autorización al Supervisor en lugar del Magic Link al usuario
+                    await emailService.sendAuthorizationRequest(
+                        supervisorEmail,
+                        dto.nombreCompleto,
+                        dto.employerData?.nombreEmpresa || 'Empresa No Especificada',
+                        dto.employerData?.ruc || 'N/A',
+                        verificationToken
+                    );
+                    console.log(`✅ Authorization request sent to supervisor (${supervisorEmail}) for:`, dto.email);
+
+                    // Guardar los datos del token y estado PENDIENTE
                     dto.employerData = {
                         ...dto.employerData!,
                         emailVerificationToken: verificationToken,
                         emailVerificationExpiry: tokenExpiry,
-                        emailVerified: false,
+                        emailVerified: false, // Se marcará true cuando el supervisor autorice
+                        status: 'PENDIENTE', // Nuevo estado explícito
                     };
                 } catch (emailError) {
                     console.error('⚠️ Failed to send verification email:', emailError);

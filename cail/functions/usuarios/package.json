@@ -9,7 +9,7 @@
         "dev": "nodemon --watch src --exec ts-node src/index.ts",
         "test": "jest --coverage",
         "test:watch": "jest --watch",
-        "deploy": "gcloud functions deploy usuarios --gen2 --runtime=nodejs20 --trigger-http --entry-point=usuarios --source=."
+        "deploy": "gcloud functions deploy usuarios --gen2 --runtime=nodejs20 --trigger-http --entry-point=usuarios --source=. --region us-central1"
     },
     "keywords": [
         "cail",

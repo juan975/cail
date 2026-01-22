@@ -10,15 +10,13 @@ interface LoadingSplashProps {
 }
 
 export function LoadingSplash({ visible, success, error, message, onComplete }: LoadingSplashProps) {
-  if (!visible) return null;
-
   const statusColor = success ? colors.success : error ? colors.danger : colors.accent;
   const statusText = success ? 'Acceso correcto' : error ? 'Error' : 'Procesando';
   const shouldAutoClose = success || error;
   const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!shouldAutoClose || !onComplete) return;
+    if (!visible || !shouldAutoClose || !onComplete) return;
     // Error: 3 segundos para leer el mensaje, Éxito: 1.2 segundos
     const duration = error ? 3000 : 1200;
     timeoutRef.current = window.setTimeout(onComplete, duration);
@@ -27,7 +25,9 @@ export function LoadingSplash({ visible, success, error, message, onComplete }: 
         window.clearTimeout(timeoutRef.current);
       }
     };
-  }, [shouldAutoClose, onComplete, error]);
+  }, [visible, shouldAutoClose, onComplete, error]);
+
+  if (!visible) return null;
 
   return (
     <div

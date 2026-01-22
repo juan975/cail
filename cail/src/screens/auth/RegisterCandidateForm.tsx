@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { InputField } from '@/components/ui/InputField';
 import { LoadingSplash } from '@/components/ui/LoadingSplash';
 import { PasswordStrength, validatePassword } from '@/components/ui/PasswordStrength';
+import { AutocompleteInput, COMMON_TECHNICAL_SKILLS, COMMON_SOFT_SKILLS } from '@/components/ui/AutocompleteInput';
 import { authService } from '@/services/auth.service';
 
 interface RegisterCandidateFormProps {
@@ -407,7 +408,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
               </View>
 
               {/* Habilidades Técnicas */}
-              <View style={styles.section}>
+              <View style={[styles.section, { zIndex: 20 }]}>
                 <View style={styles.sectionHeader}>
                   <Feather name="code" size={16} color="#3B82F6" />
                   <Text style={styles.sectionTitle}>Habilidades técnicas</Text>
@@ -416,35 +417,20 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                   Tecnologías, herramientas y software que dominas
                 </Text>
 
-                <View style={styles.skillInput}>
-                  <TextInput
-                    style={[styles.input, styles.flex1]}
-                    value={newSkill}
-                    onChangeText={setNewSkill}
-                    placeholder="Ej: Excel, Python, AutoCAD..."
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  <TouchableOpacity style={styles.addButton} onPress={addSkill}>
-                    <Feather name="plus" size={20} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-
-                {technicalSkills.length > 0 && (
-                  <View style={styles.chipContainer}>
-                    {technicalSkills.map((skill, index) => (
-                      <View key={index} style={styles.chipBlue}>
-                        <Text style={styles.chipTextBlue}>{skill}</Text>
-                        <TouchableOpacity onPress={() => removeSkill(index)}>
-                          <Feather name="x" size={14} color="#3B82F6" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
+                <AutocompleteInput
+                  selectedItems={technicalSkills}
+                  onChange={setTechnicalSkills}
+                  suggestions={COMMON_TECHNICAL_SKILLS}
+                  label=""
+                  placeholder="Buscar o agregar habilidad técnica..."
+                  chipColor="#3B82F6"
+                  addButtonColor="#3B82F6"
+                  maxItems={15}
+                />
               </View>
 
               {/* Soft Skills */}
-              <View style={styles.section}>
+              <View style={[styles.section, { zIndex: 10 }]}>
                 <View style={styles.sectionHeader}>
                   <Feather name="heart" size={16} color="#10B981" />
                   <Text style={styles.sectionTitle}>Soft skills</Text>
@@ -453,31 +439,16 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                   Habilidades blandas y fortalezas personales
                 </Text>
 
-                <View style={styles.skillInput}>
-                  <TextInput
-                    style={[styles.input, styles.flex1]}
-                    value={newSoftSkill}
-                    onChangeText={setNewSoftSkill}
-                    placeholder="Ej: Comunicación, Liderazgo, Trabajo en equipo..."
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  <TouchableOpacity style={[styles.addButton, styles.addButtonGreen]} onPress={addSoftSkill}>
-                    <Feather name="plus" size={20} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-
-                {softSkills.length > 0 && (
-                  <View style={styles.chipContainer}>
-                    {softSkills.map((skill, index) => (
-                      <View key={`${skill}-${index}`} style={styles.chipGreen}>
-                        <Text style={styles.chipTextGreen}>{skill}</Text>
-                        <TouchableOpacity onPress={() => removeSoftSkill(index)}>
-                          <Feather name="x" size={14} color="#10B981" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
+                <AutocompleteInput
+                  selectedItems={softSkills}
+                  onChange={setSoftSkills}
+                  suggestions={COMMON_SOFT_SKILLS}
+                  label=""
+                  placeholder="Buscar o agregar soft skill..."
+                  chipColor="#10B981"
+                  addButtonColor="#10B981"
+                  maxItems={10}
+                />
               </View>
 
               {/* Formación */}

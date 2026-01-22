@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { FiArrowLeft, FiCheck } from 'react-icons/fi';
+import { useState, useEffect } from 'react';
+import { FiArrowLeft, FiCheck, FiChevronDown } from 'react-icons/fi';
 import { LoadingSplash } from '../../components/ui/LoadingSplash';
 import { useNotifications } from '../../components/ui/Notifications';
 import { authService } from '../../services/auth.service';
@@ -17,11 +17,55 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
   const [contacto, setContacto] = useState('');
   const [telefono, setTelefono] = useState('');
   const [correo, setCorreo] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [website, setWebsite] = useState('');
   const [description, setDescription] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  // Company selection state
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [ruc, setRuc] = useState('');
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+
+  const selectedCompany = companies.find(c => c.ruc === ruc);
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        setLoadingCompanies(true);
+        const data = await authService.getCompanies();
+        setCompanies(data);
+      } catch (error) {
+        console.error('Error fetching companies:', error);
+        notifications.error('No se pudieron cargar las empresas.');
+      } finally {
+        setLoadingCompanies(false);
+      }
+    };
+    fetchCompanies();
+  }, []);
+
+  const handleCompanyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedRuc = e.target.value;
+    setRuc(selectedRuc);
+    const company = companies.find(c => c.ruc === selectedRuc);
+    if (company) {
+      setEmpresaNombre(company.razonSocial);
+      setAddress(company.direccion || '');
+      setCity(company.ciudad || '');
+      setWebsite(company.website || '');
+      setDescription(company.descripcion || '');
+    } else {
+      setEmpresaNombre('');
+      setAddress('');
+      setCity('');
+      setWebsite('');
+      setDescription('');
+    }
+  };
 
   // Loading and splash state
   const [loading, setLoading] = useState(false);
@@ -74,8 +118,18 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
   };
 
   const handleSubmit = async () => {
-    if (!empresaNombre || !cargo || !contacto || !telefono || !correo) {
+    if (!empresaNombre || !cargo || !contacto || !telefono || !correo || !password) {
       notifications.alert('Completa todos los campos del formulario.', 'Campos incompletos');
+      return;
+    }
+
+    if (password.length < 6) {
+      notifications.alert('La contraseña debe tener al menos 6 caracteres.', 'Contraseña muy corta');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      notifications.alert('Las contraseñas no coinciden.', 'Error de contraseña');
       return;
     }
 
@@ -90,7 +144,7 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
     try {
       const response = await authService.register({
         email: correo,
-        password: 'TempPassword123!',
+        password: password,
         nombreCompleto: contacto,
         telefono,
         tipoUsuario: 'RECLUTADOR',
@@ -102,6 +156,7 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
           ciudad: city,
           sitioWeb: website,
           descripcion: description,
+          ruc: ruc, // Include RUC for backend validation
         },
       });
 
@@ -110,8 +165,8 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
         company: empresaNombre,
         contactName: contacto,
         email: correo,
-        needsPasswordChange: true,
-        isEmailVerified: true,
+        needsPasswordChange: false, // User already set their password during registration
+        isEmailVerified: false, // Email needs verification by supervisor
       };
 
       setPendingData(userData);
@@ -207,7 +262,7 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
           {/* Form */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Company Name */}
-            <div>
+            <div style={{ position: 'relative' }}>
               <label style={{
                 fontSize: '14px',
                 fontWeight: 600,
@@ -217,14 +272,13 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
               }}>
                 Nombre de la empresa *
               </label>
-              <input
-                type="text"
-                value={empresaNombre}
-                onChange={(e) => setEmpresaNombre(e.target.value)}
-                placeholder="Ej: CAFRILOSA"
+              <select
+                value={ruc}
+                onChange={handleCompanyChange}
                 style={{
                   width: '100%',
                   padding: '14px 16px',
+                  paddingRight: '40px',
                   fontSize: '16px',
                   color: '#111827',
                   background: '#F9FAFB',
@@ -232,17 +286,29 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
                   borderRadius: '12px',
                   outline: 'none',
                   transition: 'all 0.2s',
-                  boxSizing: 'border-box',
+                  appearance: 'none',
+                  cursor: 'pointer',
                 }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#F59E0B';
-                  e.target.style.background = '#FFFFFF';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#E5E7EB';
-                  e.target.style.background = '#F9FAFB';
+                disabled={loadingCompanies}
+              >
+                <option value="">Selecciona tu empresa</option>
+                {companies.map((company) => (
+                  <option key={company.ruc} value={company.ruc}>
+                    {company.razonSocial}
+                  </option>
+                ))}
+              </select>
+              <FiChevronDown
+                size={20}
+                color="#9CA3AF"
+                style={{
+                  position: 'absolute',
+                  right: '16px',
+                  top: '42px', // Adjusted for label height + padding
+                  pointerEvents: 'none',
                 }}
               />
+              {loadingCompanies && <span style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px', display: 'block' }}>Cargando empresas...</span>}
             </div>
 
             {/* Position */}
@@ -362,83 +428,127 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
               />
             </div>
 
-                {/* Email */}
-                <div>
-                  <label style={{
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: '#374151',
-                    marginBottom: '8px',
-                    display: 'block',
-                  }}>
-                    Correo electrónico *
-                  </label>
-                  <input
-                    type="email"
-                    value={correo}
-                    onChange={(e) => setCorreo(e.target.value)}
-                    placeholder="tu@email.com"
-                    style={inputStyle}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                </div>
+            {/* Email */}
+            <div>
+              <label style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#374151',
+                marginBottom: '8px',
+                display: 'block',
+              }}>
+                Correo electrónico *
+              </label>
+              <input
+                type="email"
+                value={correo}
+                onChange={(e) => setCorreo(e.target.value)}
+                placeholder="tu@email.com"
+                style={inputStyle}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+              />
+            </div>
 
-                {/* Address */}
-                <div>
-                  <label style={labelStyle}>Dirección *</label>
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Calle principal 123"
-                    style={inputStyle}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                </div>
+            {/* Password */}
+            <div>
+              <label style={labelStyle}>Contraseña *</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                style={inputStyle}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+              />
+            </div>
 
-                {/* City */}
-                <div>
-                  <label style={labelStyle}>Ciudad *</label>
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="Loja"
-                    style={inputStyle}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                </div>
+            {/* Confirm Password */}
+            <div>
+              <label style={labelStyle}>Confirmar contraseña *</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repite tu contraseña"
+                style={inputStyle}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+              />
+            </div>
 
-                {/* Website */}
-                <div>
-                  <label style={labelStyle}>Sitio web</label>
-                  <input
-                    type="url"
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
-                    placeholder="https://empresa.com"
-                    style={inputStyle}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                </div>
+            {/* Address */}
+            <div>
+              <label style={labelStyle}>Dirección *</label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                disabled={!!selectedCompany?.direccion} // Disabled ONLY if DB provided data
+                placeholder="Calle principal 123"
+                style={{
+                  ...inputStyle,
+                  background: (!!selectedCompany?.direccion) ? '#E5E7EB' : '#F9FAFB', // Darker grey for disabled
+                  cursor: (!!selectedCompany?.direccion) ? 'not-allowed' : 'text',
+                  opacity: (!!selectedCompany?.direccion) ? 0.7 : 1,
+                }}
+              />
+            </div>
 
-                {/* Description */}
-                <div>
-                  <label style={labelStyle}>Descripción de la empresa</label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Breve descripción..."
-                    rows={4}
-                    style={textareaStyle}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                </div>
+            {/* City */}
+            <div>
+              <label style={labelStyle}>Ciudad *</label>
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                disabled={!!selectedCompany?.ciudad}
+                placeholder="Loja"
+                style={{
+                  ...inputStyle,
+                  background: (!!selectedCompany?.ciudad) ? '#E5E7EB' : '#F9FAFB',
+                  cursor: (!!selectedCompany?.ciudad) ? 'not-allowed' : 'text',
+                  opacity: (!!selectedCompany?.ciudad) ? 0.7 : 1,
+                }}
+              />
+            </div>
+
+            {/* Website */}
+            <div>
+              <label style={labelStyle}>Sitio web</label>
+              <input
+                type="url"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                disabled={!!selectedCompany?.website}
+                placeholder="https://empresa.com"
+                style={{
+                  ...inputStyle,
+                  background: (!!selectedCompany?.website) ? '#E5E7EB' : '#F9FAFB',
+                  cursor: (!!selectedCompany?.website) ? 'not-allowed' : 'text',
+                  opacity: (!!selectedCompany?.website) ? 0.7 : 1,
+                }}
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label style={labelStyle}>Descripción de la empresa</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={!!selectedCompany?.descripcion}
+                placeholder="Breve descripción..."
+                rows={4}
+                style={{
+                  ...textareaStyle,
+                  background: (!!selectedCompany?.descripcion) ? '#E5E7EB' : '#F9FAFB',
+                  cursor: (!!selectedCompany?.descripcion) ? 'not-allowed' : 'text',
+                  opacity: (!!selectedCompany?.descripcion) ? 0.7 : 1,
+                }}
+              />
+            </div>
 
             {/* Terms and Conditions */}
             <div style={{
@@ -473,14 +583,14 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
                 }}>
                   Acepto los{' '}
                   <a
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        notifications.info('Términos y condiciones - Próximamente');
-                      }}
-                      style={{
-                        color: '#F59E0B',
-                        fontWeight: 600,
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      notifications.info('Términos y condiciones - Próximamente');
+                    }}
+                    style={{
+                      color: '#F59E0B',
+                      fontWeight: 600,
                       textDecoration: 'underline',
                     }}
                   >

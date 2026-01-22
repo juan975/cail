@@ -42,22 +42,31 @@ const mapApiToLocal = (app: ApplicationWithCandidate, offerTitle: string): Appli
   const initials = nombre.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   const fecha = new Date(app.fechaAplicacion);
 
+  // Check for alternative property names as fallback
+  const anyCand = candidato as any;
+
   return {
     id: app.idAplicacion,
     candidateName: nombre,
     initials,
-    department: candidato?.resumenProfesional?.substring(0, 50) || 'Perfil pendiente',
+    department: candidato?.resumenProfesional?.substring(0, 50) || anyCand?.professionalSummary || 'Perfil pendiente',
     position: offerTitle,
-    education: candidato?.nivelEducativo || 'No especificado',
-    experience: candidato?.experienciaAnios ? `${candidato.experienciaAnios} años de exp.` : 'No especificado',
-    email: candidato?.email || 'email@pendiente.com',
-    phone: candidato?.telefono || 'No especificado',
-    location: candidato?.ciudad || 'No especificado',
-    skills: [...(candidato?.habilidadesTecnicas || []), ...(candidato?.habilidadesBlandas || [])].slice(0, 5),
+    education: candidato?.nivelEducativo || anyCand?.education || anyCand?.formacion || 'No especificado',
+    experience: candidato?.experienciaAnios
+      ? `${candidato.experienciaAnios} años de exp.`
+      : anyCand?.yearsOfExperience
+        ? `${anyCand.yearsOfExperience} años de exp.`
+        : anyCand?.experience
+          ? String(anyCand.experience)
+          : 'No especificado',
+    email: candidato?.email || anyCand?.contactEmail || 'email@pendiente.com',
+    phone: candidato?.telefono || anyCand?.phoneNumber || 'No especificado',
+    location: candidato?.ciudad || anyCand?.location || anyCand?.city || 'No especificado',
+    skills: [...(candidato?.habilidadesTecnicas || anyCand?.technicalSkills || []), ...(candidato?.habilidadesBlandas || anyCand?.softSkills || [])].slice(0, 5),
     receivedDate: fecha.toLocaleDateString('es-EC'),
     status: mapApiStatus(app.estado),
     matchScore: app.matchScore,
-    cvFile: app.candidato?.cvUrl,
+    cvFile: app.candidato?.cvUrl || anyCand?.cv,
   };
 };
 
@@ -71,7 +80,12 @@ const statusBadges: Record<ApplicationStatus, { label: string; bg: string; color
 export default function ReceivedApplicationsScreen() {
   // Estados de datos
   const [applications, setApplications] = useState<Application[]>([]);
-  const [groupedByOffer, setGroupedByOffer] = useState<{ offerId: string; offerTitle: string; apps: Application[] }[]>([]);
+  const [groupedByOffer, setGroupedByOffer] = useState<{
+    offerId: string;
+    offerTitle: string;
+    offerDetails?: { salary: string; contract: string; level: string };
+    apps: Application[]
+  }[]>([]);
 
   // Estados de UI
   const [isLoading, setIsLoading] = useState(true);
@@ -95,6 +109,11 @@ export default function ReceivedApplicationsScreen() {
           return {
             offerId: offer.idOferta,
             offerTitle: offer.titulo,
+            offerDetails: {
+              salary: offer.salarioMin ? `$${offer.salarioMin} - $${offer.salarioMax}` : 'A convenir',
+              contract: offer.tipoContrato || 'Tiempo completo',
+              level: offer.nivelJerarquico || 'Junior'
+            },
             apps: apps.map(app => mapApiToLocal(app, offer.titulo))
           };
         } catch (err) {
@@ -407,9 +426,22 @@ export default function ReceivedApplicationsScreen() {
           groupedByOffer.map((group) =>
             group.apps.length > 0 ? (
               <div key={group.offerId} style={{ marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  💼 {group.offerTitle}
+                <div style={{ fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 16 }}>💼 {group.offerTitle}</span>
                   <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 400 }}>({group.apps.length} postulaciones)</span>
+                  {group.offerDetails && (
+                    <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
+                      <span style={{ background: '#F3F4F6', padding: '2px 8px', borderRadius: 4, fontSize: 11, color: '#4B5563' }}>
+                        💰 {group.offerDetails.salary}
+                      </span>
+                      <span style={{ background: '#F3F4F6', padding: '2px 8px', borderRadius: 4, fontSize: 11, color: '#4B5563' }}>
+                        📄 {group.offerDetails.contract}
+                      </span>
+                      <span style={{ background: '#F3F4F6', padding: '2px 8px', borderRadius: 4, fontSize: 11, color: '#4B5563' }}>
+                        ⭐ {group.offerDetails.level}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {group.apps.map((app) => (
                   <div

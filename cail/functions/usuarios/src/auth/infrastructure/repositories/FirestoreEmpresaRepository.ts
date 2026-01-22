@@ -46,14 +46,7 @@ export class FirestoreEmpresaRepository implements IEmpresaRepository {
             }
 
             if (data) {
-                // Mapeo de campos snake_case (DB real) a camelCase (código interno)
-                // Según captura: estado_validacion="VERIFICADA", razon_social, nombre_comercial
-                return {
-                    ruc: rucNormalizado,
-                    razonSocial: data.razon_social || data.nombre_comercial || data.nombre || 'Sin nombre',
-                    estado: data.estado_validacion || 'PENDIENTE',
-                    fechaValidacion: data.created_at?.toDate() || new Date(),
-                };
+                return this.mapToEntity(rucNormalizado, data);
             }
 
             return null;
@@ -61,5 +54,43 @@ export class FirestoreEmpresaRepository implements IEmpresaRepository {
             console.error('Error obteniendo empresa por RUC:', error);
             return null;
         }
+    }
+
+    /**
+     * Obtiene todas las empresas validadas
+     */
+    async getAll(): Promise<EmpresaValidada[]> {
+        const db = getFirestore();
+        try {
+            const snapshot = await db.collection('empresas').get();
+            return snapshot.docs.map(doc => {
+                const data = doc.data();
+                const ruc = data.ruc || doc.id;
+                return this.mapToEntity(ruc, data);
+            });
+        } catch (error) {
+            console.error('Error obteniendo todas las empresas:', error);
+            return [];
+        }
+    }
+
+    private mapToEntity(ruc: string, data: any): EmpresaValidada {
+        return {
+            ruc: ruc,
+            razonSocial: data.razon_social || data.nombre_comercial || data.nombre || 'Sin nombre',
+            estado: data.estado_validacion || 'VERIFICADA',
+            direccion: data.direccion || data.address || '',
+            ciudad: data.ciudad || data.city || '',
+            website: data.sitio_web || data.website || data.pagina_web || data.url || '',
+            descripcion: data.descripcion || data.description || data.detalle || '',
+            // Priorizar contacto.email (si es objeto), luego campos directos variados
+            emailContacto: (typeof data.contacto === 'object' ? data.contacto?.email : undefined) ||
+                data.email ||
+                data.correo ||
+                data.email_contacto ||
+                data.contacto_email ||
+                undefined,
+            fechaValidacion: data.created_at?.toDate() || new Date(),
+        };
     }
 }
