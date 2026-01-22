@@ -10,14 +10,26 @@ import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { CandidateProfileForm } from '@/types';
 import { colors } from '@/theme/colors';
 import { userService } from '@/services/user.service';
-import { SkillSelector } from '@/components/ui/SkillSelector';
+import { AutocompleteInput, COMMON_TECHNICAL_SKILLS, COMMON_SOFT_SKILLS } from '@/components/ui/AutocompleteInput';
 import * as DocumentPicker from 'expo-document-picker';
 import { WorkExperience } from '@/types';
+
+// Lista de competencias comunes
+const COMMON_COMPETENCIES = [
+  'Gestión de proyectos', 'Análisis de datos', 'Planificación estratégica',
+  'Negociación', 'Ventas', 'Marketing', 'Finanzas', 'Contabilidad',
+  'Recursos Humanos', 'Administración', 'Logística', 'Calidad',
+  'Innovación', 'Desarrollo de negocios', 'Atención al cliente', 'Servicio al cliente',
+  'Investigación de mercado', 'Redacción', 'Edición', 'Traducción',
+  'Diseño de procesos', 'Mejora continua', 'Lean Manufacturing', 'Six Sigma',
+  'Auditoría', 'Cumplimiento normativo', 'Gestión de riesgos',
+];
 
 // Estado inicial vacío para el formulario
 const emptyCandidateProfile: CandidateProfileForm = {
   fullName: '',
   email: '',
+  cedula: '',
   phone: '',
   city: '',
   address: '',
@@ -53,6 +65,7 @@ export function CandidateProfileScreen() {
         setForm({
           fullName: profile.nombreCompleto,
           email: profile.email,
+          cedula: profile.candidateProfile.cedula || '',
           phone: profile.telefono || '',
           city: profile.candidateProfile.ciudad,
           address: profile.candidateProfile.direccion || '',
@@ -76,6 +89,7 @@ export function CandidateProfileScreen() {
       form.fullName,
       form.email,
       form.phone,
+      form.cedula,
       form.city,
       form.address,
       form.professionalSummary,
@@ -146,6 +160,10 @@ export function CandidateProfileScreen() {
   };
 
   const handleSave = async () => {
+    if (!form.cedula.trim()) {
+      Alert.alert('Error', 'La cédula es obligatoria');
+      return;
+    }
     setSaving(true);
     try {
       await userService.updateProfile({
@@ -159,7 +177,7 @@ export function CandidateProfileScreen() {
           softSkills: form.softSkills,
           competencias: form.competencies,
           experienciaLaboral: form.workExperience,
-          cedula: '', // Mantener valor existente
+          cedula: form.cedula,
         },
       });
       Alert.alert('Éxito', 'Tus cambios se guardaron correctamente.');
@@ -273,6 +291,14 @@ export function CandidateProfileScreen() {
               keyboardType="email-address"
             />
             <InputField
+              label="Cédula/DNI"
+              value={form.cedula}
+              onChangeText={(text) => updateField('cedula', text.replace(/[^0-9]/g, ''))}
+              placeholder="0000000000"
+              keyboardType="numeric"
+              maxLength={10}
+            />
+            <InputField
               label="Teléfono"
               value={form.phone}
               onChangeText={(text) => updateField('phone', text)}
@@ -336,12 +362,14 @@ export function CandidateProfileScreen() {
             </View>
 
             <View style={styles.formSection}>
-              <SkillSelector
-                selectedSkills={form.technicalSkills}
-                onChange={(skills) => updateField('technicalSkills', skills)}
+              <AutocompleteInput
+                selectedItems={form.technicalSkills}
+                onChange={(skills: string[]) => updateField('technicalSkills', skills)}
+                suggestions={COMMON_TECHNICAL_SKILLS}
                 label="Habilidades técnicas e informáticas"
                 placeholder="Ej. React Native, Python, AWS..."
                 chipColor="#3B82F6"
+                addButtonColor="#3B82F6"
               />
             </View>
           </View>
@@ -359,12 +387,14 @@ export function CandidateProfileScreen() {
             </View>
 
             <View style={styles.formSection}>
-              <SkillSelector
-                selectedSkills={form.softSkills}
-                onChange={(skills) => updateField('softSkills', skills)}
+              <AutocompleteInput
+                selectedItems={form.softSkills}
+                onChange={(skills: string[]) => updateField('softSkills', skills)}
+                suggestions={COMMON_SOFT_SKILLS}
                 label="Habilidades blandas y sociales"
                 placeholder="Ej. Liderazgo, Comunicación, Trabajo en equipo..."
                 chipColor="#10B981"
+                addButtonColor="#10B981"
               />
             </View>
           </View>
@@ -387,12 +417,14 @@ export function CandidateProfileScreen() {
             </View>
 
             <View style={styles.formSection}>
-              <SkillSelector
-                selectedSkills={form.competencies}
-                onChange={(skills) => updateField('competencies', skills)}
+              <AutocompleteInput
+                selectedItems={form.competencies}
+                onChange={(skills: string[]) => updateField('competencies', skills)}
+                suggestions={COMMON_COMPETENCIES}
                 label="Otras competencias clave"
                 placeholder="Ej. Gestión de proyectos, Análisis de datos..."
                 chipColor="#F59E0B"
+                addButtonColor="#F59E0B"
               />
             </View>
           </View>
