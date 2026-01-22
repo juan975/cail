@@ -25,6 +25,7 @@ interface Application {
   position: string;
   education: string;
   experience: string;
+  workHistory: any[];
   email: string;
   phone: string;
   location: string;
@@ -39,7 +40,6 @@ interface Application {
 const mapApiToLocal = (app: ApplicationWithCandidate, offerTitle: string): Application => {
   const candidato = app.candidato || {} as any;
   console.log('[DEBUG] Candidato Data:', JSON.stringify(candidato, null, 2));
-  console.log('[DEBUG] Nested Profile:', JSON.stringify(candidato.candidateProfile, null, 2));
 
   const profile = candidato.candidateProfile || {};
 
@@ -68,10 +68,6 @@ const mapApiToLocal = (app: ApplicationWithCandidate, offerTitle: string): Appli
     ? (String(yearsExp).includes('años') ? yearsExp : `${yearsExp} años de exp.`)
     : 'No especificado';
 
-  // Resume Experience (Summary)
-  // We explicitly want to allow showing the summary if years are missing, or combine them?
-  // The UI currently shows "experience" as a string.
-
   const location = getVal(
     candidato.ciudad,
     profile.ciudad,
@@ -81,22 +77,25 @@ const mapApiToLocal = (app: ApplicationWithCandidate, offerTitle: string): Appli
 
   const phone = getVal(
     candidato.telefono,
-    profile.phone, // In case it's in profile
-    candidato.phone
+    profile.telefono,
+    profile.phone
   ) || 'No especificado';
 
   const techSkills = candidato.habilidadesTecnicas || profile.habilidadesTecnicas || profile.technicalSkills || [];
   const softSkills = candidato.habilidadesBlandas || profile.softSkills || [];
   const skills = [...techSkills, ...softSkills].slice(0, 5);
 
+  const workHistory = profile.experienciaLaboral || candidato.experienciaLaboral || [];
+
   return {
     id: app.idAplicacion,
     candidateName: nombre,
     initials,
-    department: getVal(profile.resumenProfesional, candidato.resumenProfesional, 'Perfil pendiente').substring(0, 50),
+    department: getVal(profile.resumenProfesional, candidato.resumenProfesional, 'Perfil pendiente'),
     position: offerTitle,
     education,
     experience: experienceStr,
+    workHistory,
     email: candidato.email || 'email@pendiente.com',
     phone,
     location,
@@ -576,12 +575,34 @@ export default function ReceivedApplicationsScreen() {
             </div>
             <div style={{ marginTop: 12, display: 'grid', gap: 6, fontSize: 13, color: '#4B5563' }}>
               <div>Puesto: {selectedApplication.position}</div>
-              <div>Departamento: {selectedApplication.department}</div>
-              <div>Educación: {selectedApplication.education}</div>
-              <div>Experiencia: {selectedApplication.experience}</div>
-              <div>Ubicación: {selectedApplication.location}</div>
+              {/* Changed label */}
+              <div><strong style={{ fontWeight: 600 }}>Resumen Profesional:</strong> {selectedApplication.department}</div>
+              <div><strong>Educación:</strong> {selectedApplication.education}</div>
+              <div><strong>Experiencia:</strong> {selectedApplication.experience}</div>
+              <div style={{ marginTop: 8 }}>
+                {selectedApplication.workHistory && selectedApplication.workHistory.length > 0 ? (
+                  <div style={{ background: '#F9FAFB', padding: 8, borderRadius: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#4B5563', marginBottom: 4 }}>Historial Laboral:</div>
+                    {selectedApplication.workHistory.map((job: any, idx: number) => (
+                      <div key={idx} style={{ marginBottom: 6, paddingBottom: 6, borderBottom: idx < selectedApplication.workHistory.length - 1 ? '1px solid #E5E7EB' : 'none' }}>
+                        <div style={{ fontWeight: 600, color: '#111827' }}>{job.position} - {job.company}</div>
+                        <div style={{ fontSize: 11, color: '#6B7280' }}>
+                          {job.startDate} — {job.isCurrent ? 'Actualidad' : job.endDate}
+                        </div>
+                        {job.description && (
+                          <div style={{ fontSize: 12, marginTop: 2 }}>{job.description}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: '#9CA3AF', fontStyle: 'italic' }}>Sin historial laboral detallado</div>
+                )}
+              </div>
+
+              <div><strong>Ubicación:</strong> {selectedApplication.location}</div>
               <div>
-                Estado:
+                <strong>Estado:</strong>
                 <span
                   style={{
                     marginLeft: 6,

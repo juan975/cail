@@ -34,6 +34,10 @@ const emptyCandidateProfile: CandidateProfileForm = {
   city: '',
   address: '',
   professionalSummary: '',
+  educationLevel: '',
+  degree: '',
+  yearsExperience: '',
+  experienceSummary: '',
   technicalSkills: [],
   softSkills: [],
   competencies: [],
@@ -70,6 +74,10 @@ export function CandidateProfileScreen() {
           city: profile.candidateProfile.ciudad,
           address: profile.candidateProfile.direccion || '',
           professionalSummary: profile.candidateProfile.resumenProfesional || '',
+          educationLevel: profile.candidateProfile.nivelEducacion || '',
+          degree: profile.candidateProfile.titulo || '',
+          yearsExperience: profile.candidateProfile.anosExperiencia || '',
+          experienceSummary: profile.candidateProfile.resumenExperiencia || '',
           technicalSkills: profile.candidateProfile.habilidadesTecnicas || [],
           softSkills: profile.candidateProfile.softSkills || [],
           competencies: profile.candidateProfile.competencias || [],
@@ -93,6 +101,8 @@ export function CandidateProfileScreen() {
       form.city,
       form.address,
       form.professionalSummary,
+      form.educationLevel,
+      form.yearsExperience,
       form.technicalSkills.length ? '1' : '',
       form.softSkills.length ? '1' : '',
       form.competencies.length ? '1' : '',
@@ -173,6 +183,10 @@ export function CandidateProfileScreen() {
           ciudad: form.city,
           direccion: form.address,
           resumenProfesional: form.professionalSummary,
+          nivelEducacion: form.educationLevel,
+          titulo: form.degree,
+          anosExperiencia: form.yearsExperience,
+          resumenExperiencia: form.experienceSummary,
           habilidadesTecnicas: form.technicalSkills,
           softSkills: form.softSkills,
           competencias: form.competencies,
@@ -345,6 +359,62 @@ export function CandidateProfileScreen() {
                 multiline
                 style={styles.textArea}
                 placeholder="Ej. Ingeniero con 5 años de experiencia en desarrollo de aplicaciones móviles..."
+              />
+            </View>
+          </View>
+
+          {/* Academic Formation */}
+          <View style={[styles.sectionCard, { maxWidth: contentWidth }]}>
+            <View style={styles.sectionHeader}>
+              <Feather name="book-open" size={20} color="#8B5CF6" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Formación académica</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Tu nivel de estudios y título principal
+                </Text>
+              </View>
+            </View>
+            <View style={styles.formSection}>
+              <InputField
+                label="Nivel de educación"
+                value={form.educationLevel}
+                onChangeText={(text) => updateField('educationLevel', text)}
+                placeholder="Ej. Universitario, Tecnólogo..."
+              />
+              <InputField
+                label="Título o carrera"
+                value={form.degree}
+                onChangeText={(text) => updateField('degree', text)}
+                placeholder="Ej. Ingeniería de Sistemas"
+              />
+            </View>
+          </View>
+
+          {/* General Experience */}
+          <View style={[styles.sectionCard, { maxWidth: contentWidth }]}>
+            <View style={styles.sectionHeader}>
+              <Feather name="briefcase" size={20} color="#F59E0B" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Experiencia general</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Resumen de tu trayectoria laboral
+                </Text>
+              </View>
+            </View>
+            <View style={styles.formSection}>
+              <InputField
+                label="Años de experiencia"
+                value={form.yearsExperience}
+                onChangeText={(text) => updateField('yearsExperience', text)}
+                placeholder="Ej. 3 años"
+              />
+              <InputField
+                label="Resumen de experiencia"
+                value={form.experienceSummary}
+                onChangeText={(text) => updateField('experienceSummary', text)}
+                multiline
+                style={styles.textArea}
+                placeholder="Breve resumen de tu experiencia relevante..."
               />
             </View>
           </View>

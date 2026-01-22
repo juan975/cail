@@ -139,8 +139,10 @@ export interface CandidatoPerfil {
     resumenProfesional?: string;
     habilidadesTecnicas?: string[];
     habilidadesBlandas?: string[];
-    experienciaAnios?: number;
+    experienciaAnios?: number | string;
+    experienciaLaboral?: any[];
     cvUrl?: string;
+    candidateProfile?: any;
 }
 
 /**

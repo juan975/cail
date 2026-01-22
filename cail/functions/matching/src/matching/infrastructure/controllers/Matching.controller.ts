@@ -249,7 +249,8 @@ export const getOfferApplications = asyncHandler(
  * Mapea PostulacionConCandidato a formato de respuesta para el frontend
  */
 const mapPostulacionConCandidatoToResponse = (postulacion: any) => {
-    const profile = postulacion.candidato?.candidateProfile || {};
+    const candidat = postulacion.candidato || {};
+    const profile = candidat.candidateProfile || {};
     return {
         idAplicacion: postulacion.id,
         idPostulante: postulacion.id_postulante,
@@ -258,20 +259,20 @@ const mapPostulacionConCandidatoToResponse = (postulacion: any) => {
         estado: postulacion.estado,
         matchScore: postulacion.match_score,
         candidato: postulacion.candidato ? {
-            nombreCompleto: postulacion.candidato.nombreCompleto,
-            email: postulacion.candidato.email,
-            telefono: postulacion.candidato.telefono,
+            nombreCompleto: candidat.nombreCompleto,
+            email: candidat.email,
+            telefono: candidat.telefono || profile.phone,
 
-            // Map from candidateProfile
-            ciudad: profile.ciudad,
-            nivelEducativo: profile.nivelEducacion,
-            resumenProfesional: profile.resumenProfesional,
-            habilidadesTecnicas: profile.habilidadesTecnicas,
-            habilidadesBlandas: profile.softSkills, // Map softSkills to habilidadesBlandas
-            experienciaAnios: profile.anosExperiencia,
-            cvUrl: profile.cvUrl,
+            ciudad: profile.ciudad || candidat.ciudad,
+            nivelEducativo: profile.nivelEducacion || candidat.nivelEducativo,
+            resumenProfesional: profile.resumenProfesional || candidat.resumenProfesional,
 
-            // Pass full profile for frontend flexibility
+            habilidadesTecnicas: profile.habilidadesTecnicas || candidat.habilidadesTecnicas || [],
+            habilidadesBlandas: profile.softSkills || candidat.habilidadesBlandas || [],
+
+            experienciaAnios: profile.anosExperiencia || candidat.experienciaAnios,
+            cvUrl: profile.cvUrl || candidat.cvUrl,
+
             candidateProfile: profile
         } : undefined
     };

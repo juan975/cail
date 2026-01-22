@@ -113,6 +113,10 @@ export interface CandidateProfileForm {
   city: string;
   address: string;
   professionalSummary: string;
+  educationLevel: string;
+  degree: string;
+  yearsExperience: string;
+  experienceSummary: string;
   technicalSkills: string[];
   softSkills: string[];
   competencies: string[];

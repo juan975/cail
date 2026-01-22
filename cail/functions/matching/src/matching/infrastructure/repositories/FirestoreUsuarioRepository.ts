@@ -38,14 +38,16 @@ export class FirestoreUsuarioRepository implements IUsuarioRepository {
             return {
                 nombreCompleto: userData.nombreCompleto || 'Sin nombre',
                 email: userData.email || '',
-                telefono: candidateProfile.phone || candidateProfile.telefono,
-                ciudad: candidateProfile.city || candidateProfile.ciudad,
-                nivelEducativo: candidateProfile.educationLevel || candidateProfile.nivelEducativo,
-                resumenProfesional: candidateProfile.professionalSummary || candidateProfile.resumen,
-                habilidadesTecnicas: candidateProfile.technicalSkills || candidateProfile.habilidadesTecnicas || [],
+                telefono: userData.telefono || candidateProfile.telefono || candidateProfile.phone,
+                ciudad: candidateProfile.ciudad || candidateProfile.city,
+                nivelEducativo: candidateProfile.nivelEducacion || candidateProfile.educationLevel || candidateProfile.nivelEducativo,
+                resumenProfesional: candidateProfile.resumenExperiencia || candidateProfile.professionalSummary || candidateProfile.resumen,
+                habilidadesTecnicas: candidateProfile.competencias || candidateProfile.technicalSkills || candidateProfile.habilidadesTecnicas || [],
                 habilidadesBlandas: candidateProfile.softSkills || candidateProfile.habilidadesBlandas || [],
-                experienciaAnios: candidateProfile.yearsOfExperience || candidateProfile.aniosExperiencia,
+                experienciaAnios: candidateProfile.anosExperiencia || candidateProfile.yearsOfExperience || candidateProfile.aniosExperiencia,
+                experienciaLaboral: candidateProfile.experienciaLaboral || [],
                 cvUrl: candidateProfile.cvUrl || candidateProfile.cvFile || userData.cvUrl,
+                candidateProfile: candidateProfile
             };
         } catch (error) {
             console.error(`Error obteniendo perfil de usuario ${idUsuario}:`, error);
@@ -78,14 +80,16 @@ export class FirestoreUsuarioRepository implements IUsuarioRepository {
                         perfilesMap.set(idsUsuarios[index], {
                             nombreCompleto: userData.nombreCompleto || 'Sin nombre',
                             email: userData.email || '',
-                            telefono: candidateProfile.phone || candidateProfile.telefono,
-                            ciudad: candidateProfile.city || candidateProfile.ciudad,
-                            nivelEducativo: candidateProfile.educationLevel || candidateProfile.nivelEducativo,
-                            resumenProfesional: candidateProfile.professionalSummary || candidateProfile.resumen,
-                            habilidadesTecnicas: candidateProfile.technicalSkills || candidateProfile.habilidadesTecnicas || [],
+                            telefono: userData.telefono || candidateProfile.telefono || candidateProfile.phone,
+                            ciudad: candidateProfile.ciudad || candidateProfile.city,
+                            nivelEducativo: candidateProfile.nivelEducacion || candidateProfile.educationLevel || candidateProfile.nivelEducativo,
+                            resumenProfesional: candidateProfile.resumenExperiencia || candidateProfile.professionalSummary || candidateProfile.resumen,
+                            habilidadesTecnicas: candidateProfile.competencias || candidateProfile.technicalSkills || candidateProfile.habilidadesTecnicas || [],
                             habilidadesBlandas: candidateProfile.softSkills || candidateProfile.habilidadesBlandas || [],
-                            experienciaAnios: candidateProfile.yearsOfExperience || candidateProfile.aniosExperiencia,
+                            experienciaAnios: candidateProfile.anosExperiencia || candidateProfile.yearsOfExperience || candidateProfile.aniosExperiencia,
+                            experienciaLaboral: candidateProfile.experienciaLaboral || [],
                             cvUrl: candidateProfile.cvUrl || candidateProfile.cvFile || userData.cvUrl,
+                            candidateProfile: candidateProfile
                         });
                     }
                 }
