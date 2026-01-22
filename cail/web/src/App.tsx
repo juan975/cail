@@ -123,7 +123,7 @@ export default function App() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
+        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
       }}>
         <div style={{ textAlign: 'center', color: '#fff' }}>
           <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>CAIL</div>

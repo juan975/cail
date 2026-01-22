@@ -111,12 +111,14 @@ export function EmployerShell({ userData, onLogout }: EmployerShellProps) {
         {/* Logo */}
         <div
           style={{
-            padding: '20px',
+            padding: '12px 20px',
             borderBottom: '1px solid #E5E7EB',
             display: 'flex',
             alignItems: 'center',
             justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
             gap: '12px',
+            height: '72px',
+            boxSizing: 'border-box',
           }}
         >
           {!sidebarCollapsed ? (
@@ -220,10 +222,12 @@ export function EmployerShell({ userData, onLogout }: EmployerShellProps) {
           style={{
             background: '#FFFFFF',
             borderBottom: '1px solid #E5E7EB',
-            padding: '16px 24px',
+            padding: '12px 24px',
             position: 'sticky',
             top: 0,
             zIndex: 999,
+            height: '72px',
+            boxSizing: 'border-box',
           }}
         >
           <div

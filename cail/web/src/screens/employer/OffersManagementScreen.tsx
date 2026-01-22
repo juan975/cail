@@ -401,17 +401,17 @@ export function OffersManagementScreen() {
         <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{titleLabel}</h3>
         <InputField label="Título" value={title} onChange={(e) => setTitle(e.target.value)} />
         <div>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Descripción</label>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#4C5672', marginBottom: 6 }}>Descripción</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
             style={{
               width: '100%',
-              padding: '10px 12px',
+              padding: '12px 14px',
               borderRadius: 10,
               border: '1px solid #E5E7EB',
-              fontSize: 14,
+              fontSize: 15,
               outline: 'none',
               resize: 'vertical',
               fontFamily: 'inherit',
@@ -420,45 +420,59 @@ export function OffersManagementScreen() {
         </div>
         {/* Empresa - read-only, derived from recruiter profile */}
         <div>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Empresa</label>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#4C5672', marginBottom: 6 }}>Empresa</label>
           <div
             style={{
-              padding: '10px 12px',
+              padding: '12px 14px',
               borderRadius: 10,
               border: '1px solid #E5E7EB',
               background: '#F9FAFB',
-              fontSize: 14,
-              color: '#374151',
+              fontSize: 15,
+              color: '#0F172A',
             }}
           >
             {companyName || 'Cargando...'}
           </div>
         </div>
-        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr' }}>
           <InputField label="Salario mínimo" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value.replace(/[^0-9]/g, ''))} />
           <InputField label="Salario máximo" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value.replace(/[^0-9]/g, ''))} />
         </div>
-        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Modalidad</label>
-            <select
-              value={modality}
-              onChange={(e) => setModality(e.target.value)}
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#4C5672', marginBottom: 6 }}>Modalidad</label>
+            <div
               style={{
-                width: '100%',
-                padding: '10px 12px',
-                borderRadius: 10,
-                border: '1px solid #E5E7EB',
-                fontSize: 14,
-                outline: 'none',
-                background: '#fff',
-                cursor: 'pointer',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: '#DFE7F5',
+                borderRadius: '18px',
+                backgroundColor: '#FFFFFF',
+                padding: '4px',
+                boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)',
+                transition: 'all 0.2s',
               }}
             >
-              <option value="Presencial">Presencial</option>
-              <option value="Híbrido">Híbrida</option>
-              <option value="Remoto">Remoto</option>
-            </select>
+              <select
+                value={modality}
+                onChange={(e) => setModality(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  fontSize: 15,
+                  color: '#0F172A',
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <option value="Presencial">Presencial</option>
+                <option value="Híbrido">Híbrida</option>
+                <option value="Remoto">Remoto</option>
+              </select>
+            </div>
           </div>
           <InputField label="Ubicación" value={location} onChange={(e) => setLocation(e.target.value)} />
         </div>
@@ -467,16 +481,16 @@ export function OffersManagementScreen() {
         <InputField label="Formación requerida" value={formacionRequerida} onChange={(e) => setFormacionRequerida(e.target.value)} placeholder="Ej: Ingeniería en Sistemas, Tecnólogo en Informática" />
         {/* Nivel Jerárquico */}
         <div>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Nivel jerárquico</label>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#4C5672', marginBottom: 6 }}>Nivel jerárquico</label>
           <select
             value={nivelJerarquico}
             onChange={(e) => setNivelJerarquico(e.target.value as any)}
             style={{
               width: '100%',
-              padding: '10px 12px',
+              padding: '12px 14px',
               borderRadius: 10,
               border: '1px solid #E5E7EB',
-              fontSize: 14,
+              fontSize: 15,
               outline: 'none',
               background: '#fff',
               cursor: 'pointer',
@@ -489,7 +503,7 @@ export function OffersManagementScreen() {
           </select>
         </div>
         <div style={{ position: 'relative' }}>
-          <label style={{ fontSize: 13, fontWeight: 600 }}>Competencias</label>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#4C5672', marginBottom: 6 }}>Competencias</label>
           <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
             <div style={{ flex: 1, position: 'relative' }}>
               <input
@@ -511,6 +525,8 @@ export function OffersManagementScreen() {
                   border: '1px solid #E5E7EB',
                   fontSize: 14,
                   outline: 'none',
+                  boxSizing: 'border-box',
+                  height: '44px',
                 }}
               />
               {/* Autocomplete dropdown */}
@@ -555,17 +571,30 @@ export function OffersManagementScreen() {
               type="button"
               onClick={() => addCompetency()}
               style={{
-                padding: '10px 16px',
+                padding: '10px 12px',
                 borderRadius: 10,
-                border: 'none',
-                background: '#F1842D',
-                color: '#fff',
+                border: '2px solid #F1842D',
+                background: '#fff',
+                color: '#F1842D',
                 cursor: 'pointer',
                 fontWeight: 600,
                 whiteSpace: 'nowrap',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#FFF7ED';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#fff';
               }}
             >
-              Agregar
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
             </button>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
@@ -604,7 +633,7 @@ export function OffersManagementScreen() {
             ))}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
           <button
             type="button"
             onClick={() => {
@@ -612,12 +641,21 @@ export function OffersManagementScreen() {
               setShowEditModal(false);
             }}
             style={{
-              padding: '10px 16px',
+              padding: '12px 20px',
               borderRadius: 12,
-              border: '1px solid #E5E7EB',
-              background: '#fff',
+              border: 'none',
+              background: '#F3F4F6',
+              color: '#374151',
               cursor: 'pointer',
               fontWeight: 600,
+              fontSize: 15,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#E5E7EB';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#F3F4F6';
             }}
           >
             Cancelar
@@ -627,13 +665,25 @@ export function OffersManagementScreen() {
             onClick={onSubmit}
             disabled={isSubmitting}
             style={{
-              padding: '10px 16px',
+              padding: '12px 20px',
               borderRadius: 12,
               border: 'none',
               background: isSubmitting ? '#9CA3AF' : '#F1842D',
               color: '#fff',
               cursor: isSubmitting ? 'not-allowed' : 'pointer',
               fontWeight: 600,
+              fontSize: 15,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (!isSubmitting) {
+                e.currentTarget.style.background = '#EA580C';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isSubmitting) {
+                e.currentTarget.style.background = '#F1842D';
+              }
             }}
           >
             {isSubmitting ? 'Guardando...' : 'Guardar'}
@@ -645,8 +695,8 @@ export function OffersManagementScreen() {
 
   const statusTabs: { id: OfferStatus; label: string; count: number }[] = [
     { id: 'active', label: 'Activas', count: activeCount },
-    { id: 'archived', label: 'Archivadas', count: archivedCount },
-    { id: 'deleted', label: 'Retiradas', count: deletedCount },
+    { id: 'archived', label: 'Pausadas', count: archivedCount },
+    { id: 'deleted', label: 'Cerradas', count: deletedCount },
   ];
 
   if (isLoading) {
@@ -742,7 +792,6 @@ export function OffersManagementScreen() {
         </button>
       </div>
 
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {statusTabs.map((tab) => (
           <button
@@ -759,7 +808,24 @@ export function OffersManagementScreen() {
               fontSize: 13,
             }}
           >
-            {tab.label} ({tab.count})
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {tab.id === 'active' && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+              {tab.id === 'archived' && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              {tab.id === 'deleted' && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              )}
+              {tab.label} ({tab.count})
+            </span>
           </button>
         ))}
       </div>

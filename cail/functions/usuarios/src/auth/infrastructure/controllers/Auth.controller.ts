@@ -239,7 +239,7 @@ export class AuthController {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -247,34 +247,63 @@ export class AuthController {
             padding: 20px;
         }
         .card {
-            background: white;
-            border-radius: 20px;
-            padding: 48px;
+            background: #FFFFFF;
+            border-radius: 24px;
+            padding: 60px 40px;
             max-width: 480px;
             text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
         }
-        .icon { font-size: 64px; margin-bottom: 24px; }
-        h1 { color: #1e293b; font-size: 28px; margin-bottom: 16px; }
-        p { color: #64748b; font-size: 16px; line-height: 1.6; margin-bottom: 24px; }
-        .name { color: #10b981; font-weight: 600; }
+        .icon-container {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+        }
+        h1 { 
+            color: #111827; 
+            font-size: 28px; 
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+        }
+        p { 
+            color: #6B7280; 
+            font-size: 16px; 
+            line-height: 1.6; 
+            margin-bottom: 16px; 
+        }
+        .name { color: #10B981; font-weight: 600; }
         .button {
             display: inline-block;
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
             color: white;
             text-decoration: none;
             padding: 14px 32px;
             border-radius: 12px;
             font-weight: 600;
             font-size: 16px;
-            transition: transform 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 8px;
         }
-        .button:hover { transform: translateY(-2px); }
+        .button:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
+        }
     </style>
 </head>
 <body>
     <div class="card">
-        <div class="icon">✅</div>
+        <div class="icon-container">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+        </div>
         <h1>¡Email Verificado!</h1>
         <p>Hola <span class="name">${name}</span>, tu correo electrónico ha sido verificado exitosamente.</p>
         <p>Ya puedes iniciar sesión en la aplicación CAIL con tus credenciales.</p>
@@ -299,7 +328,7 @@ export class AuthController {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -307,22 +336,48 @@ export class AuthController {
             padding: 20px;
         }
         .card {
-            background: white;
-            border-radius: 20px;
-            padding: 48px;
+            background: #FFFFFF;
+            border-radius: 24px;
+            padding: 60px 40px;
             max-width: 480px;
             text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
         }
-        .icon { font-size: 64px; margin-bottom: 24px; }
-        h1 { color: #1e293b; font-size: 28px; margin-bottom: 16px; }
-        p { color: #64748b; font-size: 16px; line-height: 1.6; margin-bottom: 24px; }
-        .error { color: #ef4444; }
+        .icon-container {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+        }
+        h1 { 
+            color: #111827; 
+            font-size: 28px; 
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+        }
+        p { 
+            color: #6B7280; 
+            font-size: 16px; 
+            line-height: 1.6; 
+            margin-bottom: 16px; 
+        }
+        .error { color: #EF4444; font-weight: 600; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div class="icon">❌</div>
+        <div class="icon-container">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </div>
         <h1>Error de Verificación</h1>
         <p class="error">${message}</p>
         <p>Si el problema persiste, contacta a soporte.</p>
