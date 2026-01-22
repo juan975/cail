@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { FiArrowLeft, FiCheck, FiChevronDown } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiChevronDown, FiEye, FiEyeOff } from 'react-icons/fi';
 import { LoadingSplash } from '../../components/ui/LoadingSplash';
 import { useNotifications } from '../../components/ui/Notifications';
 import { authService } from '../../services/auth.service';
+import { PasswordStrength, validatePassword } from '../../components/ui/PasswordStrength';
 
 interface RegisterEmployerFormProps {
   onSuccess: (data: any) => void;
@@ -19,6 +20,8 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [website, setWebsite] = useState('');
@@ -123,8 +126,9 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
       return;
     }
 
-    if (password.length < 6) {
-      notifications.alert('La contraseña debe tener al menos 6 caracteres.', 'Contraseña muy corta');
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      notifications.alert(passwordValidation.errors[0], 'Contraseña inválida');
       return;
     }
 
@@ -453,29 +457,80 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
             {/* Password */}
             <div>
               <label style={labelStyle}>Contraseña *</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
-                style={inputStyle}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  style={{
+                    ...inputStyle,
+                    paddingRight: '48px',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {showPassword ? <FiEyeOff size={20} color="#9CA3AF" /> : <FiEye size={20} color="#9CA3AF" />}
+                </button>
+              </div>
+              <div style={{ marginTop: '12px' }}>
+                <PasswordStrength password={password} variant="employer" />
+              </div>
             </div>
 
             {/* Confirm Password */}
             <div>
               <label style={labelStyle}>Confirmar contraseña *</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Repite tu contraseña"
-                style={inputStyle}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  style={{
+                    ...inputStyle,
+                    paddingRight: '48px',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {showConfirmPassword ? <FiEyeOff size={20} color="#9CA3AF" /> : <FiEye size={20} color="#9CA3AF" />}
+                </button>
+              </div>
             </div>
 
             {/* Address */}
