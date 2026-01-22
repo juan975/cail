@@ -37,36 +37,74 @@ interface Application {
 
 // Convierte aplicación de API a formato local
 const mapApiToLocal = (app: ApplicationWithCandidate, offerTitle: string): Application => {
-  const candidato = app.candidato;
-  const nombre = candidato?.nombreCompleto || 'Candidato';
-  const initials = nombre.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  const candidato = app.candidato || {} as any;
+  console.log('[DEBUG] Candidato Data:', JSON.stringify(candidato, null, 2));
+  console.log('[DEBUG] Nested Profile:', JSON.stringify(candidato.candidateProfile, null, 2));
+
+  const profile = candidato.candidateProfile || {};
+
+  const nombre = candidato.nombreCompleto || 'Candidato';
+  const initials = nombre.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
   const fecha = new Date(app.fechaAplicacion);
 
-  // Check for alternative property names as fallback
-  const anyCand = candidato as any;
+  // Helper to find first non-empty value
+  const getVal = (...args: any[]) => args.find(v => v !== null && v !== undefined && v !== '');
+
+  const education = getVal(
+    candidato.nivelEducativo,
+    profile.nivelEducacion,
+    profile.educationLevel, // English fallback
+    candidato.education
+  ) || 'No especificado';
+
+  const yearsExp = getVal(
+    candidato.experienciaAnios,
+    profile.anosExperiencia,
+    profile.yearsExperience,
+    candidato.yearsOfExperience
+  );
+
+  const experienceStr = yearsExp
+    ? (String(yearsExp).includes('años') ? yearsExp : `${yearsExp} años de exp.`)
+    : 'No especificado';
+
+  // Resume Experience (Summary)
+  // We explicitly want to allow showing the summary if years are missing, or combine them?
+  // The UI currently shows "experience" as a string.
+
+  const location = getVal(
+    candidato.ciudad,
+    profile.ciudad,
+    profile.city,
+    candidato.location
+  ) || 'No especificado';
+
+  const phone = getVal(
+    candidato.telefono,
+    profile.phone, // In case it's in profile
+    candidato.phone
+  ) || 'No especificado';
+
+  const techSkills = candidato.habilidadesTecnicas || profile.habilidadesTecnicas || profile.technicalSkills || [];
+  const softSkills = candidato.habilidadesBlandas || profile.softSkills || [];
+  const skills = [...techSkills, ...softSkills].slice(0, 5);
 
   return {
     id: app.idAplicacion,
     candidateName: nombre,
     initials,
-    department: candidato?.resumenProfesional?.substring(0, 50) || anyCand?.professionalSummary || 'Perfil pendiente',
+    department: getVal(profile.resumenProfesional, candidato.resumenProfesional, 'Perfil pendiente').substring(0, 50),
     position: offerTitle,
-    education: candidato?.nivelEducativo || anyCand?.education || anyCand?.formacion || 'No especificado',
-    experience: candidato?.experienciaAnios
-      ? `${candidato.experienciaAnios} años de exp.`
-      : anyCand?.yearsOfExperience
-        ? `${anyCand.yearsOfExperience} años de exp.`
-        : anyCand?.experience
-          ? String(anyCand.experience)
-          : 'No especificado',
-    email: candidato?.email || anyCand?.contactEmail || 'email@pendiente.com',
-    phone: candidato?.telefono || anyCand?.phoneNumber || 'No especificado',
-    location: candidato?.ciudad || anyCand?.location || anyCand?.city || 'No especificado',
-    skills: [...(candidato?.habilidadesTecnicas || anyCand?.technicalSkills || []), ...(candidato?.habilidadesBlandas || anyCand?.softSkills || [])].slice(0, 5),
+    education,
+    experience: experienceStr,
+    email: candidato.email || 'email@pendiente.com',
+    phone,
+    location,
+    skills,
     receivedDate: fecha.toLocaleDateString('es-EC'),
     status: mapApiStatus(app.estado),
     matchScore: app.matchScore,
-    cvFile: app.candidato?.cvUrl || anyCand?.cv,
+    cvFile: candidato.cvUrl || profile.cvUrl,
   };
 };
 

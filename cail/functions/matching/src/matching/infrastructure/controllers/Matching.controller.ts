@@ -248,26 +248,34 @@ export const getOfferApplications = asyncHandler(
 /**
  * Mapea PostulacionConCandidato a formato de respuesta para el frontend
  */
-const mapPostulacionConCandidatoToResponse = (postulacion: any) => ({
-    idAplicacion: postulacion.id,
-    idPostulante: postulacion.id_postulante,
-    idOferta: postulacion.id_oferta,
-    fechaAplicacion: postulacion.fecha_postulacion,
-    estado: postulacion.estado,
-    matchScore: postulacion.match_score,
-    candidato: postulacion.candidato ? {
-        nombreCompleto: postulacion.candidato.nombreCompleto,
-        email: postulacion.candidato.email,
-        telefono: postulacion.candidato.telefono,
-        ciudad: postulacion.candidato.ciudad,
-        nivelEducativo: postulacion.candidato.nivelEducativo,
-        resumenProfesional: postulacion.candidato.resumenProfesional,
-        habilidadesTecnicas: postulacion.candidato.habilidadesTecnicas,
-        habilidadesBlandas: postulacion.candidato.habilidadesBlandas,
-        experienciaAnios: postulacion.candidato.experienciaAnios,
-        cvUrl: postulacion.candidato.cvUrl,
-    } : undefined
-});
+const mapPostulacionConCandidatoToResponse = (postulacion: any) => {
+    const profile = postulacion.candidato?.candidateProfile || {};
+    return {
+        idAplicacion: postulacion.id,
+        idPostulante: postulacion.id_postulante,
+        idOferta: postulacion.id_oferta,
+        fechaAplicacion: postulacion.fecha_postulacion,
+        estado: postulacion.estado,
+        matchScore: postulacion.match_score,
+        candidato: postulacion.candidato ? {
+            nombreCompleto: postulacion.candidato.nombreCompleto,
+            email: postulacion.candidato.email,
+            telefono: postulacion.candidato.telefono,
+
+            // Map from candidateProfile
+            ciudad: profile.ciudad,
+            nivelEducativo: profile.nivelEducacion,
+            resumenProfesional: profile.resumenProfesional,
+            habilidadesTecnicas: profile.habilidadesTecnicas,
+            habilidadesBlandas: profile.softSkills, // Map softSkills to habilidadesBlandas
+            experienciaAnios: profile.anosExperiencia,
+            cvUrl: profile.cvUrl,
+
+            // Pass full profile for frontend flexibility
+            candidateProfile: profile
+        } : undefined
+    };
+};
 
 /**
  * GET /matching/oferta/:idOferta/applications-detailed
