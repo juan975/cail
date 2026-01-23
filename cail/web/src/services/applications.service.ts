@@ -63,6 +63,10 @@ class ApplicationsService {
                             empresa: offer.empresa,
                             ciudad: offer.ciudad,
                             modalidad: offer.modalidad,
+                            descripcion: offer.descripcion,
+                            salarioMin: offer.salarioMin,
+                            salarioMax: offer.salarioMax,
+                            tipoContrato: offer.tipoContrato,
                         }
                     };
                 } catch {

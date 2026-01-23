@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FiCheck, FiSend, FiAward, FiBriefcase, FiTarget, FiInfo, FiAlertCircle, FiSearch } from 'react-icons/fi';
 import { colors } from '../../theme/colors';
 import { useResponsiveLayout } from '../../hooks/useResponsive';
 import { Chip } from '../../components/ui/Chip';
@@ -7,10 +8,14 @@ import { offersService } from '../../services/offers.service';
 import { applicationsService } from '../../services/applications.service';
 import { Offer } from '../../types/offers.types';
 import { Application, ApplicationStatusColors } from '../../types/applications.types';
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 
 interface FilterState {
-  search: string;
   modality: 'Todos' | JobOffer['modality'];
+}
+
+interface JobDiscoveryScreenProps {
+  searchQuery?: string;
 }
 
 const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
@@ -53,9 +58,9 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
   };
 };
 
-export function JobDiscoveryScreen() {
+export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps) {
   const { contentWidth } = useResponsiveLayout();
-  const [filters, setFilters] = useState<FilterState>({ search: '', modality: 'Todos' });
+  const [filters, setFilters] = useState<FilterState>({ modality: 'Todos' });
   const [offers, setOffers] = useState<JobOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [appliedOffers, setAppliedOffers] = useState<Map<string, Application>>(new Map());
@@ -90,14 +95,17 @@ export function JobDiscoveryScreen() {
 
   const filteredOffers = useMemo(() => {
     return offers.filter((offer) => {
+      // Exclude already applied offers
+      if (appliedOffers.has(offer.id)) return false;
+
       const matchesSearch =
-        filters.search.length === 0 ||
-        offer.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-        offer.company.toLowerCase().includes(filters.search.toLowerCase());
+        searchQuery.length === 0 ||
+        offer.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        offer.company.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesModality = filters.modality === 'Todos' || offer.modality === filters.modality;
       return matchesSearch && matchesModality;
     });
-  }, [filters, offers]);
+  }, [searchQuery, filters, offers, appliedOffers]);
 
   const handleApply = async () => {
     if (!selectedOffer) return;
@@ -126,11 +134,7 @@ export function JobDiscoveryScreen() {
   };
 
   if (isLoading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
-        <div style={{ color: '#6B7280' }}>Cargando ofertas...</div>
-      </div>
-    );
+    return <LoadingSpinner message="Cargando ofertas..." color="#0B7A4D" />;
   }
 
   return (
@@ -138,37 +142,41 @@ export function JobDiscoveryScreen() {
       {/* Header */}
       <div
         style={{
-          background: '#0B7A4D',
-          borderRadius: 16,
-          padding: 20,
+          background: 'linear-gradient(135deg, #0B7A4D 0%, #065F46 100%)',
+          borderRadius: 20,
+          padding: '24px',
           color: '#fff',
           display: 'flex',
-          gap: 16,
+          justifyContent: 'space-between',
           alignItems: 'center',
+          gap: 16,
+          boxShadow: '0 8px 16px rgba(11, 122, 77, 0.15)',
+          position: 'relative',
+          overflow: 'hidden'
         }}
       >
-        <div
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: 12,
-            background: 'rgba(255,255,255,0.2)',
-            display: 'grid',
-            placeItems: 'center',
-          }}
-        >
-          <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+        <div style={{ position: 'absolute', right: '-15px', top: '-15px', opacity: 0.1, color: '#fff' }}>
+          <FiSearch size={100} />
         </div>
-        <div>
-          <div style={{ fontSize: 18, fontWeight: 700 }}>Descubrimiento y postulación</div>
-          <div style={{ fontSize: 13, opacity: 0.9 }}>Catálogo de ofertas activas</div>
+
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', zIndex: 1 }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 14,
+              background: 'rgba(255,255,255,0.2)',
+              backdropFilter: 'blur(8px)',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            <FiSearch size={26} strokeWidth={2.5} />
+          </div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.01em' }}>Descubrimiento y postulación</div>
+            <div style={{ fontSize: 13, opacity: 0.9 }}>Explora las mejores oportunidades laborales para ti</div>
+          </div>
         </div>
       </div>
 
@@ -176,22 +184,8 @@ export function JobDiscoveryScreen() {
       <div style={{ background: '#fff', borderRadius: 14, padding: 16, border: '1px solid #E5E7EB' }}>
         <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Filtrar ofertas</div>
         <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 12 }}>
-          Busca por competencias, experiencia, formación y ubicación.
+          Busca por competencias, experiencia, formación y ubicación usando el buscador superior.
         </div>
-        <input
-          type="text"
-          value={filters.search}
-          onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-          placeholder="Buscar por experiencia, formación..."
-          style={{
-            width: '100%',
-            padding: '12px 14px',
-            borderRadius: '18px',
-            border: '1px solid #DFE7F5',
-            fontSize: '15px',
-            marginBottom: '12px',
-          }}
-        />
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {(['Todos', 'Presencial', 'Híbrido', 'Remoto'] as FilterState['modality'][]).map((modality) => (
             <button
@@ -295,22 +289,29 @@ export function JobDiscoveryScreen() {
                   <Chip key={comp} label={comp} />
                 ))}
               </div>
-              <div style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 12 }}>
-                <div>Formación: {offer.requiredEducation}</div>
-                <div>Experiencia: {offer.requiredExperience}</div>
+              <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 12 }}>
+                <div><strong style={{ color: '#4B5563' }}>Formación:</strong> {offer.requiredEducation}</div>
+                <div><strong style={{ color: '#4B5563' }}>Experiencia:</strong> {offer.requiredExperience}</div>
               </div>
               {applied ? (
                 <div
                   style={{
                     background: '#ECFDF5',
-                    padding: '10px 12px',
+                    padding: '12px',
                     borderRadius: 12,
                     color: '#059669',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     textAlign: 'center',
+                    fontSize: 14,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    height: '45px',
+                    boxSizing: 'border-box'
                   }}
                 >
-                  ✓ Ya postulaste a esta oferta
+                  <FiCheck size={18} /> Ya postulaste a esta oferta
                 </div>
               ) : (
                 <button
@@ -324,7 +325,12 @@ export function JobDiscoveryScreen() {
                     background: '#0B7A4D',
                     color: '#fff',
                     cursor: 'pointer',
-                    fontWeight: 600,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    height: '45px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
                   Postular a oferta
@@ -356,29 +362,66 @@ export function JobDiscoveryScreen() {
           <div
             style={{
               background: '#fff',
-              borderRadius: 20,
-              padding: 24,
+              borderRadius: 24,
+              padding: '32px',
               maxWidth: '500px',
-              width: '90%',
+              width: '95%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              position: 'relative',
+              overflow: 'hidden'
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+            {/* Header Icon */}
+            <div style={{ 
+              width: 64, 
+              height: 64, 
+              borderRadius: 20, 
+              background: '#ECFDF5', 
+              color: '#0B7A4D', 
+              display: 'grid', 
+              placeItems: 'center', 
+              margin: '0 auto 20px' 
+            }}>
+              <FiSend size={30} />
+            </div>
 
-              <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Confirmar postulación</div>
-              <div style={{ fontSize: 14, color: colors.textSecondary }}>
-                ¿Deseas postularte a {selectedOffer.title}?
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 8 }}>Confirmar postulación</div>
+              <div style={{ fontSize: 15, color: '#4B5563', lineHeight: 1.5 }}>
+                Estás por postularte a <strong style={{ color: '#111827' }}>{selectedOffer.title}</strong>.
               </div>
             </div>
 
-            <div style={{ background: '#F0F7FF', borderRadius: 12, padding: 14, marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#0052CC', marginBottom: 8 }}>
-                Requisitos de la oferta:
+            <div style={{ background: '#F8FAFC', borderRadius: 16, padding: 20, marginBottom: 24, border: '1px solid #E2E8F0' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <FiInfo size={16} color="#3B82F6" /> Requisitos de la oferta
               </div>
-              <div style={{ fontSize: 12, color: '#0052CC' }}>• Formación: {selectedOffer.requiredEducation}</div>
-              <div style={{ fontSize: 12, color: '#0052CC' }}>• Experiencia: {selectedOffer.requiredExperience}</div>
-              <div style={{ fontSize: 12, color: '#0052CC' }}>
-                • Competencias: {selectedOffer.requiredCompetencies.slice(0, 3).join(', ')}
+              
+              <div style={{ display: 'grid', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ marginTop: 2 }}><FiAward size={14} color="#0B7A4D" /></div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#64748B' }}>Formación</div>
+                    <div style={{ fontSize: 13, color: '#1F2937' }}>{selectedOffer.requiredEducation}</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ marginTop: 2 }}><FiBriefcase size={14} color="#0B7A4D" /></div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#64748B' }}>Experiencia</div>
+                    <div style={{ fontSize: 13, color: '#1F2937' }}>{selectedOffer.requiredExperience}</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ marginTop: 2 }}><FiTarget size={14} color="#0B7A4D" /></div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#64748B' }}>Competencias claves</div>
+                    <div style={{ fontSize: 13, color: '#1F2937' }}>{selectedOffer.requiredCompetencies.slice(0, 3).join(', ')}</div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -388,13 +431,18 @@ export function JobDiscoveryScreen() {
                 onClick={() => setSelectedOffer(null)}
                 style={{
                   flex: 1,
-                  padding: '12px',
-                  borderRadius: 12,
+                  padding: '14px',
+                  borderRadius: 14,
                   border: '1px solid #E5E7EB',
                   background: '#fff',
+                  color: '#374151',
                   cursor: 'pointer',
-                  fontWeight: 600,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  transition: 'all 0.2s'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#F9FAFB'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
               >
                 Cancelar
               </button>
@@ -403,17 +451,37 @@ export function JobDiscoveryScreen() {
                 onClick={handleApply}
                 disabled={isApplying}
                 style={{
-                  flex: 1,
-                  padding: '12px',
-                  borderRadius: 12,
+                  flex: 1.5,
+                  padding: '14px',
+                  borderRadius: 14,
                   border: 'none',
                   background: isApplying ? '#9CA3AF' : '#0B7A4D',
                   color: '#fff',
                   cursor: isApplying ? 'not-allowed' : 'pointer',
-                  fontWeight: 600,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  boxShadow: isApplying ? 'none' : '0 4px 12px rgba(11, 122, 77, 0.25)',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8
+                }}
+                onMouseEnter={(e) => {
+                  if (!isApplying) e.currentTarget.style.background = '#096640';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isApplying) e.currentTarget.style.background = '#0B7A4D';
                 }}
               >
-                {isApplying ? 'Enviando...' : 'Confirmar'}
+                {isApplying ? (
+                  <>
+                    <div className="spin-animation" style={{ width: 14, height: 14, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                    Enviando...
+                  </>
+                ) : (
+                  <>Confirmar postulación</>
+                )}
               </button>
             </div>
           </div>

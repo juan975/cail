@@ -24,17 +24,23 @@ interface CandidateShellProps {
 export function CandidateShell({ userData, onLogout }: CandidateShellProps) {
   const [tab, setTab] = useState<CandidateTab>('discovery');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleTabChange = (newTab: CandidateTab) => {
+    setTab(newTab);
+    setSearchQuery(''); // Clear search when switching tabs
+  };
 
   const renderScreen = () => {
     switch (tab) {
       case 'profile':
         return <CandidateProfileScreen />;
       case 'applications':
-        return <MyApplicationsScreen />;
+        return <MyApplicationsScreen searchQuery={searchQuery} />;
       case 'notifications':
-        return <NotificationsScreen />;
+        return <NotificationsScreen searchQuery={searchQuery} />;
       default:
-        return <JobDiscoveryScreen />;
+        return <JobDiscoveryScreen searchQuery={searchQuery} />;
     }
   };
 
@@ -155,7 +161,7 @@ export function CandidateShell({ userData, onLogout }: CandidateShellProps) {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setTab(item.id)}
+                onClick={() => handleTabChange(item.id)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -268,16 +274,25 @@ export function CandidateShell({ userData, onLogout }: CandidateShellProps) {
               </div>
               <input
                 type="text"
-                placeholder="Buscar ofertas, empresas..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={
+                  tab === 'discovery' ? "Buscar por título, empresa o ciudad..." : 
+                  tab === 'applications' ? "Filtrar por puesto..." :
+                  tab === 'notifications' ? "Buscar en alertas y notificaciones..." :
+                  "Buscador no disponible en perfil"
+                }
+                disabled={tab === 'profile'}
                 style={{
                   width: '100%',
                   padding: '12px 16px 12px 48px',
                   borderRadius: '12px',
                   border: '1px solid #E5E7EB',
-                  background: '#F9FAFB',
+                  background: tab === 'profile' ? '#F3F4FB' : '#F9FAFB',
                   fontSize: '14px',
                   outline: 'none',
                   transition: 'all 0.2s',
+                  opacity: tab === 'profile' ? 0.6 : 1,
                 }}
                 onFocus={(e) => {
                   e.currentTarget.style.borderColor = '#1A936F';

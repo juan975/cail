@@ -108,10 +108,15 @@ export interface WorkExperience {
 export interface CandidateProfileForm {
   fullName: string;
   email: string;
+  cedula: string;
   phone: string;
   city: string;
   address: string;
   professionalSummary: string;
+  educationLevel: string;
+  degree: string;
+  yearsExperience: string;
+  experienceSummary: string;
   technicalSkills: string[];
   softSkills: string[];
   competencies: string[];

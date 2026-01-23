@@ -35,6 +35,10 @@ export interface ApplicationWithOffer extends Application {
         empresa: string;
         ciudad: string;
         modalidad: string;
+        descripcion?: string;
+        salarioMin?: number;
+        salarioMax?: number;
+        tipoContrato?: string;
     };
 }
 
