@@ -13,6 +13,7 @@ import { userService } from '@/services/user.service';
 const emptyEmployerProfile: EmployerProfileForm = {
   companyName: '',
   contactName: '',
+  cargo: '',
   email: '',
   phone: '',
   industry: '',
@@ -20,6 +21,9 @@ const emptyEmployerProfile: EmployerProfileForm = {
   description: '',
   website: '',
   address: '',
+  ruc: '',
+  tipoEmpresa: '',
+  ciudad: '',
 };
 
 export function EmployerProfileScreen() {
@@ -47,6 +51,10 @@ export function EmployerProfileScreen() {
           description: profile.employerProfile.description || '',
           website: profile.employerProfile.website || '',
           address: profile.employerProfile.address || '',
+          cargo: profile.employerProfile.cargo || '',
+          ruc: profile.employerProfile.ruc || '20601234567',
+          tipoEmpresa: profile.employerProfile.tipoEmpresa || 'Sociedad Anónima',
+          ciudad: profile.employerProfile.ciudad || 'Lima',
         });
       }
     } catch (error: any) {
@@ -77,13 +85,16 @@ export function EmployerProfileScreen() {
         telefono: form.phone,
         employerProfile: {
           nombreEmpresa: form.companyName,
-          cargo: '', // Mantener valor existente
+          cargo: form.cargo || '',
           nombreContacto: form.contactName,
           industry: form.industry,
           numberOfEmployees: form.numberOfEmployees,
           description: form.description,
           website: form.website,
           address: form.address,
+          ruc: form.ruc,
+          tipoEmpresa: form.tipoEmpresa,
+          ciudad: form.ciudad,
         },
       });
       Alert.alert('Éxito', 'Perfil actualizado correctamente');
@@ -97,154 +108,215 @@ export function EmployerProfileScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[styles.content, { paddingHorizontal: horizontalGutter }]}
+      contentContainerStyle={[styles.content, { maxWidth: contentWidth, alignSelf: 'center' }]}
       showsVerticalScrollIndicator={false}
     >
-      <View
-        style={[
-          styles.surfaceCard,
-          styles.heroCard,
-          styles.heroShadow,
-          { maxWidth: contentWidth, alignSelf: 'center' },
-        ]}
-      >
-        <View style={styles.heroHeader}>
-          <View style={styles.iconBadge}>
-            <Feather name="home" size={18} color={colors.employerDark} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.heroTitle}>Identidad empresarial al día</Text>
-            <Text style={styles.heroSubtitle}>Mantén tus datos consistentes para generar confianza en las postulaciones.</Text>
-          </View>
-        </View>
-        <View style={styles.metaRow}>
-          <View style={styles.metaPill}>
-            <Feather name="briefcase" size={14} color={colors.employerDark} />
-            <Text style={styles.metaText}>{form.industry || 'Industria por definir'}</Text>
-          </View>
-          <View style={styles.metaPill}>
-            <Feather name="users" size={14} color={colors.employerDark} />
-            <Text style={styles.metaText}>{form.numberOfEmployees || 'Colaboradores'}</Text>
-          </View>
-          <View style={styles.metaPill}>
-            <Feather name="map-pin" size={14} color={colors.employerDark} />
-            <Text style={styles.metaText}>{form.address || 'Ubicación'}</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={[styles.surfaceCard, { maxWidth: contentWidth, alignSelf: 'center' }]}>
-        <SectionHeader
-          title="Perfil empresarial"
-          subtitle="Esta información será visible para los candidatos"
-          accentColor={colors.employer}
-        />
-
-        <View style={styles.sectionBlock}>
-          <Text style={styles.sectionLabel}>Identidad</Text>
-          <View style={[styles.formGrid, isDesktop && styles.formGridDesktop]}>
-            <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
-              <InputField
-                tone="employer"
-                label="Razón social"
-                value={form.companyName}
-                onChangeText={(text) => updateField('companyName', text)}
-              />
+      <View style={styles.pageStack}>
+        <View
+          style={[
+            styles.surfaceCard,
+            styles.block,
+            { backgroundColor: '#F59E0B', borderWidth: 0 }
+          ]}
+        >
+          <View style={styles.headerRow}>
+            <View style={styles.headerIconContainer}>
+              <Feather name="layout" size={24} color="#FFF" />
             </View>
-            <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
-              <InputField
-                tone="employer"
-                label="Industria"
-                value={form.industry}
-                onChangeText={(text) => updateField('industry', text)}
-              />
-            </View>
-            <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
-              <InputField
-                tone="employer"
-                label="Número de colaboradores"
-                value={form.numberOfEmployees}
-                onChangeText={(text) => updateField('numberOfEmployees', text)}
-              />
-            </View>
-            <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
-              <InputField
-                tone="employer"
-                label="Dirección"
-                value={form.address}
-                onChangeText={(text) => updateField('address', text)}
-              />
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <Text style={styles.headerTitleMain}>Identidad empresarial</Text>
+              <Text style={styles.headerSubtitleMain} numberOfLines={2}>
+                Mantén tus datos actualizados para generar confianza
+              </Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.sectionDivider} />
+        <View style={[styles.surfaceCard, styles.block]}>
+          <SectionHeader
+            title="Identidad Empresarial"
+            subtitle="Información general de la organización"
+            accentColor={colors.employer}
+            icon="layout"
+          />
+          <View style={styles.sectionBlock}>
+            <View style={[styles.formGrid, isDesktop && styles.formGridDesktop]}>
+              <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
+                <InputField
+                  tone="employer"
+                  label="Nombre Comercial"
+                  value={form.companyName}
+                  readonly
+                  badge="SOLO LECTURA"
+                />
+              </View>
+              <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
+                <InputField
+                  tone="employer"
+                  label="Razón Social"
+                  value={form.companyName}
+                  readonly
+                  badge="SOLO LECTURA"
+                />
+              </View>
+              <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
+                <InputField
+                  tone="employer"
+                  label="RUC"
+                  value={form.ruc}
+                  readonly
+                  badge="SOLO LECTURA"
+                />
+              </View>
+              <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
+                <InputField
+                  tone="employer"
+                  label="Tipo de Empresa"
+                  value={form.tipoEmpresa}
+                  readonly
+                  badge="SOLO LECTURA"
+                />
+              </View>
+              <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
+                <InputField
+                  tone="employer"
+                  label="Sector Industrial"
+                  value={form.industry}
+                  onChangeText={(text) => updateField('industry', text)}
+                  placeholder="Ej. Tecnología, Salud..."
+                />
+              </View>
+              <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
+                <InputField
+                  tone="employer"
+                  label="Tamaño (Colaboradores)"
+                  value={form.numberOfEmployees}
+                  onChangeText={(text) => updateField('numberOfEmployees', text)}
+                  placeholder="Ej. 10-50"
+                />
+              </View>
+            </View>
+            
+            <View style={styles.sectionDivider} />
 
-        <View style={styles.sectionBlock}>
-          <Text style={styles.sectionLabel}>Contacto principal</Text>
-          <View style={[styles.formGrid, isDesktop && styles.formGridDesktop]}>
-            <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
-              <InputField
-                tone="employer"
-                label="Persona de contacto"
-                value={form.contactName}
-                onChangeText={(text) => updateField('contactName', text)}
-              />
-            </View>
-            <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
-              <InputField
-                tone="employer"
-                label="Teléfono"
-                value={form.phone}
-                onChangeText={(text) => updateField('phone', text)}
-              />
-            </View>
-            <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
-              <InputField
-                tone="employer"
-                label="Correo"
-                value={form.email}
-                readonly
-                autoCapitalize="none"
-              />
-            </View>
-            <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
-              <InputField
-                tone="employer"
-                label="Sitio web"
-                value={form.website}
-                onChangeText={(text) => updateField('website', text)}
-                autoCapitalize="none"
-              />
+            <View style={styles.formGrid}>
+              <View style={styles.formItem}>
+                <InputField
+                  tone="employer"
+                  label="Descripción de la Empresa"
+                  value={form.description}
+                  onChangeText={(text) => updateField('description', text)}
+                  multiline
+                  placeholder="Breve reseña sobre la actividad de la empresa..."
+                />
+              </View>
             </View>
           </View>
         </View>
 
-        <View style={styles.sectionDivider} />
-
-        <View style={styles.sectionBlock}>
-          <Text style={styles.sectionLabel}>Descripción</Text>
-          <View style={styles.formGrid}>
-            <View style={styles.formItem}>
-              <InputField
-                tone="employer"
-                label="Resumen de la empresa"
-                value={form.description}
-                onChangeText={(text) => updateField('description', text)}
-                multiline
-              />
+        <View style={[styles.surfaceCard, styles.block]}>
+          <SectionHeader
+            title="Ubicación y Canales Digitales"
+            subtitle="Presencia física y online"
+            accentColor={colors.employer}
+            icon="map-pin"
+          />
+          <View style={styles.sectionBlock}>
+            <View style={[styles.formGrid, isDesktop && styles.formGridDesktop]}>
+              <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
+                <InputField
+                  tone="employer"
+                  label="Ciudad"
+                  value={form.ciudad}
+                  onChangeText={(text) => updateField('ciudad', text)}
+                />
+              </View>
+              <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
+                <InputField
+                  tone="employer"
+                  label="Sitio Web"
+                  value={form.website}
+                  onChangeText={(text) => updateField('website', text)}
+                  autoCapitalize="none"
+                  placeholder="https://..."
+                />
+              </View>
+              <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
+                <InputField
+                  tone="employer"
+                  label="Dirección Principal"
+                  value={form.address}
+                  onChangeText={(text) => updateField('address', text)}
+                  placeholder="Calle, Número, Ciudad"
+                />
+              </View>
             </View>
           </View>
         </View>
 
-        <View style={styles.actionRow}>
+        <View style={[styles.surfaceCard, styles.block]}>
+          <SectionHeader
+            title="Contacto Directo"
+            subtitle="Información del responsable"
+            accentColor={colors.employer}
+            icon="user"
+          />
+          <View style={styles.sectionBlock}>
+            <View style={[styles.formGrid, isDesktop && styles.formGridDesktop]}>
+              <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
+                <InputField
+                  tone="employer"
+                  label="Nombre de Contacto"
+                  value={form.contactName}
+                  onChangeText={(text) => updateField('contactName', text)}
+                />
+              </View>
+              <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
+                <InputField
+                  tone="employer"
+                  label="Cargo / Posición"
+                  value={form.cargo}
+                  onChangeText={(text) => updateField('cargo', text)}
+                  placeholder="Ej. Gerente de RRHH"
+                />
+              </View>
+              <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
+                <InputField
+                  tone="employer"
+                  label="Correo Electrónico"
+                  value={form.email}
+                  readonly
+                  autoCapitalize="none"
+                />
+              </View>
+              <View style={[styles.formItem, isDesktop && styles.formItemHalf]}>
+                <InputField
+                  tone="employer"
+                  label="Teléfono / WhatsApp"
+                  value={form.phone}
+                  onChangeText={(text) => updateField('phone', text)}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+
+
+
+        <View style={[styles.saveCard, styles.block]}>
+          <View style={styles.disclaimerBox}>
+            <Text style={styles.disclaimerText}>
+              Los cambios se aplicarán de inmediato y serán visibles para los candidatos.
+            </Text>
+          </View>
           <Button
-            label={saving ? 'Guardando...' : 'Guardar perfil'}
+            label={saving ? 'Guardando...' : 'Guardar Perfil'}
             onPress={handleSave}
             fullWidth
             tone="employer"
             loading={saving}
             disabled={saving}
+            icon={<Feather name="check" size={20} color="#FFF" />}
           />
         </View>
       </View>
@@ -255,13 +327,21 @@ export function EmployerProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   content: {
-    paddingBottom: 140,
+    paddingTop: 24,
+    paddingBottom: 40,
+    width: '100%',
+  },
+  pageStack: {
+    width: '100%',
+    gap: 20,
+  },
+  block: {
+    width: '100%',
   },
   surfaceCard: {
-    width: '100%',
     backgroundColor: '#fff',
     borderRadius: 16,
     borderWidth: 1,
@@ -271,59 +351,55 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 3,
-    padding: 18,
-    marginBottom: 14,
+    padding: 16,
   },
-  heroCard: {
-    gap: 12,
-  },
-  heroShadow: {
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  heroHeader: {
+  headerRow: {
     flexDirection: 'row',
-    gap: 12,
     alignItems: 'center',
+    gap: 16,
   },
-  iconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: colors.employerSurface,
-    alignItems: 'center',
+  headerIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  heroTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F2937',
+  headerTitleMain: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFF',
   },
-  heroSubtitle: {
-    color: '#6B7280',
+  headerSubtitleMain: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
     marginTop: 2,
   },
-  metaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  statsContainer: {
+    flexDirection: "row",
+    gap: 10,
   },
-  metaPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+  statBoxLight: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    padding: 10,
+    borderRadius: 12,
+    alignItems: "center",
   },
-  metaText: {
-    color: '#1F2937',
-    fontWeight: '600',
+  statNumber: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1F2937",
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: "#6B7280",
+    fontWeight: "600",
+    textAlign: 'center',
   },
   sectionBlock: {
     gap: 8,
@@ -357,5 +433,22 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     marginTop: 4,
+  },
+  saveCard: {
+    backgroundColor: '#FFF7ED', // Orange-50 equivalent
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#FED7AA', // Orange-200
+    padding: 20,
+    gap: 16,
+  },
+  disclaimerBox: {
+    marginBottom: 4,
+  },
+  disclaimerText: {
+    fontSize: 13,
+    color: '#9A3412', // Orange-900
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

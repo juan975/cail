@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Alert, StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Modal } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { authService } from '@/services/auth.service';
+import { PasswordStrength, validatePassword } from '@/components/ui/PasswordStrength';
+import { TermsScreen } from '../legal/TermsScreen';
 
 interface RegisterEmployerFormProps {
   onSuccess: (data: any) => void;
@@ -35,6 +37,8 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
   const [successData, setSuccessData] = useState<any>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [companies, setCompanies] = useState<any[]>([]);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -79,8 +83,20 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
       return;
     }
 
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      Alert.alert('Contraseña inválida', passwordValidation.errors[0]);
+      return;
+    }
+
     if (password.length < 8) {
       Alert.alert('Error', 'La contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+
+    // Validate terms acceptance
+    if (!acceptTerms) {
+      Alert.alert('Términos requeridos', 'Debes aceptar los términos y condiciones para continuar.');
       return;
     }
 
@@ -329,9 +345,9 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Contraseña *</Text>
-                <View style={styles.dropdownInput}>
+                <View style={styles.passwordContainer}>
                   <TextInput
-                    style={styles.input}
+                    style={styles.passwordInput}
                     value={password}
                     onChangeText={setPassword}
                     placeholder="Contraseña segura"
@@ -340,18 +356,19 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
                   />
                   <TouchableOpacity
                     onPress={() => setShowPassword(!showPassword)}
-                    style={styles.dropdownIcon}
+                    style={styles.passwordToggle}
                   >
                     <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#6B7280" />
                   </TouchableOpacity>
                 </View>
+                <PasswordStrength password={password} variant="employer" />
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Confirmar Contraseña *</Text>
-                <View style={styles.dropdownInput}>
+                <View style={styles.passwordContainer}>
                   <TextInput
-                    style={styles.input}
+                    style={styles.passwordInput}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     placeholder="Repite la contraseña"
@@ -360,7 +377,7 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
                   />
                   <TouchableOpacity
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={styles.dropdownIcon}
+                    style={styles.passwordToggle}
                   >
                     <Feather name={showConfirmPassword ? "eye" : "eye-off"} size={20} color="#6B7280" />
                   </TouchableOpacity>
@@ -376,6 +393,27 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
                 Tu empresa será verificada por CAIL. Recibirás credenciales por correo una vez aprobada.
               </Text>
             </View>
+
+            {/* Terms Checkbox */}
+            <TouchableOpacity
+              onPress={() => setAcceptTerms(!acceptTerms)}
+              activeOpacity={0.7}
+              style={styles.termsContainer}
+            >
+              <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
+                {acceptTerms && <Feather name="check" size={14} color="#FFFFFF" />}
+              </View>
+              <Text style={styles.termsText}>
+                Acepto los{' '}
+                <Text
+                  style={styles.termsLink}
+                  onPress={() => setShowTermsModal(true)}
+                >
+                  términos y condiciones
+                </Text>
+                {' '}de uso de la plataforma
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
 
@@ -450,6 +488,21 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
             </TouchableOpacity>
           </View>
         </View>
+      </Modal>
+
+      {/* Terms Modal */}
+      <Modal
+        visible={showTermsModal}
+        transparent={true}
+        statusBarTranslucent={true}
+        animationType="slide"
+        onRequestClose={() => setShowTermsModal(false)}
+      >
+        <TermsScreen
+          onClose={() => setShowTermsModal(false)}
+          onBack={() => setShowTermsModal(false)}
+          variant="employer"
+        />
       </Modal>
     </View>
   );
@@ -571,6 +624,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 10,
+    position: 'relative',
   },
   input: {
     flex: 1,
@@ -587,8 +641,36 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   dropdownIcon: {
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  passwordContainer: {
+    position: 'relative',
+  },
+  passwordInput: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    paddingRight: 50,
+    fontSize: 14,
+    color: '#1F2937',
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dropdown: {
     position: 'absolute',
@@ -650,6 +732,45 @@ const styles = StyleSheet.create({
   },
   infoBold: {
     fontWeight: '700',
+  },
+
+  // Terms
+  termsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginTop: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: '#F59E0B',
+    borderColor: '#F59E0B',
+  },
+  termsText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#374151',
+    lineHeight: 18,
+  },
+  termsLink: {
+    color: '#F59E0B',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 
   // Actions

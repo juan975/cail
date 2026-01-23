@@ -126,6 +126,7 @@ export interface CandidateProfileForm {
 export interface EmployerProfileForm {
   companyName: string;
   contactName: string;
+  cargo?: string;
   email: string;
   phone: string;
   industry: string;
@@ -133,4 +134,7 @@ export interface EmployerProfileForm {
   description: string;
   website: string;
   address: string;
+  ruc?: string;
+  tipoEmpresa?: string;
+  ciudad?: string;
 }

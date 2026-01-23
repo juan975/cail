@@ -6,11 +6,11 @@ import { AutocompleteInput } from '@/components/ui/AutocompleteInput';
 import { offersService } from '@/services/offers.service';
 import { userService } from '@/services/user.service';
 import { applicationsService } from '@/services/applications.service';
-import { Offer, CreateOfferDTO, OfferStatus as ApiOfferStatus } from '@/types/offers.types';
+import { Offer, CreateOfferDTO, OfferStatus as ApiOfferStatus, HierarchyLevel } from '@/types/offers.types';
 import { Application, ApplicationWithCandidate, ApplicationStatusColors } from '@/types/applications.types';
 
-type OfferStatus = 'active' | 'archived' | 'deleted';
-type OfferAction = 'archive' | 'restore' | 'delete';
+type OfferStatus = 'active' | 'paused' | 'closed';
+type OfferAction = 'pause' | 'resume' | 'close' | 'delete';
 
 interface JobOffer {
   id: string;
@@ -39,8 +39,8 @@ interface JobOffer {
 const mapApiStatusToUI = (estado: ApiOfferStatus): OfferStatus => {
   switch (estado) {
     case 'ACTIVA': return 'active';
-    case 'PAUSADA':
-    case 'CERRADA': return 'archived';
+    case 'PAUSADA': return 'paused';
+    case 'CERRADA': return 'closed';
     default: return 'active';
   }
 };
@@ -49,8 +49,8 @@ const mapApiStatusToUI = (estado: ApiOfferStatus): OfferStatus => {
 const mapUIStatusToApi = (status: OfferStatus): ApiOfferStatus => {
   switch (status) {
     case 'active': return 'ACTIVA';
-    case 'archived': return 'PAUSADA';
-    case 'deleted': return 'CERRADA';
+    case 'paused': return 'PAUSADA';
+    case 'closed': return 'CERRADA';
     default: return 'ACTIVA';
   }
 };
@@ -133,6 +133,7 @@ export function OffersManagementScreen() {
   const [newEducation, setNewEducation] = useState('');
   const [tipoContrato, setTipoContrato] = useState('Tiempo Completo');
   const [experiencia, setExperiencia] = useState('');
+  const [hierarchyLevel, setHierarchyLevel] = useState<HierarchyLevel>('Junior');
 
   // Cargar ofertas del API
   const loadOffers = useCallback(async () => {
@@ -168,12 +169,12 @@ export function OffersManagementScreen() {
 
   const filteredOffers = offers.filter((offer) => offer.status === selectedTab);
   const activeCount = offers.filter((o) => o.status === 'active').length;
-  const archivedCount = offers.filter((o) => o.status === 'archived').length;
-  const deletedCount = offers.filter((o) => o.status === 'deleted').length;
+  const pausedCount = offers.filter((o) => o.status === 'paused').length;
+  const closedCount = offers.filter((o) => o.status === 'closed').length;
   const sectionTitles: Record<OfferStatus, string> = {
     active: 'Publicadas y Vigentes',
-    archived: 'Historial de Ofertas Archivadas',
-    deleted: 'Historial de Ofertas Retiradas',
+    paused: 'Ofertas en Pausa',
+    closed: 'Ofertas Cerradas',
   };
 
   const openCreateModal = () => {
@@ -197,6 +198,7 @@ export function OffersManagementScreen() {
     setCompetencies(offer.requiredCompetencies);
     setEducation(offer.requiredEducation);
     setExperiencia(offer.requiredExperience);
+    setHierarchyLevel((offer as any).hierarchyLevel || 'Junior');
     setShowEditModal(true);
   };
 
@@ -216,6 +218,7 @@ export function OffersManagementScreen() {
     setNewEducation('');
     setTipoContrato('Tiempo Completo');
     setExperiencia('');
+    setHierarchyLevel('Junior');
   };
 
   const handleCreateOffer = async () => {
@@ -239,6 +242,7 @@ export function OffersManagementScreen() {
         experiencia_requerida: experiencia,
         formacion_requerida: education.join(', '),
         competencias_requeridas: competencies,
+        nivelJerarquico: hierarchyLevel,
       };
 
       const newOffer = await offersService.createOffer(createData);
@@ -274,6 +278,7 @@ export function OffersManagementScreen() {
         competencias_requeridas: competencies,
         salarioMin: salaryMin ? parseInt(salaryMin) : undefined,
         salarioMax: salaryMax ? parseInt(salaryMax) : undefined,
+        nivelJerarquico: hierarchyLevel,
       };
 
       const updated = await offersService.updateOffer(selectedOffer.apiId, updateData);
@@ -328,22 +333,27 @@ export function OffersManagementScreen() {
     try {
       setIsSubmitting(true);
 
-      if (type === 'archive') {
+      if (type === 'pause') {
         await offersService.pauseOffer(offer.apiId!);
         setOffers(prev => prev.map(item =>
-          item.id === offer.id ? { ...item, status: 'archived' as OfferStatus, apiEstado: 'PAUSADA' } : item
+          item.id === offer.id ? { ...item, status: 'paused', apiEstado: 'PAUSADA' } : item
         ));
-      } else if (type === 'restore') {
+      } else if (type === 'resume') {
         await offersService.activateOffer(offer.apiId!);
         setOffers(prev => prev.map(item =>
-          item.id === offer.id ? { ...item, status: 'active' as OfferStatus, apiEstado: 'ACTIVA' } : item
+          item.id === offer.id ? { ...item, status: 'active', apiEstado: 'ACTIVA' } : item
+        ));
+      } else if (type === 'close') {
+        await offersService.updateOffer(offer.apiId!, { estado: 'CERRADA' });
+        setOffers(prev => prev.map(item =>
+          item.id === offer.id ? { ...item, status: 'closed', apiEstado: 'CERRADA' } : item
         ));
       } else if (type === 'delete') {
         await offersService.deleteOffer(offer.apiId!);
         setOffers(prev => prev.filter(item => item.id !== offer.id));
       }
 
-      setSelectedTab(type === 'archive' ? 'archived' : type === 'restore' ? 'active' : selectedTab);
+      setSelectedTab(type === 'pause' ? 'paused' : type === 'resume' ? 'active' : type === 'close' ? 'closed' : selectedTab);
       setPendingAction(null);
     } catch (err: any) {
       console.error('Error performing action:', err);
@@ -357,24 +367,31 @@ export function OffersManagementScreen() {
     if (!pendingAction) return null;
     const { offer, type } = pendingAction;
     switch (type) {
-      case 'archive':
+      case 'pause':
         return {
-          title: '¿Archivar esta oferta?',
-          description: `La oferta "${offer.title}" será movida al historial de ofertas archivadas.`,
-          bullets: ['No será visible para los candidatos', 'Podrás restaurarla cuando desees', 'Las postulaciones existentes se conservan'],
+          title: '¿Pausar esta oferta?',
+          description: `La oferta "${offer.title}" dejará de ser visible para los candidatos.`,
+          bullets: ['No recibirá nuevas postulaciones', 'Puedes reactivarla cuando desees', 'Las postulaciones actuales se conservan'],
           confirmColor: '#F59E0B',
         };
-      case 'restore':
+      case 'resume':
         return {
-          title: '¿Restaurar esta oferta?',
-          description: `La oferta "${offer.title}" será restaurada y estará activa nuevamente para recibir postulaciones.`,
+          title: '¿Reactivar esta oferta?',
+          description: `La oferta "${offer.title}" volverá a estar activa y visible para postulaciones.`,
           confirmColor: '#10B981',
+        };
+      case 'close':
+        return {
+          title: '¿Cerrar esta oferta?',
+          description: `La oferta "${offer.title}" se marcará como finalizada.`,
+          bullets: ['No podrá recibir más candidatos', 'Se mantendrá el registro de aplicantes', 'Útil para puestos ya cubiertos'],
+          confirmColor: '#EF4444',
         };
       default:
         return {
-          title: '¿Retirar esta oferta permanentemente?',
-          description: `La oferta "${offer.title}" será eliminada permanentemente del sistema.`,
-          warning: 'Esta acción no se puede deshacer. La oferta y sus estadísticas serán eliminadas.',
+          title: '¿Eliminar esta oferta?',
+          description: `La oferta "${offer.title}" será eliminada permanentemente.`,
+          warning: 'Esta acción no se puede deshacer.',
           confirmColor: '#EF4444',
         };
     }
@@ -405,37 +422,38 @@ export function OffersManagementScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingHorizontal: horizontalGutter }]}>
+    <View style={styles.container}>
       <ScrollView
         style={styles.fullScroll}
         contentContainerStyle={[styles.scrollContent, { maxWidth: contentWidth, alignSelf: 'center' }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.pageStack}>
-          <View style={[styles.surfaceCard, styles.block]}>
-            <View style={styles.headerContent}>
-              <View style={styles.iconBadge}>
-                <Feather name="briefcase" size={20} color="#F59E0B" />
+          <View style={[styles.surfaceCard, styles.block, { backgroundColor: '#F59E0B' }]}>
+            <View style={styles.headerRow}>
+              <View style={styles.headerIconContainer}>
+                <Feather name="briefcase" size={24} color="#FFF" />
               </View>
-              <View style={styles.headerText}>
-                <Text style={styles.headerTitle}>Gestión de Ofertas Laborales</Text>
-                <Text style={styles.headerSubtitle}>Define vacantes y administra su ciclo de vida</Text>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={styles.headerTitleMain}>Gestión de Ofertas</Text>
+                <Text style={styles.headerSubtitleMain} numberOfLines={2}>
+                  Define vacantes y administra su ciclo de vida
+                </Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.newOfferButton} onPress={openCreateModal}>
-              <Feather name="plus" size={18} color="#fff" />
-              <Text style={styles.newOfferText}>Nueva Oferta</Text>
+            <TouchableOpacity style={styles.newOfferButtonMain} onPress={openCreateModal}>
+              <Feather name="plus" size={18} color="#F59E0B" />
+              <Text style={styles.newOfferTextMain}>Nueva Oferta de Trabajo</Text>
             </TouchableOpacity>
           </View>
 
           <View style={[styles.surfaceCard, styles.block, styles.tabsCard]}>
-            <TabButton label={`Activas (${activeCount})`} active={selectedTab === 'active'} onPress={() => setSelectedTab('active')} />
-            <TabButton label={`Archivadas (${archivedCount})`} active={selectedTab === 'archived'} onPress={() => setSelectedTab('archived')} />
-            <TabButton label={`Borradas (${deletedCount})`} active={selectedTab === 'deleted'} onPress={() => setSelectedTab('deleted')} />
+            <TabButton icon="check-circle" label={`Activas (${activeCount})`} active={selectedTab === 'active'} onPress={() => setSelectedTab('active')} />
+            <TabButton icon="pause-circle" label={`Pausadas (${pausedCount})`} active={selectedTab === 'paused'} onPress={() => setSelectedTab('paused')} />
+            <TabButton icon="x-circle" label={`Cerradas (${closedCount})`} active={selectedTab === 'closed'} onPress={() => setSelectedTab('closed')} />
           </View>
 
-          <View style={[styles.surfaceCard, styles.block, styles.listCard]}>
-            <Text style={styles.sectionLabel}>{sectionTitles[selectedTab]}</Text>
+          <View style={styles.listCard}>
             {filteredOffers.length === 0 ? (
               <View style={styles.emptyState}>
                 <Feather name="inbox" size={48} color="#D1D5DB" />
@@ -447,10 +465,8 @@ export function OffersManagementScreen() {
                   key={offer.id}
                   offer={offer}
                   onEdit={() => openEditModal(offer)}
-                  onArchive={() => requestOfferAction('archive', offer)}
-                  onRestore={() => requestOfferAction('restore', offer)}
-                  onDelete={() => requestOfferAction('delete', offer)}
                   onViewApplications={() => handleViewApplications(offer)}
+                  requestOfferAction={requestOfferAction}
                 />
               ))
             )}
@@ -528,6 +544,8 @@ export function OffersManagementScreen() {
               }}
               setCompetencies={setCompetencies}
               setEducation={setEducation}
+              hierarchyLevel={hierarchyLevel}
+              setHierarchyLevel={setHierarchyLevel}
             />
             <TouchableOpacity
               style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
@@ -614,6 +632,8 @@ export function OffersManagementScreen() {
               }}
               setCompetencies={setCompetencies}
               setEducation={setEducation}
+              hierarchyLevel={hierarchyLevel}
+              setHierarchyLevel={setHierarchyLevel}
             />
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.cancelButton} onPress={() => setShowEditModal(false)}>
@@ -808,9 +828,10 @@ export function OffersManagementScreen() {
   );
 }
 
-function TabButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function TabButton({ icon, label, active, onPress }: { icon: keyof typeof Feather.glyphMap; label: string; active: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity style={[styles.tab, active && styles.tabActive]} onPress={onPress}>
+      <Feather name={icon} size={16} color={active ? '#4B5BE8' : '#6B7280'} style={{ marginRight: 6 }} />
       <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -819,32 +840,21 @@ function TabButton({ label, active, onPress }: { label: string; active: boolean;
 function OfferCard({
   offer,
   onEdit,
-  onArchive,
-  onRestore,
-  onDelete,
   onViewApplications,
+  requestOfferAction,
 }: {
   offer: JobOffer;
   onEdit: () => void;
-  onArchive: () => void;
-  onRestore: () => void;
-  onDelete: () => void;
   onViewApplications: () => void;
+  requestOfferAction: (action: OfferAction, offer: JobOffer) => void;
 }) {
   return (
     <View style={styles.offerCard}>
       <View style={styles.offerHeader}>
         <Text style={styles.offerTitle}>{offer.title}</Text>
-        <View style={styles.badges}>
-          <View style={styles.statusBadge}>
-            <Text style={[styles.statusBadgeText, offer.status === 'active' ? styles.statusActive : styles.statusMuted]}>
-              {offer.status === 'active' ? 'Activa' : offer.status === 'archived' ? 'Archivada' : 'Borrada'}
-            </Text>
-          </View>
-          <View style={styles.priorityBadge}>
-            <Text style={styles.priorityText}>{offer.priority}</Text>
-          </View>
-        </View>
+        <TouchableOpacity onPress={onEdit} style={styles.headerEditBtn}>
+          <Feather name="edit-2" size={18} color="#10B981" />
+        </TouchableOpacity>
       </View>
       <Text style={styles.offerDepartment}>{offer.department}</Text>
       <Text style={styles.offerDescription} numberOfLines={2}>
@@ -861,34 +871,38 @@ function OfferCard({
           <>
             <TouchableOpacity style={styles.infoGhost} onPress={onViewApplications}>
               <Feather name="users" size={16} color="#3B82F6" />
-              <Text style={[styles.actionText, { color: '#3B82F6' }]}>Aplicaciones</Text>
+              <Text style={[styles.actionText, { color: '#3B82F6' }]}>Candidatos</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.primaryGhost} onPress={onEdit}>
-              <Feather name="edit-2" size={16} color="#10B981" />
-              <Text style={[styles.actionText, { color: '#10B981' }]}>Actualizar</Text>
+            <TouchableOpacity style={styles.warningGhost} onPress={() => requestOfferAction('pause', offer)}>
+              <Feather name="pause" size={16} color="#F59E0B" />
+              <Text style={[styles.actionText, { color: '#F59E0B' }]}>Pausar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.warningGhost} onPress={onArchive}>
-              <Feather name="archive" size={16} color="#F59E0B" />
-              <Text style={[styles.actionText, { color: '#F59E0B' }]}>Archivar</Text>
+            <TouchableOpacity style={styles.dangerGhost} onPress={() => requestOfferAction('close', offer)}>
+              <Feather name="x-circle" size={16} color="#EF4444" />
+              <Text style={[styles.actionText, { color: '#EF4444' }]}>Cerrar</Text>
             </TouchableOpacity>
           </>
         )}
-        {offer.status === 'archived' && (
+        {offer.status === 'paused' && (
           <>
-            <TouchableOpacity style={styles.primaryGhost} onPress={onRestore}>
-              <Feather name="rotate-ccw" size={16} color="#10B981" />
-              <Text style={[styles.actionText, { color: '#10B981' }]}>Restaurar</Text>
+            <TouchableOpacity style={styles.infoGhost} onPress={onViewApplications}>
+              <Feather name="users" size={16} color="#3B82F6" />
+              <Text style={[styles.actionText, { color: '#3B82F6' }]}>Candidatos</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.dangerGhost} onPress={onDelete}>
-              <Feather name="trash-2" size={16} color="#DC2626" />
-              <Text style={[styles.actionText, { color: '#DC2626' }]}>Eliminar</Text>
+            <TouchableOpacity style={styles.primaryGhost} onPress={() => requestOfferAction('resume', offer)}>
+              <Feather name="play" size={16} color="#10B981" />
+              <Text style={[styles.actionText, { color: '#10B981' }]}>Reactivar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.dangerGhost} onPress={() => requestOfferAction('close', offer)}>
+              <Feather name="x-circle" size={16} color="#EF4444" />
+              <Text style={[styles.actionText, { color: '#EF4444' }]}>Cerrar</Text>
             </TouchableOpacity>
           </>
         )}
-        {offer.status === 'deleted' && (
+        {offer.status === 'closed' && (
           <View style={styles.deletedTag}>
-            <Feather name="trash-2" size={16} color="#B91C1C" />
-            <Text style={styles.deletedTagText}>Oferta retirada</Text>
+            <Feather name="lock" size={16} color="#6B7280" />
+            <Text style={[styles.deletedTagText, { color: '#6B7280' }]}>Oferta Cerrada</Text>
           </View>
         )}
       </View>
@@ -939,6 +953,8 @@ function OfferForm({
   onOpenSelection,
   setCompetencies,
   setEducation,
+  hierarchyLevel,
+  setHierarchyLevel,
 }: {
   title: string;
   description: string;
@@ -973,9 +989,12 @@ function OfferForm({
   onOpenSelection: (title: string, options: string[], onSelect: (option: string) => void) => void;
   setCompetencies: (items: string[]) => void;
   setEducation: (items: string[]) => void;
+  hierarchyLevel: HierarchyLevel;
+  setHierarchyLevel: (v: HierarchyLevel) => void;
 }) {
   const MODALITY_OPTIONS = ['Presencial', 'Híbrido', 'Remoto'];
   const CONTRACT_OPTIONS = ['Tiempo Completo', 'Medio Tiempo', 'Por Horas', 'Temporal', 'Freelance', 'Pasantía'];
+  const HIERARCHY_OPTIONS: HierarchyLevel[] = ['Junior', 'Semi-Senior', 'Senior', 'Gerencial'];
 
   // Reuse Web lists
   const COMMON_COMPETENCIES = [
@@ -1081,6 +1100,18 @@ function OfferForm({
           </TouchableOpacity>
         </View>
         <View style={[styles.inputGroup, styles.flex1]}>
+          <Text style={styles.label}>Nivel Jerárquico</Text>
+          <TouchableOpacity
+            style={styles.selectContainer}
+            onPress={() => onOpenSelection('Nivel Jerárquico', HIERARCHY_OPTIONS, (val) => setHierarchyLevel(val as HierarchyLevel))}
+          >
+            <Text style={styles.selectText}>{hierarchyLevel}</Text>
+            <Feather name="chevron-down" size={20} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View style={styles.row}>
+        <View style={[styles.inputGroup, styles.flex1]}>
           <Text style={styles.label}>Tipo de Contrato</Text>
           <TouchableOpacity
             style={styles.selectContainer}
@@ -1090,16 +1121,16 @@ function OfferForm({
             <Feather name="chevron-down" size={20} color="#6B7280" />
           </TouchableOpacity>
         </View>
-      </View>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Ubicación</Text>
-        <TextInput
-          style={styles.input}
-          value={location}
-          onChangeText={setLocation}
-          placeholder="Loja"
-          placeholderTextColor="#9CA3AF"
-        />
+        <View style={[styles.inputGroup, styles.flex1]}>
+          <Text style={styles.label}>Ubicación</Text>
+          <TextInput
+            style={styles.input}
+            value={location}
+            onChangeText={setLocation}
+            placeholder="Loja"
+            placeholderTextColor="#9CA3AF"
+          />
+        </View>
       </View>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Experiencia Requerida</Text>
@@ -1143,7 +1174,7 @@ function OfferForm({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   centerContent: {
     justifyContent: 'center',
@@ -1183,6 +1214,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    paddingTop: 24,
     paddingBottom: 32,
     width: '100%',
   },
@@ -1205,44 +1237,46 @@ const styles = StyleSheet.create({
   block: {
     width: '100%',
   },
-  headerContent: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
+    gap: 16,
+    marginBottom: 20,
   },
-  iconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FEF3C7',
+  headerIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerText: {
-    flex: 1,
+  headerTitleMain: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFF',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  headerSubtitle: {
+  headerSubtitleMain: {
     fontSize: 13,
-    color: '#6B7280',
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 2,
   },
-  newOfferButton: {
+  newOfferButtonMain: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#F59E0B',
-    paddingVertical: 12,
-    borderRadius: 12,
+    gap: 10,
+    backgroundColor: '#FFF',
+    paddingVertical: 14,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  newOfferText: {
-    color: '#fff',
-    fontWeight: '700',
+  newOfferTextMain: {
+    color: '#F59E0B',
+    fontWeight: '800',
     fontSize: 15,
   },
   tabsCard: {
@@ -1327,36 +1361,10 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     flex: 1,
   },
-  badges: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#F3F4F6',
-  },
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  statusActive: {
-    color: '#10B981',
-  },
-  statusMuted: {
-    color: '#6B7280',
-  },
-  priorityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#FEF3C7',
-  },
-  priorityText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#D97706',
+  headerEditBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#ECFDF5',
   },
   offerDepartment: {
     fontSize: 13,
@@ -1386,44 +1394,51 @@ const styles = StyleSheet.create({
   },
   offerActions: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 10,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   primaryGhost: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     backgroundColor: '#ECFDF5',
   },
   warningGhost: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     backgroundColor: '#FEF3C7',
   },
   dangerGhost: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     backgroundColor: '#FEE2E2',
   },
   infoGhost: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     backgroundColor: '#DBEAFE',
   },
@@ -1447,7 +1462,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)', // Light translucent white instead of gray
   },
   modalOverlayDesktop: {
     justifyContent: 'center',
@@ -1601,7 +1616,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#10B981',
+    backgroundColor: '#F59E0B',
   },
   saveText: {
     color: '#fff',
@@ -1720,7 +1735,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   readonlyInput: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
     color: '#6B7280',
   },
   selectionModalContent: {

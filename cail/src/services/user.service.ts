@@ -34,6 +34,9 @@ export interface UserProfile {
         description?: string;
         website?: string;
         address?: string;
+        ruc?: string;
+        tipoEmpresa?: string;
+        ciudad?: string;
     };
 }
 

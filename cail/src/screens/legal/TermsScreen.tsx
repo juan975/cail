@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
@@ -8,6 +8,7 @@ import { colors } from '@/theme/colors';
 interface TermsScreenProps {
   onClose: () => void;
   onBack?: () => void;
+  variant?: 'candidate' | 'employer';
 }
 
 type Section = {
@@ -167,12 +168,13 @@ const sections: Section[] = [
   },
 ];
 
-export function TermsScreen({ onClose, onBack }: TermsScreenProps) {
+export function TermsScreen({ onClose, onBack, variant = 'candidate' }: TermsScreenProps) {
   const { contentWidth, horizontalGutter } = useResponsiveLayout();
+  const insets = useSafeAreaInsets();
 
-  // When embedded (onBack is present), render without full-screen wrappers
-  // to avoid nested ScrollView issues
   const isEmbedded = !!onBack;
+  const primaryColor = variant === 'employer' ? colors.employer : colors.candidate;
+  const bgColor = variant === 'employer' ? '#FFF7ED' : '#F0FDF4';
 
   const content = (
     <View style={[styles.container, { maxWidth: contentWidth }]}>
@@ -180,49 +182,23 @@ export function TermsScreen({ onClose, onBack }: TermsScreenProps) {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           {onBack && (
-            <TouchableOpacity onPress={onBack} style={styles.closeButton} activeOpacity={0.8}>
-              <Feather name="arrow-left" size={18} color={colors.textPrimary} />
+            <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.8}>
+              <Feather name="arrow-left" size={20} color="#6B7280" />
             </TouchableOpacity>
           )}
-          <View style={styles.badge}>
-            <Feather name="file-text" size={18} color={colors.candidateDark} />
+          <View style={[styles.badge, { backgroundColor: bgColor }]}>
+            <Feather name="file-text" size={22} color={primaryColor} />
           </View>
           <View style={styles.headerText}>
-            <Text style={styles.title}>Términos y Condiciones de Uso</Text>
+            <Text style={styles.title}>Términos y Condiciones</Text>
             <Text style={styles.subtitle}>Bolsa de Empleo CAIL · Versión 1.0</Text>
           </View>
         </View>
         {!onBack && (
           <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.8}>
-            <Feather name="x" size={18} color={colors.textPrimary} />
+            <Feather name="x" size={20} color="#6B7280" />
           </TouchableOpacity>
         )}
-      </View>
-
-      {/* Meta Info */}
-      <View style={styles.metaRow}>
-        <MetaPill icon="calendar" label="Última actualización" value="12 de noviembre de 2025" />
-        <MetaPill icon="map" label="Ámbito" value="Loja, Ecuador" />
-        <MetaPill icon="shield" label="Al usar, aceptas estos términos" value="Aplicación y sitio web" />
-      </View>
-
-      {/* Summary Cards */}
-      <View style={styles.summaryRow}>
-        <SummaryCard
-          icon="check-circle"
-          title="Aceptación"
-          text="El uso implica lectura y aceptación íntegra de estos términos."
-        />
-        <SummaryCard
-          icon="globe"
-          title="Uso local"
-          text="Enfocado en oportunidades laborales de la ciudad y provincia de Loja."
-        />
-        <SummaryCard
-          icon="gift"
-          title="Servicio gratuito"
-          text="Sin comisiones ni suscripciones para candidatos o empleadores."
-        />
       </View>
 
       {/* Sections */}
@@ -231,14 +207,14 @@ export function TermsScreen({ onClose, onBack }: TermsScreenProps) {
           <View key={section.id} style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionIcon}>
-                <Feather name={section.icon} size={16} color={colors.candidateDark} />
+                <Feather name={section.icon} size={16} color={primaryColor} />
               </View>
               <Text style={styles.sectionTitle}>{section.title}</Text>
             </View>
             {section.description && <Text style={styles.sectionDescription}>{section.description}</Text>}
             {section.bullets?.map((bullet, index) => (
               <View key={index} style={styles.bulletRow}>
-                <View style={styles.bulletDot} />
+                <View style={[styles.bulletDot, { backgroundColor: primaryColor }]} />
                 <Text style={styles.bulletText}>{bullet}</Text>
               </View>
             ))}
@@ -248,85 +224,51 @@ export function TermsScreen({ onClose, onBack }: TermsScreenProps) {
       </View>
 
       {/* Footer actions */}
-      <View style={styles.actions}>
-        <TouchableOpacity onPress={onClose} activeOpacity={0.85} style={styles.primaryButton}>
-          <Text style={styles.primaryButtonText}>Aceptar Términos y Condiciones</Text>
-        </TouchableOpacity>
+      <View style={styles.footer}>
         <Text style={styles.disclaimer}>
-          Estos términos pueden actualizarse periódicamente. Te avisaremos cuando se publiquen cambios
-          relevantes.
+          Última actualización: 12 de noviembre de 2025
         </Text>
+        <TouchableOpacity 
+          onPress={onClose} 
+          activeOpacity={0.85} 
+          style={[styles.primaryButton, { backgroundColor: primaryColor, shadowColor: primaryColor }]}
+        >
+          <Text style={styles.primaryButtonText}>Entendido</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 
-  // Embedded mode: just the content with internal scroll, no gradient wrapper
-  if (isEmbedded) {
-    return (
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.embeddedScroll, { paddingHorizontal: horizontalGutter }]}
-        nestedScrollEnabled={true}
-      >
-        {content}
-      </ScrollView>
-    );
-  }
-
-  // Fullscreen mode: with gradient and SafeAreaView
+  // Fullscreen mode: floating modal with semi-transparent background
   return (
-    <LinearGradient colors={['#0B7A4D', '#0A6B43', '#085C3A']} style={styles.gradient}>
-      <SafeAreaView style={styles.safe}>
+    <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', justifyContent: 'flex-start' }}>
+      {/* Background overlay to close modal */}
+      <TouchableOpacity 
+        style={StyleSheet.absoluteFill} 
+        onPress={onClose} 
+        activeOpacity={1} 
+      />
+      
+      <View style={{ maxHeight: '90%', width: '100%' }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.scroll, { paddingHorizontal: horizontalGutter }]}
+          contentContainerStyle={{ 
+            paddingHorizontal: horizontalGutter,
+            paddingTop: 85, // Manually adjusted to align with background cards
+            paddingBottom: 40,
+          }}
+          pointerEvents="box-none"
         >
-          {content}
+          <TouchableOpacity activeOpacity={1}>
+            {content}
+          </TouchableOpacity>
         </ScrollView>
-      </SafeAreaView>
-    </LinearGradient>
-  );
-}
-
-function MetaPill({
-  icon,
-  label,
-  value,
-}: {
-  icon: keyof typeof Feather.glyphMap;
-  label: string;
-  value: string;
-}) {
-  return (
-    <View style={styles.metaPill}>
-      <Feather name={icon} size={14} color={colors.textPrimary} />
-      <View style={styles.metaText}>
-        <Text style={styles.metaLabel}>{label}</Text>
-        <Text style={styles.metaValue}>{value}</Text>
       </View>
     </View>
   );
 }
 
-function SummaryCard({
-  icon,
-  title,
-  text,
-}: {
-  icon: keyof typeof Feather.glyphMap;
-  title: string;
-  text: string;
-}) {
-  return (
-    <View style={styles.summaryCard}>
-      <View style={styles.summaryIcon}>
-        <Feather name={icon} size={16} color={colors.candidateDark} />
-      </View>
-      <Text style={styles.summaryTitle}>{title}</Text>
-      <Text style={styles.summaryText}>{text}</Text>
-    </View>
-  );
-}
+
 
 const styles = StyleSheet.create({
   gradient: {
@@ -336,216 +278,172 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    paddingVertical: 24,
+    paddingTop: 120,
+    paddingBottom: 40,
   },
   embeddedScroll: {
-    paddingVertical: 16,
-    paddingBottom: 32,
+    paddingVertical: 0,
   },
   container: {
-    backgroundColor: '#F8FAFB',
-    borderRadius: 20,
-    padding: 18,
-    gap: 16,
-    alignSelf: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
     width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 16,
     flex: 1,
   },
   badge: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    backgroundColor: colors.candidateSurface,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   headerText: {
     flex: 1,
-    gap: 4,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
   },
   subtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -4,
   },
   closeButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  metaPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flex: 1,
-    minWidth: 240,
-  },
-  metaText: {
-    gap: 2,
-  },
-  metaLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  metaValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: 12,
-    flexWrap: 'wrap',
-  },
-  summaryCard: {
-    flex: 1,
-    minWidth: 240,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
-    gap: 6,
-  },
-  summaryIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: colors.candidateSurface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  summaryTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  summaryText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
   },
   sections: {
-    gap: 12,
+    padding: 24,
+    gap: 16,
   },
   sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
+    padding: 24,
+    borderRadius: 16,
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: colors.border,
-    gap: 8,
+    borderColor: '#F3F4F6',
+    gap: 12,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
   sectionIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: colors.candidateSurface,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: colors.textPrimary,
+    color: '#111827',
     flex: 1,
   },
   sectionDescription: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 19,
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 22,
   },
   bulletRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
     alignItems: 'flex-start',
   },
   bulletDot: {
     width: 6,
     height: 6,
-    borderRadius: 99,
-    backgroundColor: colors.candidateDark,
-    marginTop: 6,
+    borderRadius: 3,
+    marginTop: 8,
   },
   bulletText: {
     flex: 1,
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 19,
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 21,
   },
   footerNote: {
     fontSize: 12,
-    color: colors.muted,
-    lineHeight: 18,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    borderStyle: 'dashed',
   },
-  actions: {
-    gap: 10,
-    alignItems: 'flex-start',
-  },
-  primaryButton: {
+  footer: {
+    padding: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.candidateDark,
+    justifyContent: 'space-between',
+    backgroundColor: '#F9FAFB',
+    gap: 16,
+  },
+  primaryButton: {
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
   },
   primaryButtonText: {
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: 14,
   },
   disclaimer: {
+    flex: 1,
     fontSize: 12,
-    color: colors.textSecondary,
-    lineHeight: 18,
+    color: '#9CA3AF',
   },
 });

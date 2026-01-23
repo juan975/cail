@@ -174,7 +174,7 @@ class ApplicationsService {
     /**
      * Actualiza el estado de una aplicación (Reclutador)
      */
-    async updateApplicationStatus(idAplicacion: string, status: 'ACEPTADA' | 'RECHAZADA'): Promise<void> {
+    async updateApplicationStatus(idAplicacion: string, status: 'ACEPTADA' | 'RECHAZADA' | 'EN_REVISION'): Promise<void> {
         await apiService.patch(`/matching/postulacion/${idAplicacion}/status`, { estado: status });
     }
 }
