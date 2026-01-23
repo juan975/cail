@@ -445,24 +445,32 @@ export function JobDiscoveryScreen() {
           style={styles.modalContainer}
         >
           <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitle}>{selectedOffer?.title}</Text>
-                <Text style={styles.modalSubtitle}>{selectedOffer?.location}</Text>
+            <View style={styles.modalHeaderClean}>
+              <View style={styles.modalDragIndicator} />
+              <View style={styles.modalTitleRow}>
+                <View style={[styles.companyLogoPlaceholder, { backgroundColor: '#F0FDF4' }]}>
+                  <Feather name="layers" size={24} color="#059669" />
+                </View>
+                <View style={{ flex: 1, justifyContent: 'center' }}>
+                  <Text style={styles.modalEyebrow}>POSTULAR A</Text>
+                  <Text style={styles.modalTitleLarge} numberOfLines={2}>{selectedOffer?.title}</Text>
+                  <Text style={styles.modalSubtitle}>{selectedOffer?.location}</Text>
+                </View>
               </View>
-              <TouchableOpacity onPress={resetModal} style={styles.closeButton}>
-                <Feather name="x" size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.modalBody}>
-                <View style={styles.confirmationMessage}>
-                  <Feather name="send" size={32} color="#0B7A4D" />
-                  <Text style={styles.confirmationTitle}>Confirmar Postulación</Text>
-                  <Text style={styles.confirmationText}>
-                    Al postularte, el reclutador podrá ver tu perfil y datos de contacto.
-                  </Text>
+                <View style={styles.confirmationBox}>
+                  <View style={styles.confirmationIcon}>
+                    <Feather name="briefcase" size={24} color="#059669" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.confirmationTitle}>Confirmar Postulación</Text>
+                    <Text style={styles.confirmationText}>
+                      Tu perfil será enviado al reclutador. Asegúrate de que tu CV esté actualizado.
+                    </Text>
+                  </View>
                 </View>
 
                 {selectedOffer && (
@@ -471,19 +479,19 @@ export function JobDiscoveryScreen() {
                     <View style={styles.requirementItem}>
                       <Text style={styles.requirementBullet}>•</Text>
                       <Text style={styles.requirementText}>
-                        Formación: {selectedOffer.requiredEducation}
+                        <Text style={{ fontWeight: '700' }}>Formación:</Text> {selectedOffer.requiredEducation}
                       </Text>
                     </View>
                     <View style={styles.requirementItem}>
                       <Text style={styles.requirementBullet}>•</Text>
                       <Text style={styles.requirementText}>
-                        Experiencia: {selectedOffer.requiredExperience}
+                        <Text style={{ fontWeight: '700' }}>Experiencia:</Text> {selectedOffer.requiredExperience}
                       </Text>
                     </View>
                     <View style={styles.requirementItem}>
                       <Text style={styles.requirementBullet}>•</Text>
                       <Text style={styles.requirementText}>
-                        Competencias: {selectedOffer.requiredCompetencies.join(', ')}
+                        <Text style={{ fontWeight: '700' }}>Competencias:</Text> {selectedOffer.requiredCompetencies.join(', ')}
                       </Text>
                     </View>
                   </View>
@@ -498,7 +506,7 @@ export function JobDiscoveryScreen() {
                     <Text style={styles.cancelButtonText}>Cancelar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.confirmButton, isApplying && styles.confirmButtonDisabled]}
+                    style={[styles.confirmButton, isApplying && styles.confirmButtonDisabled, { backgroundColor: '#059669' }]}
                     onPress={handleApply}
                     disabled={isApplying}
                   >
@@ -790,7 +798,7 @@ const styles = StyleSheet.create({
   // Modal
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -798,68 +806,94 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 20,
-    paddingBottom: 16,
+  modalHeaderClean: {
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F2F5',
+    borderBottomColor: '#F3F4F6',
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
-  modalTitle: {
-    fontSize: 18,
+  modalDragIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  modalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  companyLogoPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F0FDF4',
+  },
+  modalEyebrow: {
+    fontSize: 11,
     fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 4,
+    color: '#059669',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  modalTitleLarge: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+    lineHeight: 24,
   },
   modalSubtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
   },
   closeButton: {
     padding: 4,
   },
   modalBody: {
-    padding: 20,
-    gap: 16,
+    padding: 24,
   },
-  modalLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  fileSelector: {
-    backgroundColor: '#F8FAFB',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E4E9',
-    borderStyle: 'dashed',
+  confirmationBox: {
+    flexDirection: 'row',
+    gap: 14,
+    backgroundColor: '#ECFDF5',
     padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    marginBottom: 24,
+  },
+  confirmationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 60,
   },
-  fileSelectorText: {
+  confirmationTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#065F46',
+    marginBottom: 4,
+  },
+  confirmationText: {
     fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
+    color: '#047857',
+    lineHeight: 18,
   },
-  modalHelper: {
-    fontSize: 12,
-    color: colors.muted,
-    marginTop: -8,
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
+
   requirementsBox: {
     backgroundColor: '#F0F7FF',
     borderRadius: 8,
@@ -920,22 +954,7 @@ const styles = StyleSheet.create({
     color: '#059669',
   },
   // Confirmation modal styles
-  confirmationMessage: {
-    alignItems: 'center',
-    paddingVertical: 16,
-    gap: 12,
-  },
-  confirmationTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  confirmationText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+
   modalActions: {
     flexDirection: 'row',
     gap: 12,

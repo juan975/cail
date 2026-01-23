@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather, FontAwesome5 } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '@/theme/colors';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { CandidateProfileScreen } from './CandidateProfileScreen';
@@ -41,40 +42,41 @@ export function CandidateShell({ userData, onLogout }: CandidateShellProps) {
       <View style={[styles.container, { paddingHorizontal: horizontalGutter }]}>
         <View style={[styles.maxWidth, styles.flexFill, { maxWidth: contentWidth }]}>
           {/* Header Card */}
+          {/* Header Card (AppBar integrated) */}
           <View style={styles.headerCard}>
             <View style={styles.headerLeft}>
-              {/* Logo Badge */}
-              <View style={styles.logoBadge}>
-                <Image source={logo} style={styles.logo} />
+              <View style={styles.avatarContainer}>
+                <LinearGradient
+                  colors={['#34D399', '#059669']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.avatarGradient}
+                >
+                  <Text style={styles.avatarText}>
+                    {userData.name.charAt(0).toUpperCase() || 'C'}
+                  </Text>
+                </LinearGradient>
               </View>
-              
-              {/* Header Text */}
               <View style={styles.headerCopy}>
-                <Text style={styles.headerEyebrow}>Módulo candidato</Text>
-                <Text style={styles.headerTitle}>Bolsa de Empleo CAIL</Text>
-                <Text style={styles.headerSubtitle}>Hola, {userData.name}</Text>
+                <Text style={styles.headerEyebrow}>Portal Candidato</Text>
+                <Text style={styles.headerTitle}>{userData.name}</Text>
+                <View style={styles.activeBadge}>
+                  <View style={styles.statusDot} />
+                  <Text style={styles.activeBadgeText}>Activo</Text>
+                </View>
               </View>
             </View>
 
-            {/* Header Actions */}
-            <View style={styles.headerActions}>
-              {/* Status Badge */}
-              <View style={styles.statusBadge}>
-                <View style={styles.statusDot} />
-                <Text style={styles.statusText}>Activo</Text>
-              </View>
-
-              {/* Logout Button */}
-              <TouchableOpacity onPress={onLogout} style={styles.logoutBtn}>
-                <Feather name="log-out" color="#EF4444" size={18} />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity onPress={onLogout} style={styles.logoutBtn}>
+              <Feather name="log-out" color="#EF4444" size={18} />
+            </TouchableOpacity>
           </View>
 
           {/* Content Area */}
           <View style={styles.content}>{renderScreen()}</View>
         </View>
 
+        {/* Bottom Navigation Bar */}
         {/* Bottom Navigation Bar */}
         <View style={[styles.navbar, styles.maxWidth, { maxWidth: contentWidth }]}>
           <NavItem 
@@ -92,6 +94,7 @@ export function CandidateShell({ userData, onLogout }: CandidateShellProps) {
           <NavItem
             icon="bell"
             label="Alertas"
+            badge={2} 
             active={tab === 'notifications'}
             onPress={() => setTab('notifications')}
           />
@@ -114,7 +117,7 @@ function NavItem({
   active,
   onPress,
 }: {
-  icon: keyof typeof Feather.glyphMap;
+  icon: string;
   label: string;
   badge?: number;
   active: boolean;
@@ -128,10 +131,10 @@ function NavItem({
     >
       <View style={styles.navIconContainer}>
         <View style={[styles.navIcon, active && styles.navIconActive]}>
-          <Feather 
+          <FontAwesome5 
             name={icon} 
             size={20} 
-            color={active ? '#0B7A4D' : colors.textSecondary} 
+            color={active ? '#059669' : '#6B7280'} 
           />
         </View>
         {badge && badge > 0 && (
@@ -140,9 +143,6 @@ function NavItem({
           </View>
         )}
       </View>
-      <Text style={[styles.navLabel, active && styles.navLabelActive]}>
-        {label}
-      </Text>
     </TouchableOpacity>
   );
 }
@@ -186,58 +186,51 @@ const styles = StyleSheet.create({
     gap: 12,
     flex: 1,
   },
-  logoBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: '#F8FAFB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E8ECF0',
+  avatarContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    overflow: 'hidden',
   },
-  logo: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+  avatarGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
   },
   headerCopy: {
     flex: 1,
     gap: 2,
   },
   headerEyebrow: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textSecondary,
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-
-  // Header Actions
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  statusBadge: {
+  activeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: '#ECFDF5',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#A7F3D0',
+    alignSelf: 'flex-start',
+    marginTop: 2,
   },
   statusDot: {
     width: 6,
@@ -245,10 +238,10 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: '#10B981',
   },
-  statusText: {
-    fontSize: 12,
+  activeBadgeText: {
+    fontSize: 10,
     fontWeight: '700',
-    color: '#0B7A4D',
+    color: '#047857',
   },
   logoutBtn: {
     width: 40,
@@ -273,46 +266,45 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    marginTop: 12,
-    marginBottom: 12,
+    borderRadius: 24,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowRadius: 10,
     elevation: 8,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
+    width: '90%', // Narrower than contentWidth
+    alignSelf: 'center',
   },
   navItem: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingVertical: 4,
     borderRadius: 16,
-    gap: 4,
   },
   navItemActive: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#ECFDF5',
   },
   navIconContainer: {
     position: 'relative',
   },
   navIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F8FAFB',
   },
   navIconActive: {
     backgroundColor: '#ECFDF5',
-    borderWidth: 2,
-    borderColor: '#BBF7D0',
+    borderWidth: 1.5,
+    borderColor: '#6EE7B7',
   },
   badge: {
     position: 'absolute',
@@ -332,15 +324,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: '#FFFFFF',
-  },
-  navLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  navLabelActive: {
-    color: '#0B7A4D',
-    fontWeight: '700',
   },
 });

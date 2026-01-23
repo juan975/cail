@@ -13,6 +13,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ViewStyle,
+  DimensionValue,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
@@ -27,6 +29,12 @@ import { colors } from '@/theme/colors';
 
 export function MyApplicationsScreen() {
   const { contentWidth } = useResponsiveLayout();
+  const widthLimiter: ViewStyle = {
+    width: '100%' as DimensionValue,
+    maxWidth: contentWidth,
+    alignSelf: 'center',
+  };
+
   const [applications, setApplications] = useState<ApplicationWithOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -90,7 +98,7 @@ export function MyApplicationsScreen() {
     const statusInfo = ApplicationStatusColors[item.estado];
 
     return (
-      <Card style={[styles.applicationCard, { maxWidth: contentWidth }]}>
+      <Card style={[styles.applicationCard, widthLimiter]}>
         <View style={styles.cardHeader}>
           <View style={styles.offerInfo}>
             <Text style={styles.offerTitle}>{item.oferta?.titulo || 'Oferta'}</Text>
@@ -173,7 +181,7 @@ export function MyApplicationsScreen() {
           />
         }
         ListHeaderComponent={
-          <View style={[styles.header, { maxWidth: contentWidth }]}>
+          <View style={[styles.header, widthLimiter]}>
             <Card spacing="lg" style={styles.heroCard}>
               <View style={styles.heroContent}>
                 <View style={styles.heroIcon}>
@@ -215,7 +223,7 @@ export function MyApplicationsScreen() {
           </View>
         }
         ListEmptyComponent={
-          <View style={[styles.emptyState, { maxWidth: contentWidth }]}>
+          <View style={[styles.emptyState, widthLimiter]}>
             <Feather name="inbox" size={48} color="#D1D5DB" />
             <Text style={styles.emptyTitle}>No tienes postulaciones</Text>
             <Text style={styles.emptySubtitle}>
@@ -266,7 +274,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingVertical: 16,
-    paddingHorizontal: 16,
     paddingBottom: 100,
     gap: 12,
   },
