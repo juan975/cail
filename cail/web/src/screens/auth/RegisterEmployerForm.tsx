@@ -6,6 +6,56 @@ import { authService } from '../../services/auth.service';
 import { PasswordStrength, validatePassword } from '../../components/ui/PasswordStrength';
 import { TermsModal } from '../../components/legal/TermsModal';
 
+// Styles
+const screenContainerStyle: React.CSSProperties = {
+  minHeight: '100vh',
+  width: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '60px 20px',
+  position: 'relative',
+};
+
+const backButtonStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '40px',
+  left: '40px',
+  width: '60px',
+  height: '60px',
+  borderRadius: '20px',
+  background: 'rgba(255, 255, 255, 0.15)',
+  backdropFilter: 'blur(12px)',
+  border: '1px solid rgba(255, 255, 255, 0.3)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+  zIndex: 10,
+};
+
+const glassCardStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: '680px',
+  background: 'rgba(255, 255, 255, 0.98)',
+  backdropFilter: 'blur(20px)',
+  borderRadius: '40px',
+  padding: '64px 56px',
+  boxShadow: '0 50px 100px rgba(0,0,0,0.18)',
+  zIndex: 5,
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: '15px',
+  fontWeight: 800,
+  color: '#334155',
+  marginBottom: '10px',
+  display: 'block',
+  marginLeft: '4px'
+};
+
 interface RegisterEmployerFormProps {
   onSuccess: (data: any) => void;
   onBack: () => void;
@@ -81,45 +131,34 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
   // Style helpers (updated without boxSizing)
   const inputStyle = {
     width: '100%',
-    padding: '14px 16px',
+    padding: '16px 18px',
     fontSize: '16px',
-    color: '#111827',
-    background: '#F9FAFB',
-    border: '1px solid #E5E7EB',
-    borderRadius: '12px',
+    color: '#0F172A',
+    background: '#F1F5F9',
+    border: '2px solid transparent',
+    borderRadius: '16px',
     outline: 'none',
-    transition: 'all 0.2s',
-  };
-
-  const labelStyle = {
-    fontSize: '14px',
-    fontWeight: 600,
-    color: '#374151',
-    marginBottom: '8px',
-    display: 'block',
+    transition: 'all 0.3s ease',
+    boxSizing: 'border-box' as const,
+    fontWeight: 500,
   };
 
   const textareaStyle = {
-    width: '100%',
-    padding: '14px 16px',
-    fontSize: '16px',
-    color: '#111827',
-    background: '#F9FAFB',
-    border: '1px solid #E5E7EB',
-    borderRadius: '12px',
-    outline: 'none',
-    transition: 'all 0.2s',
-    // No resize property needed
+    ...inputStyle,
+    height: '120px',
+    resize: 'none' as const,
   };
 
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    e.target.style.borderColor = '#F59E0B';
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    e.target.style.borderColor = `rgba(245, 158, 11, 0.4)`;
     e.target.style.background = '#FFFFFF';
+    e.target.style.boxShadow = `0 0 0 5px rgba(245, 158, 11, 0.1)`;
   };
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    e.target.style.borderColor = '#E5E7EB';
-    e.target.style.background = '#F9FAFB';
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    e.target.style.borderColor = 'transparent';
+    e.target.style.background = '#F1F5F9';
+    e.target.style.boxShadow = 'none';
   };
 
   const handleSubmit = async () => {
@@ -197,56 +236,17 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
     <>
       <LoadingSplash visible={showSplash} success={splashSuccess} onComplete={handleSplashComplete} />
 
-      <div style={{
-        minHeight: '100vh',
-        width: '100%',
-        background: 'linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '40px 20px',
-        position: 'relative',
-      }}>
-        {/* Back Button */}
+      <div style={{ ...screenContainerStyle, background: 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)' }}>
         <button
           onClick={onBack}
-          style={{
-            position: 'absolute',
-            top: '32px',
-            left: '32px',
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
-            border: 'none',
-            background: '#FFFFFF',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-            e.currentTarget.style.transform = 'translateX(-2px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-            e.currentTarget.style.transform = 'translateX(0)';
-          }}
+          style={backButtonStyle}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
         >
-          <FiArrowLeft size={24} color="#374151" />
+          <FiArrowLeft size={28} color="#FFFFFF" />
         </button>
 
-        {/* Main Card */}
-        <div style={{
-          width: '100%',
-          maxWidth: '600px',
-          background: '#FFFFFF',
-          borderRadius: '24px',
-          padding: '48px 40px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.08)',
-        }}>
+        <div style={glassCardStyle}>
           {/* Title */}
           <h1 style={{
             fontSize: '32px',
@@ -729,3 +729,4 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
     </>
   );
 }
+

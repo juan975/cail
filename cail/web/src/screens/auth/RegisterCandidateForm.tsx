@@ -6,6 +6,82 @@ import { PasswordStrength, validatePassword } from '../../components/ui/Password
 import { authService } from '../../services/auth.service';
 import { TermsModal } from '../../components/legal/TermsModal';
 
+// Styles
+const screenContainerStyle: React.CSSProperties = {
+  minHeight: '100vh',
+  width: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '60px 20px',
+  position: 'relative',
+};
+
+const backButtonStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '40px',
+  left: '40px',
+  width: '60px',
+  height: '60px',
+  borderRadius: '20px',
+  background: 'rgba(255, 255, 255, 0.15)',
+  backdropFilter: 'blur(12px)',
+  border: '1px solid rgba(255, 255, 255, 0.3)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+  zIndex: 10,
+};
+
+const glassCardStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: '680px',
+  background: 'rgba(255, 255, 255, 0.98)',
+  backdropFilter: 'blur(20px)',
+  borderRadius: '40px',
+  padding: '64px 56px',
+  boxShadow: '0 50px 100px rgba(0,0,0,0.18)',
+  zIndex: 5,
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '16px 18px',
+  fontSize: '16px',
+  color: '#0F172A',
+  background: '#F1F5F9',
+  border: '2px solid transparent',
+  borderRadius: '16px',
+  outline: 'none',
+  transition: 'all 0.3s ease',
+  boxSizing: 'border-box',
+  fontWeight: 500,
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: '15px',
+  fontWeight: 800,
+  color: '#334155',
+  marginBottom: '10px',
+  display: 'block',
+  marginLeft: '4px'
+};
+
+function handleInputFocus(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>, color: string) {
+  e.target.style.borderColor = `${color}40`;
+  e.target.style.background = '#FFFFFF';
+  e.target.style.boxShadow = `0 0 0 5px ${color}10`;
+}
+
+function handleInputBlur(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
+  e.target.style.borderColor = 'transparent';
+  e.target.style.background = '#F1F5F9';
+  e.target.style.boxShadow = 'none';
+}
+
 interface RegisterCandidateFormProps {
   onSuccess: (data: any) => void;
   onBack: () => void;
@@ -165,56 +241,17 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
     <>
       <LoadingSplash visible={showSplash} success={splashSuccess} onComplete={handleSplashComplete} />
 
-      <div style={{
-        minHeight: '100vh',
-        width: '100%',
-        background: 'linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '40px 20px',
-        position: 'relative',
-      }}>
-        {/* Back Button */}
+      <div style={{ ...screenContainerStyle, background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)' }}>
         <button
           onClick={step === 'personal' ? onBack : () => setStep('personal')}
-          style={{
-            position: 'absolute',
-            top: '32px',
-            left: '32px',
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
-            border: 'none',
-            background: '#FFFFFF',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-            e.currentTarget.style.transform = 'translateX(-2px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-            e.currentTarget.style.transform = 'translateX(0)';
-          }}
+          style={backButtonStyle}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
         >
-          <FiArrowLeft size={24} color="#374151" />
+          <FiArrowLeft size={28} color="#FFFFFF" />
         </button>
 
-        {/* Main Card */}
-        <div style={{
-          width: '100%',
-          maxWidth: '600px',
-          background: '#FFFFFF',
-          borderRadius: '24px',
-          padding: '48px 40px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.08)',
-        }}>
+        <div style={glassCardStyle}>
           {/* Progress Indicator */}
           <div style={{ marginBottom: '32px' }}>
             <div style={{
@@ -280,27 +317,10 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Ej: María Fernanda Calle"
-                  style={{
-                    width: '100%',
-                    padding: '14px 16px',
-                    fontSize: '16px',
-                    color: '#111827',
-                    background: '#F9FAFB',
-                    border: '1px solid #E5E7EB',
-                    borderRadius: '12px',
-                    outline: 'none',
-                    transition: 'all 0.2s',
-                    boxSizing: 'border-box',
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#10B981';
-                    e.target.style.background = '#FFFFFF';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#E5E7EB';
-                    e.target.style.background = '#F9FAFB';
-                  }}
+                  placeholder="Ingresa tu nombre completo"
+                  style={inputStyle}
+                  onFocus={(e) => handleInputFocus(e, '#10B981')}
+                  onBlur={handleInputBlur}
                 />
               </div>
 
@@ -320,7 +340,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                     type="text"
                     value={cedula}
                     onChange={(e) => setCedula(e.target.value)}
-                    placeholder="0000000000"
+                    placeholder="Ej: 1104567890"
                     maxLength={10}
                     style={{
                       width: '100%',
@@ -359,7 +379,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="0999999999"
+                    placeholder="Ej: 0987654321"
                     style={{
                       width: '100%',
                       padding: '14px 16px',
@@ -399,7 +419,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@email.com"
+                  placeholder="Ej: maria.calle@email.com"
                   style={{
                     width: '100%',
                     padding: '14px 16px',
@@ -413,14 +433,14 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                     boxSizing: 'border-box',
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#10B981';
-                    e.target.style.background = '#FFFFFF';
-                  }}
+                      e.target.style.borderColor = '#10B981';
+                      e.target.style.background = '#FFFFFF';
+                    }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = '#E5E7EB';
-                    e.target.style.background = '#F9FAFB';
-                  }}
-                />
+                      e.target.style.borderColor = '#E5E7EB';
+                      e.target.style.background = '#F9FAFB';
+                    }}
+                  />
               </div>
 
               {/* Birth Date and City */}
@@ -516,7 +536,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Calle principal, número de casa"
+                  placeholder="Ej: Av. Universitaria y Calle Lourdes, número de casa"
                   style={{
                     width: '100%',
                     padding: '14px 16px',
@@ -556,7 +576,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Mínimo 8 caracteres, incluye mayúsculas y números"
                     style={{
                       width: '100%',
                       padding: '14px 50px 14px 16px',
@@ -618,7 +638,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Confirma tu contraseña"
                     style={{
                       width: '100%',
                       padding: '14px 50px 14px 16px',
@@ -711,7 +731,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                 <textarea
                   value={professionalSummary}
                   onChange={(e) => setProfessionalSummary(e.target.value)}
-                  placeholder="Describe brevemente tu experiencia y objetivos profesionales..."
+                  placeholder="Ej: He trabajado en proyectos de desarrollo web y móvil..."
                   rows={4}
                   style={{
                     width: '100%',
@@ -864,7 +884,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                         addSoftSkill();
                       }
                     }}
-                    placeholder="Ej: Comunicación, Liderazgo, Trabajo en equipo..."
+                    placeholder="Ej: Trabajo en equipo, Liderazgo, Comunicación..."
                     style={{
                       flex: 1,
                       padding: '14px 16px',

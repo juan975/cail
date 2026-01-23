@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FiArrowLeft, FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { LoadingSplash } from '../../components/ui/LoadingSplash';
 import { useNotifications } from '../../components/ui/Notifications';
 import { UserRole } from '../../types';
@@ -129,282 +130,260 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLogin
     setLoading(false);
   };
 
-  const accentColor = role === 'candidate' ? '#10B981' : '#F59E0B';
-  const accentGradient = role === 'candidate'
-    ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-    : 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)';
+  const roleColor = role === 'candidate' ? '#10B981' : '#F59E0B';
+  const roleGradient = role === 'candidate' 
+    ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)'
+    : 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)';
 
   return (
-    <>
-      <LoadingSplash
-        visible={showSplash}
-        success={splashSuccess}
-        error={splashError}
-        message={splashError ? splashErrorMessage : 'Validando credenciales'}
-        onComplete={splashError ? handleSplashErrorComplete : handleSplashComplete}
+    <div style={{ ...screenContainerStyle, background: roleGradient }}>
+      <LoadingSplash 
+        visible={showSplash || splashError} 
+        success={!splashError} 
+        message={splashError ? (splashErrorMessage || 'Error al iniciar sesión') : 'Validando credenciales...'}
+        onComplete={splashError ? handleSplashErrorComplete : handleSplashComplete} 
       />
 
-      <div style={{
-        minHeight: '100vh',
-        width: '100%',
-        background: 'linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '40px 20px',
-        position: 'relative',
-      }}>
-        {/* Back Button */}
-        <button
-          onClick={onBack}
-          style={{
-            position: 'absolute',
-            top: '32px',
-            left: '32px',
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
-            border: 'none',
-            background: '#FFFFFF',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-            e.currentTarget.style.transform = 'translateX(-2px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-            e.currentTarget.style.transform = 'translateX(0)';
-          }}
-        >
-          <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#374151">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-          </svg>
+      {/* Header with Back Button */}
+      <div style={formHeaderStyle}>
+        <button onClick={onBack} style={backButtonStyle}>
+          <FiArrowLeft size={28} color="#FFFFFF" />
         </button>
+      </div>
 
-        {/* Main Card */}
-        <div style={{
-          width: '100%',
-          maxWidth: '480px',
-          background: '#FFFFFF',
-          borderRadius: '24px',
-          padding: '48px 40px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.08)',
-        }}>
-          {/* Title */}
-          <h1 style={{
-            fontSize: '32px',
-            fontWeight: 800,
-            color: '#111827',
-            marginBottom: '8px',
-            letterSpacing: '-0.5px',
-          }}>
-            Iniciar sesión
-          </h1>
-          <p style={{
-            fontSize: '16px',
-            color: '#6B7280',
-            marginBottom: '32px',
-          }}>
-            {role === 'candidate' ? 'Accede como Candidato' : 'Accede como Empleador'}
+      {/* Glass Form Card */}
+      <div style={glassCardStyle}>
+        <div style={{ textAlign: 'center', marginBottom: '44px' }}>
+          <h2 style={loginTitleStyle}>Bienvenido</h2>
+          <p style={loginSubtitleStyle}>
+            Portal de {role === 'candidate' ? 'Candidatos' : 'Empleadores'}
           </p>
+        </div>
 
-          {/* Form */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Email */}
-            <div>
-              <label style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: '#374151',
-                marginBottom: '8px',
-                display: 'block',
-              }}>
-                Correo electrónico
-              </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          <div>
+            <label style={labelStyle}>Correo electrónico</label>
+            <div style={{ position: 'relative' }}>
+              <div style={iconContainerStyle}><FiMail size={18} /></div>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="tu@email.com"
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  fontSize: '16px',
-                  color: '#111827',
-                  background: '#F9FAFB',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '12px',
-                  outline: 'none',
-                  transition: 'all 0.2s',
-                  boxSizing: 'border-box',
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = accentColor;
-                  e.target.style.background = '#FFFFFF';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#E5E7EB';
-                  e.target.style.background = '#F9FAFB';
-                }}
+                style={inputStyle}
+                onFocus={(e) => handleInputFocus(e, roleColor)}
+                onBlur={handleInputBlur}
               />
             </div>
+          </div>
 
-            {/* Password */}
-            <div>
-              <label style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: '#374151',
-                marginBottom: '8px',
-                display: 'block',
-              }}>
-                Contraseña
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  style={{
-                    width: '100%',
-                    padding: '14px 50px 14px 16px',
-                    fontSize: '16px',
-                    color: '#111827',
-                    background: '#F9FAFB',
-                    border: '1px solid #E5E7EB',
-                    borderRadius: '12px',
-                    outline: 'none',
-                    transition: 'all 0.2s',
-                    boxSizing: 'border-box',
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = accentColor;
-                    e.target.style.background = '#FFFFFF';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#E5E7EB';
-                    e.target.style.background = '#F9FAFB';
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    padding: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                >
-                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF">
-                    {showPassword ? (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    ) : (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    )}
-                  </svg>
-                </button>
-              </div>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>Contraseña</label>
+              {/* Optional: Add forgot password link here if needed */}
             </div>
-
-            {/* Forgot Password */}
-            <button
-              type="button"
-              style={{
-                border: 'none',
-                background: 'transparent',
-                color: accentColor,
-                fontSize: '14px',
-                fontWeight: 600,
-                textAlign: 'right',
-                cursor: 'pointer',
-                padding: '0',
-              }}
-            >
-              ¿Olvidaste tu contraseña?
-            </button>
-
-            {/* Submit Button */}
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '16px',
-                borderRadius: '12px',
-                border: 'none',
-                background: accentGradient,
-                color: '#FFFFFF',
-                fontSize: '16px',
-                fontWeight: 700,
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.7 : 1,
-                boxShadow: `0 4px 14px ${accentColor}40`,
-                transition: 'all 0.3s',
-              }}
-              onMouseEnter={(e) => {
-                if (!loading) {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = `0 6px 20px ${accentColor}50`;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = `0 4px 14px ${accentColor}40`;
-              }}
-            >
-              {loading ? 'Ingresando...' : 'Iniciar sesión'}
-            </button>
-
-            {/* Divider */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '8px 0' }}>
-              <div style={{ flex: 1, height: '1px', background: '#E5E7EB' }} />
-              <span style={{ fontSize: '14px', color: '#9CA3AF', fontWeight: 500 }}>
-                ¿Nuevo en CAIL?
-              </span>
-              <div style={{ flex: 1, height: '1px', background: '#E5E7EB' }} />
+            <div style={{ position: 'relative' }}>
+              <div style={iconContainerStyle}><FiLock size={18} /></div>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                style={{ ...inputStyle, paddingRight: '52px' }}
+                onFocus={(e) => handleInputFocus(e, roleColor)}
+                onBlur={handleInputBlur}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={eyeButtonStyle}
+              >
+                {showPassword ? <FiEyeOff size={22} color="#94A3B8" /> : <FiEye size={22} color="#94A3B8" />}
+              </button>
             </div>
+          </div>
 
-            {/* Register Button */}
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            style={{
+              ...submitButtonStyle,
+              background: roleColor,
+              boxShadow: `0 12px 24px ${roleColor}35`,
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = `0 18px 30px ${roleColor}45`;
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = `0 12px 24px ${roleColor}35`;
+            }}
+          >
+            {loading ? 'Ingresando...' : 'Iniciar Sesión'}
+          </button>
+
+          <div style={footerTextStyle}>
+            ¿Aún no tienes cuenta?{' '}
             <button
               onClick={onSwitchToRegister}
               style={{
-                width: '100%',
-                padding: '16px',
-                borderRadius: '12px',
-                border: `2px solid ${accentColor}`,
                 background: 'transparent',
-                color: accentColor,
-                fontSize: '16px',
-                fontWeight: 600,
+                border: 'none',
+                color: roleColor,
+                fontWeight: 800,
                 cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = `${accentColor}10`;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
+                textDecoration: 'underline',
+                fontSize: '16px',
               }}
             >
-              Crear cuenta nueva
+              Regístrate aquí
             </button>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
+}
+
+// Redesigned Styles
+const screenContainerStyle: React.CSSProperties = {
+  minHeight: '100vh',
+  width: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '40px 20px',
+  position: 'relative',
+  transition: 'background 0.5s ease',
+};
+
+const formHeaderStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '40px',
+  left: '40px',
+  zIndex: 10,
+};
+
+const backButtonStyle: React.CSSProperties = {
+  width: '60px',
+  height: '60px',
+  borderRadius: '20px',
+  background: 'rgba(255, 255, 255, 0.15)',
+  backdropFilter: 'blur(12px)',
+  border: '1px solid rgba(255, 255, 255, 0.3)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+};
+
+const glassCardStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: '520px',
+  background: 'rgba(255, 255, 255, 0.98)',
+  backdropFilter: 'blur(20px)',
+  borderRadius: '40px',
+  padding: '64px 56px',
+  boxShadow: '0 50px 100px rgba(0,0,0,0.18)',
+  zIndex: 5,
+};
+
+const loginTitleStyle: React.CSSProperties = {
+  fontSize: '42px',
+  fontWeight: 900,
+  color: '#0F172A',
+  marginBottom: '12px',
+  letterSpacing: '-0.04em',
+};
+
+const loginSubtitleStyle: React.CSSProperties = {
+  fontSize: '18px',
+  color: '#64748B',
+  fontWeight: 600,
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: '15px',
+  fontWeight: 800,
+  color: '#334155',
+  marginBottom: '10px',
+  display: 'block',
+  marginLeft: '4px'
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '18px 18px 18px 52px',
+  fontSize: '17px',
+  color: '#0F172A',
+  background: '#F1F5F9',
+  border: '2px solid transparent',
+  borderRadius: '18px',
+  outline: 'none',
+  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+  boxSizing: 'border-box',
+  fontWeight: 500,
+};
+
+const iconContainerStyle: React.CSSProperties = {
+  position: 'absolute',
+  left: '18px',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  color: '#94A3B8',
+  display: 'flex',
+  alignItems: 'center',
+  zIndex: 1,
+};
+
+const eyeButtonStyle: React.CSSProperties = {
+  position: 'absolute',
+  right: '16px',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  border: 'none',
+  background: 'transparent',
+  cursor: 'pointer',
+  padding: '4px',
+  display: 'flex',
+  alignItems: 'center',
+  zIndex: 1,
+};
+
+const submitButtonStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '20px',
+  borderRadius: '20px',
+  border: 'none',
+  color: '#FFFFFF',
+  fontSize: '19px',
+  fontWeight: 900,
+  cursor: 'pointer',
+  transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+  marginTop: '16px',
+};
+
+const footerTextStyle: React.CSSProperties = {
+  textAlign: 'center',
+  color: '#64748B',
+  fontSize: '16px',
+  fontWeight: 600,
+  marginTop: '8px'
+};
+
+function handleInputFocus(e: React.FocusEvent<HTMLInputElement>, color: string) {
+  e.target.style.borderColor = `${color}40`;
+  e.target.style.background = '#FFFFFF';
+  e.target.style.boxShadow = `0 0 0 5px ${color}10`;
+}
+
+function handleInputBlur(e: React.FocusEvent<HTMLInputElement>) {
+  e.target.style.borderColor = 'transparent';
+  e.target.style.background = '#F1F5F9';
+  e.target.style.boxShadow = 'none';
 }

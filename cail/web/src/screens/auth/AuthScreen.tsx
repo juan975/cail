@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FiUser, FiBriefcase, FiArrowRight } from 'react-icons/fi';
 import { UserRole } from '../../types';
 import { LoginForm } from './LoginForm';
 import { RegisterCandidateForm } from './RegisterCandidateForm';
@@ -26,194 +27,89 @@ export function AuthScreen({ onAuthSuccess, onShowTerms, onLoginStart }: AuthScr
     onAuthSuccess(selectedRole, data);
   };
 
-  // Role selection screen
   if (mode === 'select') {
     return (
-      <div style={{
-        minHeight: '100vh',
-        width: '100%',
-        background: 'linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '40px 20px',
-      }}>
-        <div style={{
-          width: '100%',
-          maxWidth: '900px',
-          background: '#FFFFFF',
-          borderRadius: '24px',
-          padding: '60px 40px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.08)',
-        }}>
-          {/* Logo and Title */}
-          <div style={{
-            textAlign: 'center',
-            marginBottom: '48px',
-          }}>
-            <div style={{
-              width: '100px',
-              height: '100px',
-              margin: '0 auto 24px',
-              borderRadius: '20px',
-              background: '#FFFFFF',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <img src={logo} alt="CAIL" style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
-            </div>
-            <h1 style={{
-              fontSize: '36px',
-              fontWeight: 800,
-              color: '#111827',
-              marginBottom: '8px',
-              letterSpacing: '-0.5px',
-            }}>
-              Bolsa de Empleo
-            </h1>
-            <p style={{
-              fontSize: '18px',
-              color: '#6B7280',
-              fontWeight: 500,
-            }}>
-              Cámara de Industrias de Loja
-            </p>
+      <div style={containerStyle} className="auth-screen-container">
+        {/* Logo and Title Overlay */}
+        <div style={headerOverlayStyle}>
+          <div style={logoCardStyle}>
+            <img 
+              src={logo} 
+              alt="Logo CAIL" 
+              style={{ width: '100%', height: 'auto' }} 
+            />
           </div>
+          <h1 style={titleStyle}>Bolsa de Empleo</h1>
+          <p style={subtitleStyle}>Cámara de Industrias de Loja</p>
+        </div>
 
-          {/* Role Selection Cards */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '24px',
-            marginBottom: '32px',
-          }}>
-            {/* Candidate Card */}
-            <div
-              onClick={() => handleRoleSelect('candidate')}
-              style={{
-                background: '#FFFFFF',
-                border: '2px solid #E5E7EB',
-                borderRadius: '16px',
-                padding: '32px 24px',
-                cursor: 'pointer',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                textAlign: 'center',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#10B981';
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(16, 185, 129, 0.15)';
-                e.currentTarget.style.transform = 'translateY(-4px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#E5E7EB';
-                e.currentTarget.style.boxShadow = 'none';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              <div style={{
-                width: '80px',
-                height: '80px',
-                margin: '0 auto 20px',
-                borderRadius: '16px',
-                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)',
-              }}>
-                <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#FFFFFF">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
+        {/* Split Section */}
+        <div style={splitSectionStyle} className="split-section">
+          {/* Candidate Side */}
+          <div style={{ ...halfStyle, background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)' }}>
+            <div style={contentWrapperStyle}>
+              <div style={glassIconCardStyle}>
+                <FiUser size={40} color="#FFFFFF" />
               </div>
-              <h3 style={{
-                fontSize: '24px',
-                fontWeight: 700,
-                color: '#111827',
-                marginBottom: '8px',
-              }}>
-                Soy Candidato
-              </h3>
-              <p style={{
-                fontSize: '15px',
-                color: '#6B7280',
-                lineHeight: '1.6',
-              }}>
+              <h2 style={cardTitleStyle}>Soy Candidato</h2>
+              <p style={cardDescStyle}>
                 Busco oportunidades laborales y quiero conectar con empresas
               </p>
-            </div>
-
-            {/* Employer Card */}
-            <div
-              onClick={() => handleRoleSelect('employer')}
-              style={{
-                background: '#FFFFFF',
-                border: '2px solid #E5E7EB',
-                borderRadius: '16px',
-                padding: '32px 24px',
-                cursor: 'pointer',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                textAlign: 'center',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#F59E0B';
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(245, 158, 11, 0.15)';
-                e.currentTarget.style.transform = 'translateY(-4px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#E5E7EB';
-                e.currentTarget.style.boxShadow = 'none';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              <div style={{
-                width: '80px',
-                height: '80px',
-                margin: '0 auto 20px',
-                borderRadius: '16px',
-                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 8px 24px rgba(245, 158, 11, 0.3)',
-              }}>
-                <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#FFFFFF">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h3 style={{
-                fontSize: '24px',
-                fontWeight: 700,
-                color: '#111827',
-                marginBottom: '8px',
-              }}>
-                Soy Empleador
-              </h3>
-              <p style={{
-                fontSize: '15px',
-                color: '#6B7280',
-                lineHeight: '1.6',
-              }}>
-                Represento una empresa y busco talento para mi organización
-              </p>
+              <button 
+                onClick={() => handleRoleSelect('candidate')}
+                style={selectButtonStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                Seleccionar
+              </button>
             </div>
           </div>
 
-          {/* Footer text */}
-          <p style={{
-            textAlign: 'center',
-            fontSize: '14px',
-            color: '#9CA3AF',
-          }}>
-            Selecciona tu perfil para continuar
-          </p>
+          {/* Employer Side */}
+          <div style={{ ...halfStyle, background: 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)' }}>
+            <div style={contentWrapperStyle}>
+              <div style={glassIconCardStyle}>
+                <FiBriefcase size={40} color="#FFFFFF" />
+              </div>
+              <h2 style={cardTitleStyle}>Soy Empleador</h2>
+              <p style={cardDescStyle}>
+                Represento una empresa y busco talento para mi organización
+              </p>
+              <button 
+                onClick={() => handleRoleSelect('employer')}
+                style={selectButtonStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                Seleccionar
+              </button>
+            </div>
+          </div>
         </div>
+
+        <style>{`
+          @media (max-width: 768px) {
+            .split-section { flex-direction: column; overflow-y: auto; }
+            .auth-screen-container { height: auto; min-height: 100vh; }
+          }
+        `}</style>
       </div>
     );
   }
 
-  // Login or Register
   if (mode === 'login') {
     return (
       <LoginForm
@@ -226,7 +122,6 @@ export function AuthScreen({ onAuthSuccess, onShowTerms, onLoginStart }: AuthScr
     );
   }
 
-  // Register
   if (selectedRole === 'candidate') {
     return (
       <RegisterCandidateForm
@@ -245,3 +140,126 @@ export function AuthScreen({ onAuthSuccess, onShowTerms, onLoginStart }: AuthScr
     />
   );
 }
+
+// Styles
+const containerStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100vh',
+  width: '100%',
+  overflow: 'hidden',
+  position: 'relative',
+};
+
+const headerOverlayStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '60px',
+  left: '50%',
+  transform: 'translateX(-50%)',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  textAlign: 'center',
+  zIndex: 10,
+};
+
+const logoCardStyle: React.CSSProperties = {
+  width: '100px',
+  height: '100px',
+  background: 'rgba(255, 255, 255, 0.95)',
+  borderRadius: '24px',
+  padding: '20px',
+  boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+  backdropFilter: 'blur(10px)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: '20px',
+};
+
+const titleStyle: React.CSSProperties = {
+  fontSize: '42px',
+  fontWeight: 900,
+  color: '#FFFFFF',
+  marginBottom: '8px',
+  letterSpacing: '-0.03em',
+  textShadow: '0 2px 10px rgba(0,0,0,0.2)',
+};
+
+const subtitleStyle: React.CSSProperties = {
+  fontSize: '19px',
+  color: 'rgba(255, 255, 255, 0.95)',
+  fontWeight: 600,
+  letterSpacing: '0.01em',
+  textShadow: '0 1px 5px rgba(0,0,0,0.15)',
+};
+
+const splitSectionStyle: React.CSSProperties = {
+  flex: '1',
+  display: 'flex',
+  width: '100%',
+  height: '100%',
+};
+
+const halfStyle: React.CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '60px',
+  textAlign: 'center',
+  position: 'relative',
+  transition: 'all 0.4s ease',
+};
+
+const contentWrapperStyle: React.CSSProperties = {
+  maxWidth: '380px',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+};
+
+const glassIconCardStyle: React.CSSProperties = {
+  width: '88px',
+  height: '88px',
+  borderRadius: '24px',
+  background: 'rgba(255, 255, 255, 0.18)',
+  backdropFilter: 'blur(12px)',
+  border: '1px solid rgba(255, 255, 255, 0.25)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: '28px',
+  boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+};
+
+const cardTitleStyle: React.CSSProperties = {
+  fontSize: '36px',
+  fontWeight: 800,
+  color: '#FFFFFF',
+  marginBottom: '16px',
+  letterSpacing: '-0.02em',
+};
+
+const cardDescStyle: React.CSSProperties = {
+  fontSize: '17px',
+  color: 'rgba(255, 255, 255, 0.95)',
+  marginBottom: '40px',
+  lineHeight: 1.65,
+  fontWeight: 500,
+};
+
+const selectButtonStyle: React.CSSProperties = {
+  padding: '16px 56px',
+  borderRadius: '999px',
+  background: '#FFFFFF',
+  color: '#0F172A',
+  fontSize: '17px',
+  fontWeight: 700,
+  border: 'none',
+  cursor: 'pointer',
+  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+};
