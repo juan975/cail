@@ -77,6 +77,54 @@ export class FirestoreAplicacionRepository implements IMatchingRepository {
     }
 
     /**
+     * Obtiene un candidato/postulante por ID
+     */
+    async getPostulante(id: string): Promise<Postulante | null> {
+        const doc = await this.db.collection('candidatos').doc(id).get();
+        if (!doc.exists) {
+            return null;
+        }
+        return this.mapToPostulante(doc);
+    }
+
+    /**
+     * Busca ofertas activas del mismo sector industrial
+     * Usado para matching inverso (ofertas para candidato)
+     */
+    async buscarOfertasSimilares(
+        sectorId: string,
+        limite: number
+    ): Promise<Oferta[]> {
+        const snapshot = await this.db.collection('ofertas')
+            .where('estado', '==', 'ACTIVA')
+            .where('id_sector_industrial', '==', sectorId)
+            .limit(limite)
+            .get();
+
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                titulo: data.titulo,
+                descripcion: data.descripcion,
+                id_sector_industrial: data.id_sector_industrial || data.sectorIndustrial || '',
+                id_nivel_requerido: data.id_nivel_requerido || data.experiencia_requerida || '',
+                modalidad: data.modalidad,
+                competencias_requeridas: data.competencias_requeridas || [],
+                habilidades_obligatorias: this.mapHabilidades(data.habilidades_obligatorias, true),
+                habilidades_deseables: this.mapHabilidades(data.habilidades_deseables, false),
+                // Campos adicionales para el frontend
+                empresa: data.empresa,
+                ubicacion: data.ubicacion,
+                salario_min: data.salario_min,
+                salario_max: data.salario_max,
+                fecha_publicacion: data.fecha_publicacion,
+                id_reclutador: data.id_reclutador
+            } as Oferta & Record<string, any>;
+        });
+    }
+
+    /**
      * Mapea documento Firestore a entidad Postulante
      */
     private mapToPostulante(doc: FirebaseFirestore.DocumentSnapshot): Postulante {
@@ -107,5 +155,59 @@ export class FirestoreAplicacionRepository implements IMatchingRepository {
             es_obligatorio: esObligatorio,
             peso: typeof h === 'object' && h.peso ? h.peso : (esObligatorio ? 0.8 : 0.4)
         }));
+    }
+
+    /**
+     * Busca ofertas similares usando búsqueda vectorial (KNN)
+     * Usado para matching inverso con similitud semántica
+     */
+    async buscarOfertasPorVector(
+        vector: number[],
+        sectorId: string,  // Kept for API compatibility but not used
+        limite: number
+    ): Promise<Oferta[]> {
+        try {
+            const snapshot = await this.db.collection('ofertas')
+                // Solo filtrar por estado activa - mostrar TODAS las ofertas rankeadas por similitud
+                .where('estado', '==', 'ACTIVA')
+                // Búsqueda vectorial KNN - ordena por similitud semántica
+                .findNearest({
+                    vectorField: 'embedding_oferta',
+                    queryVector: vector,
+                    distanceMeasure: 'COSINE',
+                    limit: limite
+                })
+                .get();
+
+            return snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    titulo: data.titulo,
+                    descripcion: data.descripcion,
+                    id_sector_industrial: data.id_sector_industrial || '',
+                    id_nivel_requerido: data.id_nivel_requerido || '',
+                    modalidad: data.modalidad,
+                    competencias_requeridas: data.competencias_requeridas || [],
+                    habilidades_obligatorias: this.mapHabilidades(data.habilidades_obligatorias, true),
+                    habilidades_deseables: this.mapHabilidades(data.habilidades_deseables, false),
+                    embedding_oferta: data.embedding_oferta,
+                    // Campos adicionales para el frontend
+                    empresa: data.empresa,
+                    ubicacion: data.ubicacion,
+                    ciudad: data.ciudad,
+                    salario_min: data.salario_min,
+                    salario_max: data.salario_max,
+                    fechaPublicacion: data.fechaPublicacion,
+                    tipoContrato: data.tipoContrato,
+                    experiencia_requerida: data.experiencia_requerida,
+                    formacion_requerida: data.formacion_requerida,
+                } as Oferta & Record<string, any>;
+            });
+        } catch (error) {
+            // Si falla la búsqueda vectorial (ej: índice faltante), usar fallback
+            console.warn('Vector search failed, falling back to regular search:', error);
+            return this.buscarOfertasSimilares(sectorId, limite);
+        }
     }
 }

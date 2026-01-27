@@ -95,6 +95,20 @@ class OffersService {
     async closeOffer(id: string): Promise<Offer> {
         return this.updateOffer(id, { estado: 'CERRADA' });
     }
+
+    /**
+     * Obtiene ofertas rankeadas para el candidato autenticado
+     * Usa el microservicio de matching para ordenar por match_score
+     * Nota: El path es /discover porque matchingClient ya tiene baseURL=/api/matching
+     */
+    async getMatchedOffers(limit?: number): Promise<Offer[]> {
+        const params = limit ? `?limit=${limit}` : '';
+        // Usamos el matchingClient directamente para evitar duplicación de /matching
+        const response = await apiService.get<OfferApiResponse<Offer[]>>(
+            `/matching/discover${params}`
+        );
+        return response.data;
+    }
 }
 
 export const offersService = new OffersService();

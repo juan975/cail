@@ -19,7 +19,20 @@ interface JobDiscoveryScreenProps {
 }
 
 const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
-  const fechaPub = offer.fechaPublicacion instanceof Date ? offer.fechaPublicacion : new Date(offer.fechaPublicacion);
+  // Handle Firestore Timestamp format: { _seconds, _nanoseconds }
+  let fechaPub: Date;
+  const rawDate = offer.fechaPublicacion as any;
+  if (rawDate && typeof rawDate === 'object' && rawDate._seconds) {
+    // Firestore Timestamp
+    fechaPub = new Date(rawDate._seconds * 1000);
+  } else if (rawDate instanceof Date) {
+    fechaPub = rawDate;
+  } else if (typeof rawDate === 'string' || typeof rawDate === 'number') {
+    fechaPub = new Date(rawDate);
+  } else {
+    fechaPub = new Date(); // Fallback to current date
+  }
+
   const modalityMap: Record<string, JobOffer['modality']> = {
     Presencial: 'Presencial',
     Remoto: 'Remoto',
@@ -31,9 +44,10 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
     'Tiempo completo': 'Tiempo completo',
     'Medio tiempo': 'Medio tiempo',
     Contrato: 'Contrato',
+    'Por Horas': 'Contrato',
   };
   return {
-    id: offer.idOferta,
+    id: offer.idOferta || (offer as any).id, // Handle both id formats
     title: offer.titulo,
     company: offer.empresa,
     description: offer.descripcion,
@@ -43,8 +57,8 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
       offer.salarioMin && offer.salarioMax
         ? `$${offer.salarioMin} - $${offer.salarioMax}`
         : offer.salarioMin
-        ? `$${offer.salarioMin}+`
-        : 'A convenir',
+          ? `$${offer.salarioMin}+`
+          : 'A convenir',
     employmentType: employmentTypeMap[offer.tipoContrato] || 'Tiempo completo',
     industry: offer.empresa || 'General',
     hierarchyLevel: 'Semi-Senior',
@@ -55,6 +69,7 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
     economicSector: offer.empresa || 'General',
     experienceLevel: offer.experiencia_requerida || 'No especificada',
     postedDate: fechaPub.toLocaleDateString('es-EC'),
+    matchScore: (offer as any).match_score,
   };
 };
 
@@ -70,7 +85,28 @@ export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps
   const loadOffers = useCallback(async () => {
     try {
       setIsLoading(true);
+      console.log('🔍 [DEBUG] loadOffers called');
+      // Try to get matched (ranked) offers first
+      try {
+        console.log('🔍 [DEBUG] Calling getMatchedOffers...');
+        const matchedOffers = await offersService.getMatchedOffers(50);
+        console.log('🔍 [DEBUG] getMatchedOffers response:', matchedOffers);
+        if (matchedOffers && matchedOffers.length > 0) {
+          console.log('🔍 [DEBUG] First offer RAW:', JSON.stringify(matchedOffers[0], null, 2));
+          console.log('🔍 [DEBUG] match_score values:', matchedOffers.map(o => (o as any).match_score));
+          console.log('🔍 [DEBUG] Using matched offers, count:', matchedOffers.length);
+          setOffers(matchedOffers.map(mapApiOfferToJobOffer));
+          return;
+        }
+        console.log('🔍 [DEBUG] matchedOffers empty, falling back');
+      } catch (matchError) {
+        console.log('🔍 [DEBUG] Matching service error:', matchError);
+        console.log('Matching service unavailable, falling back to regular offers');
+      }
+      // Fallback to regular offers
+      console.log('🔍 [DEBUG] Calling regular getOffers...');
       const apiOffers = await offersService.getOffers({ estado: 'ACTIVA' });
+      console.log('🔍 [DEBUG] Regular offers count:', apiOffers.length);
       setOffers(apiOffers.map(mapApiOfferToJobOffer));
     } catch (err) {
       console.error('Error loading offers:', err);
@@ -239,109 +275,109 @@ export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
           {filteredOffers.map((offer) => {
-          const applied = appliedOffers.has(offer.id);
-          const application = appliedOffers.get(offer.id);
-          const statusInfo = application ? ApplicationStatusColors[application.estado] : null;
-          return (
-            <div key={offer.id} style={{ background: '#fff', borderRadius: 14, padding: 14, border: '1px solid #E5E7EB' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-                <div style={{ fontSize: 16, fontWeight: 700 }}>{offer.title}</div>
-                {applied && statusInfo && (
-                  <span
+            const applied = appliedOffers.has(offer.id);
+            const application = appliedOffers.get(offer.id);
+            const statusInfo = application ? ApplicationStatusColors[application.estado] : null;
+            return (
+              <div key={offer.id} style={{ background: '#fff', borderRadius: 14, padding: 14, border: '1px solid #E5E7EB' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700 }}>{offer.title}</div>
+                  {applied && statusInfo && (
+                    <span
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: 999,
+                        background: statusInfo.bg,
+                        color: statusInfo.text,
+                        fontSize: 11,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {statusInfo.label}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 8 }}>{offer.description}</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 12, color: colors.textSecondary, marginBottom: 8 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    {offer.location}
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    {offer.modality}
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {offer.salaryRange}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  <Chip label={offer.employmentType} />
+                  {offer.requiredCompetencies.slice(0, 3).map((comp) => (
+                    <Chip key={comp} label={comp} />
+                  ))}
+                </div>
+                <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 12 }}>
+                  <div><strong style={{ color: '#4B5563' }}>Formación:</strong> {offer.requiredEducation}</div>
+                  <div><strong style={{ color: '#4B5563' }}>Experiencia:</strong> {offer.requiredExperience}</div>
+                </div>
+                {applied ? (
+                  <div
                     style={{
-                      padding: '4px 8px',
-                      borderRadius: 999,
-                      background: statusInfo.bg,
-                      color: statusInfo.text,
-                      fontSize: 11,
-                      fontWeight: 600,
+                      background: '#ECFDF5',
+                      padding: '12px',
+                      borderRadius: 12,
+                      color: '#059669',
+                      fontWeight: 700,
+                      textAlign: 'center',
+                      fontSize: 14,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      height: '45px',
+                      boxSizing: 'border-box'
                     }}
                   >
-                    {statusInfo.label}
-                  </span>
+                    <FiCheck size={18} /> Ya postulaste a esta oferta
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOffer(offer)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: 12,
+                      border: 'none',
+                      background: '#0B7A4D',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: 14,
+                      height: '45px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    Postular a oferta
+                  </button>
                 )}
-              </div>
-              <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 8 }}>{offer.description}</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 12, color: colors.textSecondary, marginBottom: 8 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  {offer.location}
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  {offer.modality}
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {offer.salaryRange}
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-                <Chip label={offer.employmentType} />
-                {offer.requiredCompetencies.slice(0, 3).map((comp) => (
-                  <Chip key={comp} label={comp} />
-                ))}
-              </div>
-              <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 12 }}>
-                <div><strong style={{ color: '#4B5563' }}>Formación:</strong> {offer.requiredEducation}</div>
-                <div><strong style={{ color: '#4B5563' }}>Experiencia:</strong> {offer.requiredExperience}</div>
-              </div>
-              {applied ? (
-                <div
-                  style={{
-                    background: '#ECFDF5',
-                    padding: '12px',
-                    borderRadius: 12,
-                    color: '#059669',
-                    fontWeight: 700,
-                    textAlign: 'center',
-                    fontSize: 14,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    height: '45px',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  <FiCheck size={18} /> Ya postulaste a esta oferta
+                <div style={{ fontSize: 11, color: colors.muted, textAlign: 'center', marginTop: 8 }}>
+                  Publicado: {offer.postedDate}
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setSelectedOffer(offer)}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: 12,
-                    border: 'none',
-                    background: '#0B7A4D',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    fontWeight: 700,
-                    fontSize: 14,
-                    height: '45px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  Postular a oferta
-                </button>
-              )}
-              <div style={{ fontSize: 11, color: colors.muted, textAlign: 'center', marginTop: 8 }}>
-                Publicado: {offer.postedDate}
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
       )}
 
@@ -373,15 +409,15 @@ export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header Icon */}
-            <div style={{ 
-              width: 64, 
-              height: 64, 
-              borderRadius: 20, 
-              background: '#ECFDF5', 
-              color: '#0B7A4D', 
-              display: 'grid', 
-              placeItems: 'center', 
-              margin: '0 auto 20px' 
+            <div style={{
+              width: 64,
+              height: 64,
+              borderRadius: 20,
+              background: '#ECFDF5',
+              color: '#0B7A4D',
+              display: 'grid',
+              placeItems: 'center',
+              margin: '0 auto 20px'
             }}>
               <FiSend size={30} />
             </div>
@@ -397,7 +433,7 @@ export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps
               <div style={{ fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <FiInfo size={16} color="#3B82F6" /> Requisitos de la oferta
               </div>
-              
+
               <div style={{ display: 'grid', gap: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   <div style={{ marginTop: 2 }}><FiAward size={14} color="#0B7A4D" /></div>

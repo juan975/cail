@@ -10,6 +10,7 @@ import {
     Postulante,
     Oferta,
     MatchResult,
+    OfferMatchResult,
     Postulacion,
     PostulacionConCandidato,
     OfertaNoEncontradaError,
@@ -193,6 +194,114 @@ export class MatchingService {
         }
 
         await this.postulacionRepository.updateEstado(idAplicacion, nuevoEstado);
+    }
+
+    /**
+     * Caso de Uso: Obtener ofertas rankeadas para un candidato
+     * Matching inverso con búsqueda vectorial - usado en la página de descubrimiento
+     */
+    async getOffersForCandidate(candidatoId: string, limite: number = 20): Promise<OfferMatchResult[]> {
+        // 1. Obtener perfil del candidato
+        const candidato = await this.matchingRepository.getPostulante(candidatoId);
+        if (!candidato) {
+            throw new Error('Candidato no encontrado');
+        }
+
+        // 2. Generar vector del candidato (o usar el almacenado)
+        let vector = candidato.embedding_habilidades;
+        if (!vector || vector.length === 0) {
+            // Generar embedding del candidato basado en sus habilidades
+            const textoParaVector = this.construirTextoCandidato(candidato);
+            vector = await this.embeddingProvider.generateEmbedding(textoParaVector);
+        }
+
+        // 3. Buscar ofertas similares usando búsqueda vectorial + filtro de sector
+        let ofertas: Oferta[];
+        try {
+            ofertas = await this.matchingRepository.buscarOfertasPorVector(
+                vector,
+                candidato.id_sector_industrial,
+                50 // Traer más para rankear
+            );
+        } catch (error) {
+            // Fallback si falla la búsqueda vectorial
+            console.warn('Vector search failed, using fallback:', error);
+            ofertas = await this.matchingRepository.buscarOfertasSimilares(
+                candidato.id_sector_industrial,
+                50
+            );
+        }
+
+        // 4. Calcular score completo para cada oferta
+        const resultados = ofertas.map((oferta, index) =>
+            this.calcularScoreOfertaParaCandidato(candidato, oferta, index, ofertas.length)
+        );
+
+        // 5. Ordenar por score descendente y limitar
+        return resultados
+            .sort((a, b) => b.match_score - a.match_score)
+            .slice(0, limite);
+    }
+
+    /**
+     * Construye texto del candidato para vectorización
+     */
+    private construirTextoCandidato(candidato: Postulante): string {
+        const habilidades = candidato.habilidades_tecnicas?.join(', ') || '';
+        return `Profesional con habilidades en: ${habilidades}. ` +
+            `Nivel: ${candidato.id_nivel_actual}. ` +
+            `Sector: ${candidato.id_sector_industrial}.`;
+    }
+
+    /**
+     * Calcula el score de match de una oferta para un candidato
+     * Incluye similitud vectorial basada en posición en resultados KNN
+     */
+    private calcularScoreOfertaParaCandidato(
+        candidato: Postulante,
+        oferta: Oferta,
+        posicionKNN: number = 0,
+        totalResultados: number = 1
+    ): OfferMatchResult {
+        // Score de similitud vectorial (basado en posición en resultados KNN)
+        // Los primeros resultados tienen score más alto
+        const scoreSimilitud = totalResultados > 1
+            ? 1 - (posicionKNN / totalResultados) * 0.4  // De 1.0 a 0.6
+            : 0.8;
+
+        // Score de habilidades obligatorias
+        const scoreObligatorias = this.calcularScoreHabilidades(
+            candidato.habilidades_tecnicas,
+            oferta.habilidades_obligatorias || []
+        );
+
+        // Score de habilidades deseables
+        const scoreDeseables = this.calcularScoreHabilidades(
+            candidato.habilidades_tecnicas,
+            oferta.habilidades_deseables || []
+        );
+
+        // Score combinado de habilidades (obligatorias pesan más)
+        const scoreHabilidades = (scoreObligatorias * 0.7) + (scoreDeseables * 0.3);
+
+        // Score de nivel jerárquico
+        const scoreNivel = candidato.id_nivel_actual === oferta.id_nivel_requerido ? 1.0 : 0.5;
+
+        // Score ponderado final con vectorización
+        const matchScore =
+            (scoreSimilitud * SCORING_WEIGHTS.SIMILITUD_VECTORIAL) +
+            (scoreHabilidades * (SCORING_WEIGHTS.HABILIDADES_OBLIGATORIAS + SCORING_WEIGHTS.HABILIDADES_DESEABLES)) +
+            (scoreNivel * SCORING_WEIGHTS.NIVEL_JERARQUICO);
+
+        return {
+            oferta,
+            match_score: Math.round(matchScore * 100) / 100,
+            score_detalle: {
+                similitud_vectorial: scoreSimilitud,
+                habilidades_match: scoreHabilidades,
+                nivel_jerarquico: scoreNivel
+            }
+        };
     }
 
     // ============================================

@@ -43,6 +43,7 @@ export interface JobOffer {
   economicSector: string;
   experienceLevel: string;
   postedDate: string;
+  matchScore?: number; // Score de matching del algoritmo de recomendación
 }
 
 export type ApplicationStatus = 'Postulado' | 'En revisión' | 'Entrevista' | 'Oferta' | 'Finalizado';

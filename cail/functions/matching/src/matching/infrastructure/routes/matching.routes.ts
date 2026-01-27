@@ -9,7 +9,9 @@ import {
     getMyApplications,
     getOfferApplications,
     getOfferApplicationsDetailed,
-    updateApplicationStatus
+    updateApplicationStatus,
+    getOffersForCandidate,
+    regenerateEmbeddings
 } from '../controllers/Matching.controller';
 
 const router = Router();
@@ -58,6 +60,18 @@ router.get(
     authenticate,
     authorize('CANDIDATO', 'POSTULANTE'),
     getMyApplications
+);
+
+/**
+ * @route   GET /matching/discover
+ * @desc    Obtener ofertas rankeadas para el candidato autenticado
+ * @access  Private - Solo CANDIDATO/POSTULANTE
+ */
+router.get(
+    '/discover',
+    authenticate,
+    authorize('CANDIDATO', 'POSTULANTE'),
+    getOffersForCandidate
 );
 
 // ============================================
@@ -110,6 +124,22 @@ router.patch(
     authenticate,
     authorize('RECLUTADOR', 'ADMIN'),
     updateApplicationStatus
+);
+
+// ============================================
+// RUTAS DE ADMINISTRACIÓN
+// ============================================
+
+/**
+ * @route   POST /matching/admin/regenerate-embeddings
+ * @desc    Regenerar embeddings de ofertas existentes
+ * @access  Private - Solo ADMIN
+ */
+router.post(
+    '/admin/regenerate-embeddings',
+    authenticate,
+    authorize('ADMIN'),
+    regenerateEmbeddings
 );
 
 export default router;

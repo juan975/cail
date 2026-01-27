@@ -78,6 +78,7 @@ class ApiService {
             return { client: this.ofertasClient, cleanUrl: url };
         }
         if (url.startsWith('/matching')) {
+            // Keep the full URL - proxy needs /matching prefix to route correctly
             return { client: this.matchingClient, cleanUrl: url };
         }
         // Default to usuarios for unknown paths

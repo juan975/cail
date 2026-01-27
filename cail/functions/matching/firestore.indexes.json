@@ -27,6 +27,23 @@
                     "order": "DESCENDING"
                 }
             ]
+        },
+        {
+            "collectionGroup": "candidatos",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "id_sector_industrial",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "embedding_habilidades",
+                    "vectorConfig": {
+                        "dimension": 768,
+                        "flat": {}
+                    }
+                }
+            ]
         }
     ],
     "fieldOverrides": []

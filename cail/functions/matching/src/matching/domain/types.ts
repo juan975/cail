@@ -50,6 +50,8 @@ export interface Oferta {
     competencias_requeridas?: string[];
     habilidades_obligatorias?: OfertaSkill[];
     habilidades_deseables?: OfertaSkill[];
+    // Vector embedding para búsqueda semántica (generado de título + descripción + habilidades)
+    embedding_oferta?: number[];
 }
 
 /**
@@ -87,6 +89,20 @@ export interface MatchResult {
     };
 }
 
+/**
+ * Resultado del matching inverso: ofertas para un candidato
+ * Usado en la página de descubrimiento para candidatos
+ */
+export interface OfferMatchResult {
+    oferta: Oferta;
+    match_score: number;
+    score_detalle: {
+        similitud_vectorial: number;
+        habilidades_match: number;
+        nivel_jerarquico: number;
+    };
+}
+
 // ============================================
 // INTERFACES DE REPOSITORIO (Contratos)
 // ============================================
@@ -103,6 +119,17 @@ export interface IMatchingRepository {
         limite: number
     ): Promise<Postulante[]>;
     updateVectorCandidato(id: string, vector: number[]): Promise<void>;
+    // Métodos para matching inverso (ofertas para candidato)
+    getPostulante(id: string): Promise<Postulante | null>;
+    buscarOfertasSimilares(
+        sectorId: string,
+        limite: number
+    ): Promise<Oferta[]>;
+    buscarOfertasPorVector(
+        vector: number[],
+        sectorId: string,
+        limite: number
+    ): Promise<Oferta[]>;
 }
 
 /**

@@ -3,7 +3,7 @@ export const API_CONFIG = {
     SERVICES: {
         USUARIOS: '/api/usuarios',
         OFERTAS: '/api/ofertas',
-        MATCHING: '/api/matching',
+        MATCHING: '/api', // Routes already include /matching prefix
     },
     TIMEOUT: 15000,
     ENDPOINTS: {
