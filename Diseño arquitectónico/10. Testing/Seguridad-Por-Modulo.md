@@ -24,9 +24,9 @@
 
 ---
 
-## 2. ¿Qué es la Seguridad? (Explicación Simple)
+## 2. ¿Qué es la Seguridad? 
 
-### Analogía: El Guardia de Seguridad
+
 
 Imagina que tu API es un **edificio de oficinas** y cada petición es un **visitante**:
 
@@ -65,18 +65,6 @@ Imagina que tu API es un **edificio de oficinas** y cada petición es un **visit
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Ejemplos Reales de Cada Verificación
-
-| Verificación | Ejemplo de la Vida Real | Ejemplo en el Código |
-|--------------|------------------------|----------------------|
-| **JWT Token** | Mostrar credencial de empleado | `Authorization: Bearer eyJhbG...` |
-| **Rate Limiting** | "Solo puedes pasar 100 veces al día" | 100 peticiones / 15 min |
-| **Validación** | Revisar que no traiga armas | Rechazar `<script>alert()</script>` |
-| **Roles** | "Solo gerentes pueden entrar aquí" | Solo RECLUTADOR puede crear ofertas |
-| **Helmet** | Cámaras de seguridad y alarmas | Headers HTTP de seguridad |
-| **bcrypt** | Guardar contraseñas en caja fuerte | Hash irreversible con 10 rounds |
-
----
 
 ## 3. Tests por Microservicio
 
@@ -95,7 +83,7 @@ Imagina que tu API es un **edificio de oficinas** y cada petición es un **visit
 - ✅ Límite de 10 postulaciones/día se respeta
 - ✅ Ordenamiento por score descendente funciona
 
-### 3.2 Usuarios (29 tests) - 23 pasan
+### 3.2 Usuarios (29 tests) 
 
 | Categoría | Tests | Descripción |
 |-----------|-------|-------------|
@@ -106,13 +94,8 @@ Imagina que tu API es un **edificio de oficinas** y cada petición es un **visit
 | **Injection** | 4 | SQL, NoSQL, XSS, Template |
 | **Integración** | 9 | Register, Login, Profile |
 
-**Tests importantes:**
-- ✅ Sin token → 401 Unauthorized
-- ✅ Token malformado → 401 
-- ✅ Headers de seguridad presentes
-- ⚠️ 6 tests fallan (requieren Firebase real)
 
-### 3.3 Ofertas (22 tests) - 21 pasan
+### 3.3 Ofertas (22 tests)
 
 | Categoría | Tests | Descripción |
 |-----------|-------|-------------|
@@ -124,18 +107,12 @@ Imagina que tu API es un **edificio de oficinas** y cada petición es un **visit
 | **Integración** | 5 | CRUD, filtros |
 | **Rutas públicas** | 4 | GET /offers sin auth |
 
-**Tests importantes:**
-- ✅ Rutas públicas funcionan sin auth
-- ✅ Rutas protegidas requieren token
-- ✅ Inyección NoSQL manejada
-
----
 
 ## 4. Capas de Seguridad Implementadas
 
 ### 4.1 Helmet (Headers HTTP)
 
-**Analogía:** Son como las **cámaras de seguridad y alarmas** del edificio - no detienen al atacante directamente, pero lo disuaden y registran todo.
+Son como las **cámaras de seguridad y alarmas** del edificio - no detienen al atacante directamente, pero lo disuaden y registran todo.
 
 ```
 X-Content-Type-Options: nosniff     → "No puedes disfrazarte de otro tipo de archivo"
@@ -146,8 +123,6 @@ Strict-Transport-Security           → "Siempre debes usar HTTPS (conexión seg
 
 ### 4.2 Rate Limiting
 
-**Analogía:** Es como decirle al visitante: "Solo puedes entrar X veces al día, si vienes más te bloqueo"
-
 ```
 General:    100 peticiones / 15 min   → "100 entradas cada 15 minutos"
 Login:      10 intentos / 15 min      → "10 intentos de contraseña, luego espera"
@@ -156,7 +131,7 @@ Registro:   5 intentos / 1 hora       → "No puedes crear 100 cuentas en 1 hora
 
 ### 4.3 JWT Authentication
 
-**Analogía:** Es tu **credencial de empleado** con tu foto, nombre y cargo que caduca cada cierto tiempo.
+Es tu **credencial de empleado** con tu foto, nombre y cargo que caduca cada cierto tiempo.
 
 ```
 Algoritmo:   HS256                    → Firma digital que no se puede falsificar
@@ -166,7 +141,7 @@ Validación:  Firebase Admin SDK       → Sistema central verifica autenticidad
 
 ### 4.4 Bcrypt (Contraseñas)
 
-**Analogía:** Es como una **caja fuerte unidireccional** - puedes meter algo, pero nadie puede sacarlo ni el guardia.
+Es como una **caja fuerte unidireccional** - puedes meter algo, pero nadie puede sacarlo ni el guardia.
 
 ```
 Rounds:      10 (2^10 iteraciones)    → "1,024 vueltas de mezcla"
@@ -175,7 +150,7 @@ Resultado:   Hash irreversible        → Imposible recuperar contraseña origin
 
 ### 4.5 Validación de Archivos
 
-**Analogía:** Es como el **detector de metales** en la entrada - revisamos que no traigas nada peligroso.
+Es como el **detector de metales** en la entrada - revisamos que no traigas nada peligroso.
 
 ```
 Tipo:        Solo PDF                 → "Solo puedes traer documentos PDF"
@@ -185,7 +160,7 @@ Validación:  MIME type real           → "Verificamos que realmente sea PDF, n
 
 ### 4.6 Manejo de Errores Seguro
 
-**Analogía:** Si hay un error, no le decimos al atacante exactamente qué salió mal.
+Si hay un error, no le decimos al atacante exactamente qué salió mal.
 
 ```
 Desarrollo:  Stack trace visible      → Para debugging
@@ -196,7 +171,7 @@ Producción:  Solo mensaje genérico    → "Algo salió mal" (sin dar pistas)
 
 ## 5. WSO2 API Gateway
 
-**Analogía:** WSO2 es como la **RECEPCIÓN PRINCIPAL** del edificio - TODO el mundo pasa por aquí primero.
+WSO2 es como la **RECEPCIÓN PRINCIPAL** del edificio - TODO el mundo pasa por aquí primero.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -247,7 +222,7 @@ Producción:  Solo mensaje genérico    → "Algo salió mal" (sin dar pistas)
 
 ## 6. SonarCloud (Análisis Estático)
 
-**Analogía:** SonarCloud es como un **inspector de calidad** que revisa tu edificio buscando grietas, cables sueltos y puertas sin cerradura ANTES de que alguien las explote.
+SonarCloud es como un **inspector de calidad** que revisa tu edificio buscando grietas, cables sueltos y puertas sin cerradura ANTES de que alguien las explote.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -277,30 +252,7 @@ Producción:  Solo mensaje genérico    → "Algo salió mal" (sin dar pistas)
 
 ---
 
-## 7. Comandos para Ejecutar Tests
 
-```bash
-# === MATCHING ===
-cd cail/functions/matching
-npm test                    # Todos los tests
-npm test -- --coverage      # Con cobertura
-
-# === USUARIOS ===
-cd cail/functions/usuarios
-npm test                    # Todos los tests
-
-# === OFERTAS ===
-cd cail/functions/ofertas
-npm test                    # Todos los tests
-
-# === SOLO TESTS DE SEGURIDAD ===
-npm test -- --testPathPattern=security
-
-# === TEST ESPECÍFICO ===
-npm test -- --testNamePattern="Helmet"
-```
-
----
 
 ## 8. Estándares Seguidos
 
@@ -310,7 +262,7 @@ npm test -- --testNamePattern="Helmet"
 | **OWASP ASVS** | Verificación de seguridad de aplicaciones | Tests de seguridad |
 | **RFC 5321** | Límite de 254 caracteres en emails | Validación Email.ts |
 
-> **Nota:** NIST SP 800-61 es para manejo de incidentes (respuesta). Nuestro enfoque es **prevención** (OWASP).
+> **Nota:** NIST SP 800-53 - Controles de seguridad generales
 
 ---
 
