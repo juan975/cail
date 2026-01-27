@@ -45,11 +45,9 @@ export interface RegisterRequestDto {
     nombreCompleto: string;
     telefono?: string;
     tipoUsuario: TipoUsuario;
-    // Firebase UID for candidates (created client-side)
-    firebaseUid?: string;
+    firebaseUid?: string; // UID del usuario creado en Firebase Auth por el frontend
     candidateData?: CandidateProfileData;
     employerData?: EmployerProfileData;
-    firebaseUid?: string; // UID del usuario creado en Firebase Auth por el frontend
 }
 
 /**
