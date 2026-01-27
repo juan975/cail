@@ -24,10 +24,10 @@ En el contexto de CAIL, este diagrama muestra:
 
 ## Diagrama de Despliegue (Bolsa de Empleos CAIL)
 
-<!-- TODO: Agregar link de la imagen del diagrama de despliegue -->
-<!-- ![Diagrama de Despliegue CAIL](URL_DE_LA_IMAGEN_AQUI) -->
+<img width="975" height="573" alt="image" src="https://github.com/user-attachments/assets/5858a6bc-3e86-4cb6-82ee-c6b9cd87f16f" />
+EN_AQUI) -->
 
-> **Nota:** Insertar aquí el link de la imagen del diagrama de despliegue cuando esté disponible.
+
 
 ---
 
