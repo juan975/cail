@@ -33,8 +33,8 @@ Establecer nuevos estándares en la industria, siendo sinónimo de lógica, func
     <th align="center">Backend Developer</th>
   </tr>
   <tr>
-    <td align="center"><img src="https://github.com/user-attachments/assets/b3371101-ce8b-4489-b87b-2d16157cd30a" width="150" alt="Alex Ramírez"></td>
-    <td align="center"><img src="https://github.com/user-attachments/assets/bf1f82ed-4b7e-4ea3-ab2d-fb2b95a2a8e8" width="120" alt="Sebastián Calderón"></td>
+    <td align="center"><img src= "https://github.com/user-attachments/assets/5f44a9a5-06f1-4d4f-960d-93434aa08e67" width="130" height="180" alt="Alex Ramírez"></td>
+    <td align="center"><img src="https://github.com/user-attachments/assets/154ee3c3-34f4-4440-85dc-ee7dd47dd13e" width="120" alt="Sebastián Calderón"></td>
     <td align="center"><img src="https://github.com/user-attachments/assets/e74cd0f4-ece5-44fd-adb7-a1d5cc01f4db" width="130" alt="Carlos Mejia"></td>
   </tr>
   <tr>
@@ -53,7 +53,7 @@ Establecer nuevos estándares en la industria, siendo sinónimo de lógica, func
   <tr>
     <td align="center"><img src="https://github.com/user-attachments/assets/0c15fd69-3fa7-4b35-b4c2-3cb212e6ad4b" width="140" alt="Dara Van Gijsel"></td>
     <td align="center"><img src="https://github.com/user-attachments/assets/a6978ca3-3a7a-4e30-9359-540a532395b4" width="150" alt="Erick Gaona"></td>
-    <td align="center"><img src="https://github.com/user-attachments/assets/c5ddc7d0-6334-4463-9ba9-7479d652c573" width="150" alt="Juan Espinosa"></td>
+    <td align="center"><img src="https://github.com/user-attachments/assets/e3244128-590d-4729-9cca-3dd166934908" width="150" alt="Juan Espinosa"></td>
   </tr>
   <tr>
     <td align="center"><a href="https://github.com/daravan1">Dara Van Gijsel</a></td>
