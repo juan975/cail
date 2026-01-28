@@ -4,6 +4,7 @@ import { useResponsiveLayout } from '../../hooks/useResponsive';
 import { applicationsService } from '../../services/applications.service';
 import { FiBriefcase, FiMapPin, FiCalendar, FiClock, FiEye, FiCheckCircle, FiXCircle, FiInbox, FiRefreshCw, FiAward, FiExternalLink } from 'react-icons/fi';
 import { ApplicationWithOffer, ApplicationStatus, ApplicationStatusColors } from '../../types/applications.types';
+import { Offer } from '../../types/offers.types';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 
 interface MyApplicationsScreenProps {
@@ -15,6 +16,7 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
   const [applications, setApplications] = useState<ApplicationWithOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
 
   const loadApplications = useCallback(async (showRefresh = false) => {
     try {
@@ -136,11 +138,11 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
       {/* Applications */}
       <div style={{ display: 'grid', gap: 12 }}>
         {filteredApplications.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '60px 20px', 
-            background: '#fff', 
-            borderRadius: 16, 
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            background: '#fff',
+            borderRadius: 16,
             border: '1px solid #E5E7EB',
             display: 'flex',
             flexDirection: 'column',
@@ -159,12 +161,12 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
           filteredApplications.map((item: ApplicationWithOffer) => {
             const statusInfo = ApplicationStatusColors[item.estado];
             return (
-              <div 
-                key={item.idAplicacion} 
-                style={{ 
-                  background: '#fff', 
-                  borderRadius: 16, 
-                  padding: '20px', 
+              <div
+                key={item.idAplicacion}
+                style={{
+                  background: '#fff',
+                  borderRadius: 16,
+                  padding: '20px',
                   border: '1px solid #E5E7EB',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
                   transition: 'all 0.2s ease',
@@ -217,9 +219,9 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
                 </div>
 
                 {item.oferta?.descripcion && (
-                  <div style={{ 
-                    fontSize: 13, 
-                    color: '#475569', 
+                  <div style={{
+                    fontSize: 13,
+                    color: '#475569',
                     lineHeight: '1.5',
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
@@ -240,7 +242,7 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: '#F8FAFC', borderRadius: 8, fontSize: 12, color: '#475569', border: '1px solid #F1F5F9' }}>
                       <span style={{ color: '#059669', fontWeight: 700 }}>$</span>
                       <span>
-                        {item.oferta.salarioMin && item.oferta.salarioMax 
+                        {item.oferta.salarioMin && item.oferta.salarioMax
                           ? `${item.oferta.salarioMin} - ${item.oferta.salarioMax}`
                           : item.oferta.salarioMin || item.oferta.salarioMax
                         }
@@ -255,6 +257,7 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
 
                 <div style={{ paddingTop: 12, borderTop: '1px solid #F1F5F9', marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
                   <button
+                    onClick={() => setSelectedOffer(item.oferta)}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -269,16 +272,16 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
                       borderRadius: 6,
                       transition: 'all 0.2s'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#E1F4EB'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    onMouseEnter={(e: any) => e.currentTarget.style.background = '#E1F4EB'}
+                    onMouseLeave={(e: any) => e.currentTarget.style.background = 'none'}
                   >
                     Detalles de la oferta <FiExternalLink size={14} />
                   </button>
                 </div>
               </div>
-          );
-        })
-      )}
+            );
+          })
+        )}
       </div>
 
       <button
@@ -305,6 +308,128 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
         <FiRefreshCw className={isRefreshing ? 'spin-animation' : ''} />
         {isRefreshing ? 'Actualizando...' : 'Actualizar listado'}
       </button>
-    </div>
+
+      {/* DETALLES DE OFERTA MODAL */}
+      {
+        selectedOffer && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 9999,
+            }}
+            onClick={() => setSelectedOffer(null)}
+          >
+            <div
+              style={{
+                background: '#fff',
+                borderRadius: 24,
+                padding: '32px',
+                maxWidth: '600px',
+                width: '95%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                position: 'relative'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 24 }}>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                  <div style={{ width: 56, height: 56, borderRadius: 16, background: '#F8FAFC', border: '1px solid #E2E8F0', display: 'grid', placeItems: 'center', color: '#0B7A4D' }}>
+                    <FiBriefcase size={24} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#111827' }}>{selectedOffer.titulo}</div>
+                    <div style={{ color: '#64748B', fontSize: 14 }}>{selectedOffer.empresa || 'Empresa Confidencial'}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedOffer(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF' }}
+                >
+                  <FiXCircle size={24} />
+                </button>
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#0B7A4D', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Descripción del puesto</div>
+                <div style={{ fontSize: 15, color: '#374151', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                  {selectedOffer.descripcion}
+                </div>
+              </div>
+
+              <div style={{ background: '#F8FAFC', borderRadius: 16, padding: 24, border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#1F2937', marginBottom: 16 }}>Requisitos y Detalles</div>
+
+                <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr' }}>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Modalidad</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{selectedOffer.modalidad}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Ubicación</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{selectedOffer.ciudad}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Experiencia Requ.</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{selectedOffer.experiencia_requerida || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Salario</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#059669' }}>
+                      {selectedOffer.salarioMin ? `$${selectedOffer.salarioMin} - $${selectedOffer.salarioMax}` : 'A convenir'}
+                    </div>
+                  </div>
+                </div>
+
+                {selectedOffer.habilidades_obligatorias && selectedOffer.habilidades_obligatorias.length > 0 && (
+                  <div style={{ marginTop: 24 }}>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 8 }}>Habilidades Técnicas</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {selectedOffer.habilidades_obligatorias.map((h: any, i: number) => (
+                        <span key={i} style={{
+                          background: '#fff',
+                          border: '1px solid #E5E7EB',
+                          padding: '6px 12px',
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#475569'
+                        }}>
+                          {h.nombre}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid #F1F5F9', textAlign: 'right' }}>
+                <button
+                  onClick={() => setSelectedOffer(null)}
+                  style={{
+                    padding: '12px 24px',
+                    borderRadius: 12,
+                    background: '#0B7A4D',
+                    color: '#fff',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    fontSize: 14
+                  }}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 }

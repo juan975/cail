@@ -44,6 +44,7 @@ export interface JobOffer {
   experienceLevel: string;
   postedDate: string;
   matchScore?: number; // Score de matching del algoritmo de recomendación
+  technicalSkills?: string[];
 }
 
 export type ApplicationStatus = 'Postulado' | 'En revisión' | 'Entrevista' | 'Oferta' | 'Finalizado';
@@ -112,6 +113,7 @@ export interface CandidateProfileForm {
   cedula: string;
   phone: string;
   city: string;
+  sectorIndustrial: string; // [NEW] Added for matching
   address: string;
   professionalSummary: string;
   educationLevel: string;

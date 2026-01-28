@@ -42,19 +42,28 @@ export function SkillSelector({
         if (searchTimeout.current) clearTimeout(searchTimeout.current);
 
         searchTimeout.current = setTimeout(async () => {
+            let results: CatalogItem[] = [];
             try {
-                const results = await catalogsService.searchSkills(query);
+                results = await catalogsService.searchSkills(query);
+            } catch (error) {
+                console.warn('Error fetching skills catalog, using local input only', error);
+                results = [];
+            } finally {
+                // Filtramos las que ya están seleccionadas
                 const filtered = results.filter(s => !selectedSkills.includes(s.name));
 
-                const exactMatch = results.find(s => s.name.toLowerCase() === query.toLowerCase());
-                if (!exactMatch && query.trim().length > 1) {
-                    filtered.push({ id: 'new', name: query.trim(), type: 'HARD' });
+                // Verificamos si hay match exacto (case insensitive)
+                const exactMatch = results.find(s => s.name.toLowerCase() === query.toLowerCase().trim());
+
+                // Si no hay match exacto y hay texto, permitimos crear nueva
+                const queryTrimmed = query.trim();
+                const isAlreadySelected = selectedSkills.some(s => s.toLowerCase() === queryTrimmed.toLowerCase());
+
+                if (!exactMatch && !isAlreadySelected && queryTrimmed.length > 0) {
+                    filtered.push({ id: 'new', name: queryTrimmed, type: 'HARD' });
                 }
 
                 setSuggestions(filtered);
-            } catch (error) {
-                console.error('Error buscando skills:', error);
-            } finally {
                 setLoading(false);
             }
         }, 300);

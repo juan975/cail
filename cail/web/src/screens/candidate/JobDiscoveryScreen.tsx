@@ -6,6 +6,7 @@ import { Chip } from '../../components/ui/Chip';
 import { JobOffer } from '../../types';
 import { offersService } from '../../services/offers.service';
 import { applicationsService } from '../../services/applications.service';
+import { userService, UserProfile } from '../../services/user.service';
 import { Offer } from '../../types/offers.types';
 import { Application, ApplicationStatusColors } from '../../types/applications.types';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
@@ -70,6 +71,10 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
     experienceLevel: offer.experiencia_requerida || 'No especificada',
     postedDate: fechaPub.toLocaleDateString('es-EC'),
     matchScore: (offer as any).match_score,
+    technicalSkills: [
+      ...(offer.habilidades_obligatorias || []).map(h => h.nombre),
+      ...(offer.habilidades_deseables || []).map(h => h.nombre)
+    ],
   };
 };
 
@@ -81,6 +86,11 @@ export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps
   const [appliedOffers, setAppliedOffers] = useState<Map<string, Application>>(new Map());
   const [selectedOffer, setSelectedOffer] = useState<JobOffer | null>(null);
   const [isApplying, setIsApplying] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    userService.getProfile().then(setCurrentUser).catch(console.error);
+  }, []);
 
   const loadOffers = useCallback(async () => {
     try {
@@ -145,6 +155,15 @@ export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps
 
   const handleApply = async () => {
     if (!selectedOffer) return;
+
+    // Validar CV
+    if (!currentUser?.candidateProfile?.cvUrl) {
+      alert('⚠️ Para postular a una oferta, necesitas subir tu hoja de vida (CV) en tu perfil.');
+      // Opcional: Redirigir al perfil
+      window.location.href = '/candidate/profile';
+      return;
+    }
+
     setIsApplying(true);
     try {
       const application = await applicationsService.applyToOffer(selectedOffer.id);
@@ -321,9 +340,17 @@ export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                   <Chip label={offer.employmentType} />
-                  {offer.requiredCompetencies.slice(0, 3).map((comp) => (
-                    <Chip key={comp} label={comp} />
-                  ))}
+                  {/* Mostrar Habilidades Técnicas (Prioridad) */}
+                  {offer.technicalSkills && offer.technicalSkills.length > 0 ? (
+                    offer.technicalSkills.slice(0, 3).map((skill) => (
+                      <Chip key={skill} label={skill} customBg="#E0F2FE" customText="#0369A1" />
+                    ))
+                  ) : (
+                    /* Fallback a competencias si no hay skills técnicas */
+                    offer.requiredCompetencies.slice(0, 3).map((comp) => (
+                      <Chip key={comp} label={comp} />
+                    ))
+                  )}
                 </div>
                 <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 12 }}>
                   <div><strong style={{ color: '#4B5563' }}>Formación:</strong> {offer.requiredEducation}</div>

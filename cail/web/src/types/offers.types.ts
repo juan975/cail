@@ -19,6 +19,8 @@ export interface Offer {
     experiencia_requerida?: string;
     formacion_requerida?: string;
     competencias_requeridas: string[];
+    habilidades_obligatorias?: { nombre: string; es_obligatorio: boolean; peso: number }[];
+    habilidades_deseables?: { nombre: string; es_obligatorio: boolean; peso: number }[];
     nivelJerarquico?: HierarchyLevel;
     fechaPublicacion: Date | string;
     fechaCierre?: Date | string;

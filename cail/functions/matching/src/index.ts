@@ -136,7 +136,7 @@ const isFirebaseDeployment = process.env.FIREBASE_CONFIG !== undefined ||
     process.env.K_SERVICE !== undefined;
 
 // Solo iniciar servidor local para desarrollo manual
-if (!isTest && !isProduction && !isCloudFunction && !isFirebaseDeployment) {
+if (false && !isTest && !isProduction && !isCloudFunction && !isFirebaseDeployment) {
     const PORT = config.port;
     app.listen(PORT, () => {
         console.log(`🚀 Matching Function running on port ${PORT}`);

@@ -24,11 +24,11 @@ interface EnvConfig {
 const validateEnv = (): EnvConfig => {
     return {
         nodeEnv: process.env.NODE_ENV || 'development',
-        port: parseInt(process.env.PORT || '8084', 10),
+        port: parseInt(process.env.APP_PORT || '8084', 10),
         firebase: {
-            projectId: process.env.FIREBASE_PROJECT_ID || '',
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
-            privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+            projectId: process.env.FB_PROJECT_ID || '',
+            clientEmail: process.env.FB_CLIENT_EMAIL || '',
+            privateKey: (process.env.FB_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
         },
         jwt: {
             secret: process.env.JWT_SECRET || 'default-secret',

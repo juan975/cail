@@ -24,10 +24,10 @@ import {
  * Pesos basados en especificación CU08
  */
 const SCORING_WEIGHTS = {
-    SIMILITUD_VECTORIAL: 0.40,      // 40% - Similaridad semántica
-    HABILIDADES_OBLIGATORIAS: 0.30, // 30% - Skills requeridas
-    HABILIDADES_DESEABLES: 0.15,    // 15% - Skills deseables
-    NIVEL_JERARQUICO: 0.15          // 15% - Match de nivel
+    SIMILITUD_VECTORIAL: 0.40,      // 40% - Balanced with Skills
+    HABILIDADES_OBLIGATORIAS: 0.40, // 40% - Trust deterministic inference
+    HABILIDADES_DESEABLES: 0.10,    // 10%
+    NIVEL_JERARQUICO: 0.10          // 10%
 };
 
 const MAX_POSTULACIONES_DIA = 10;
@@ -215,9 +215,16 @@ export class MatchingService {
             vector = await this.embeddingProvider.generateEmbedding(textoParaVector);
         }
 
+        // [CRITICAL] Guard: Ensure sector is present to prevent unfiltered results
+        if (!candidato.id_sector_industrial) {
+            console.warn(`[MatchingService] Candidato ${candidatoId} has NO sector. Aborting to prevent leak.`);
+            return [];
+        }
+
         // 3. Buscar ofertas similares usando búsqueda vectorial + filtro de sector
         let ofertas: Oferta[];
         try {
+            console.log(`[MatchingService] Searching offers for sector: ${candidato.id_sector_industrial}`);
             ofertas = await this.matchingRepository.buscarOfertasPorVector(
                 vector,
                 candidato.id_sector_industrial,
@@ -230,6 +237,19 @@ export class MatchingService {
                 candidato.id_sector_industrial,
                 50
             );
+        }
+
+        // [CRITICAL] Brute Force Filter: Ensure NO leaks from other sectors
+        // This acts as a final safety net against DB query issues
+        const sectorRequerido = candidato.id_sector_industrial.toLowerCase().trim();
+        const ofertasOriginales = ofertas.length;
+        ofertas = ofertas.filter(o => {
+            const sectorOferta = (o.id_sector_industrial || '').toLowerCase().trim();
+            return sectorOferta === sectorRequerido;
+        });
+
+        if (ofertas.length < ofertasOriginales) {
+            console.warn(`[MatchingService] FILTERED OUT ${ofertasOriginales - ofertas.length} offers with mismatching sector!`);
         }
 
         // 4. Calcular score completo para cada oferta
@@ -285,7 +305,7 @@ export class MatchingService {
         const scoreHabilidades = (scoreObligatorias * 0.7) + (scoreDeseables * 0.3);
 
         // Score de nivel jerárquico
-        const scoreNivel = candidato.id_nivel_actual === oferta.id_nivel_requerido ? 1.0 : 0.5;
+        const scoreNivel = (!candidato.id_nivel_actual || candidato.id_nivel_actual === oferta.id_nivel_requerido) ? 1.0 : 0.5;
 
         // Score ponderado final con vectorización
         const matchScore =
@@ -361,7 +381,7 @@ export class MatchingService {
         );
 
         // Score de nivel jerárquico
-        const scoreNivel = candidato.id_nivel_actual === oferta.id_nivel_requerido ? 1.0 : 0.5;
+        const scoreNivel = (!candidato.id_nivel_actual || candidato.id_nivel_actual === oferta.id_nivel_requerido) ? 1.0 : 0.5;
 
         // Score de similitud vectorial (implícito en el orden de KNN, normalizamos a 0.8)
         const scoreSimilitud = 0.8; // Base score por estar en top KNN
@@ -385,15 +405,27 @@ export class MatchingService {
         };
     }
 
+    // ============================================
+    // LOGICA DE INFERENCIA
+    // ============================================
+    private readonly SKILL_INFERENCE_MAP: Record<string, string[]> = {
+        'javascript': ['react', 'angular', 'vue', 'node', 'typescript', 'express', 'next'],
+        'node.js': ['express', 'nest', 'mean', 'mern', 'javascript', 'typescript'],
+        'sql': ['mysql', 'postgresql', 'postgres', 'oracle', 'sql server', 'database', 'bases de datos'],
+        'python': ['django', 'flask', 'fastapi', 'pandas', 'numpy', 'pytorch', 'tensorflow'],
+        'java': ['spring', 'hibernate', 'jakarta'],
+        'c#': ['.net', 'dotnet', 'entity framework'],
+    };
+
     /**
-     * Calcula score de coincidencia de habilidades
+     * Calcula score de coincidencia de habilidades con inferencia
      */
     private calcularScoreHabilidades(
         habilidadesCandidato: string[],
         habilidadesOferta: { nombre: string; peso: number }[]
     ): number {
         if (habilidadesOferta.length === 0) {
-            return 1.0; // Si no hay requisitos, score perfecto
+            return 1.0;
         }
 
         const habilidadesCandidatoLower = habilidadesCandidato.map(h => h.toLowerCase());
@@ -402,14 +434,30 @@ export class MatchingService {
 
         for (const habilidad of habilidadesOferta) {
             pesoTotal += habilidad.peso;
+            const skillRequerida = habilidad.nombre.toLowerCase();
 
-            const coincide = habilidadesCandidatoLower.some(hc =>
-                hc.includes(habilidad.nombre.toLowerCase()) ||
-                habilidad.nombre.toLowerCase().includes(hc)
+            // 1. Busqueda Exacta
+            const coincidenciaExacta = habilidadesCandidatoLower.some(hc =>
+                hc.includes(skillRequerida) || skillRequerida.includes(hc)
             );
 
-            if (coincide) {
+            if (coincidenciaExacta) {
                 pesoCoincidencias += habilidad.peso;
+                continue;
+            }
+
+            // 2. Inferencia (Si tengo React, sé JavaScript)
+            // Verificamos si alguna habilidad del candidato IMPLICA la habilidad requerida
+            const inferredSkills = this.SKILL_INFERENCE_MAP[skillRequerida];
+            if (inferredSkills) {
+                const inferredMatch = habilidadesCandidatoLower.some(hc =>
+                    inferredSkills.some(is => hc.includes(is))
+                );
+                if (inferredMatch) {
+                    // Damos crédito completo o parcial (aquí completo para potenciar el match)
+                    pesoCoincidencias += habilidad.peso;
+                    continue;
+                }
             }
         }
 

@@ -99,23 +99,36 @@ async function preprocessCandidateWithETL(profile: CandidateProfileData): Promis
 function buildFallbackEmbeddingText(profile: CandidateProfileData): string {
     const parts: string[] = [];
 
-    if (profile.habilidadesTecnicas?.length) {
-        parts.push(`Habilidades técnicas: ${profile.habilidadesTecnicas.join(', ')}`);
+    // [CRITICAL] IDENTITY FIRST: The professional summary defines "WHO" the candidate is (e.g., "Software Engineer").
+    // We place this first and repeat it to set the primary semantic context.
+    if (profile.resumenProfesional) {
+        parts.push(`ROL PRINCIPAL: ${profile.resumenProfesional}.`);
+        parts.push(`RESUMEN PROFESIONAL: ${profile.resumenProfesional}.`);
     }
 
+    // [SUPPORTING] SKILLS SECOND: The skills support the role.
+    // Repeating them ensures they are captured, but the context is now set by the role above.
+    if (profile.habilidadesTecnicas?.length) {
+        const skillsString = profile.habilidadesTecnicas.join(', ');
+        parts.push(`Dominio tecnológico experto en: ${skillsString}.`);
+        parts.push(`Stack técnico: ${skillsString}.`);
+    }
+
+    // [CONTEXT] Additional details
     if (profile.softSkills?.length) {
         parts.push(`Habilidades blandas: ${profile.softSkills.join(', ')}`);
     }
 
     if (profile.competencias?.length) {
-        parts.push(`Competencias: ${profile.competencias.join(', ')}`);
+        parts.push(`Otras competencias: ${profile.competencias.join(', ')}`);
     }
 
-    if (profile.resumenProfesional) {
-        parts.push(`Perfil: ${profile.resumenProfesional}`);
+    // Explicitly add sector context if available to semantic search
+    if (profile.sectorIndustrial) {
+        parts.push(`Industria o sector de enfoque: ${profile.sectorIndustrial}`);
     }
 
-    return parts.join('. ') || 'Sin habilidades especificadas';
+    return parts.join(' ');
 }
 
 /**
@@ -266,6 +279,7 @@ export const regenerateEmbeddings = async (userId?: string): Promise<{ processed
                 habilidades_tecnicas: profile.habilidadesTecnicas || [],
                 soft_skills: profile.softSkills || [],
                 competencias: profile.competencias || [],
+                id_sector_industrial: profile.sectorIndustrial || '', // Ensure sector is preserved
                 embedding_habilidades: FieldValue.vector(vector),
                 fecha_actualizacion_vector: new Date(),
             }, { merge: true });

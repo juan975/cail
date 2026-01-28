@@ -167,10 +167,18 @@ export class FirestoreAplicacionRepository implements IMatchingRepository {
         limite: number
     ): Promise<Oferta[]> {
         try {
-            const snapshot = await this.db.collection('ofertas')
-                // Solo filtrar por estado activa - mostrar TODAS las ofertas rankeadas por similitud
-                .where('estado', '==', 'ACTIVA')
-                // Búsqueda vectorial KNN - ordena por similitud semántica
+            let query: FirebaseFirestore.Query = this.db.collection('ofertas')
+                .where('estado', '==', 'ACTIVA');
+
+            // Enforce sector filter if provided
+            if (sectorId) {
+                console.log(`[Matching] Filtering by sector: ${sectorId}`);
+                query = query.where('id_sector_industrial', '==', sectorId);
+            } else {
+                console.log(`[Matching] NO SECTOR FILTER APPLIED (sectorId is empty)`);
+            }
+
+            const snapshot = await query
                 .findNearest({
                     vectorField: 'embedding_oferta',
                     queryVector: vector,

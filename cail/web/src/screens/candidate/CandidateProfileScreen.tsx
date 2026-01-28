@@ -43,6 +43,7 @@ const emptyCandidateProfile: CandidateProfileForm = {
   cedula: '',
   phone: '',
   city: '',
+  sectorIndustrial: '',
   address: '',
   professionalSummary: '',
   educationLevel: '',
@@ -131,6 +132,7 @@ export function CandidateProfileScreen() {
           cedula: profile.candidateProfile.cedula || '',
           phone: profile.telefono || '',
           city: profile.candidateProfile.ciudad,
+          sectorIndustrial: profile.candidateProfile.sectorIndustrial || '',
           address: profile.candidateProfile.direccion || '',
           professionalSummary: profile.candidateProfile.resumenProfesional || '',
           educationLevel: profile.candidateProfile.nivelEducacion || '',
@@ -190,6 +192,7 @@ export function CandidateProfileScreen() {
         telefono: form.phone,
         candidateProfile: {
           ciudad: form.city,
+          sectorIndustrial: form.sectorIndustrial,
           direccion: form.address,
           cedula: form.cedula,
           resumenProfesional: form.professionalSummary,
@@ -262,12 +265,12 @@ export function CandidateProfileScreen() {
           <div style={statusPillStyle}>
             <FiEye size={14} /> Perfil Visible
           </div>
-          <div 
-            style={{ 
-              ...statusPillStyle, 
-              background: 'rgba(255,255,255,0.15)', 
+          <div
+            style={{
+              ...statusPillStyle,
+              background: 'rgba(255,255,255,0.15)',
               color: '#fff',
-              border: '1px solid rgba(255,255,255,0.2)' 
+              border: '1px solid rgba(255,255,255,0.2)'
             }}
           >
             <FiShield size={14} /> Verificado
@@ -283,13 +286,13 @@ export function CandidateProfileScreen() {
             <span style={{ fontSize: 14, fontWeight: 800, color: '#0B7A4D' }}>{Math.round(completion * 100)}%</span>
           </div>
           <div style={{ height: 8, background: '#F1F5F9', borderRadius: 4, overflow: 'hidden' }}>
-            <div 
-              style={{ 
-                height: '100%', 
-                background: 'linear-gradient(90deg, #1A936F, #0B7A4D)', 
+            <div
+              style={{
+                height: '100%',
+                background: 'linear-gradient(90deg, #1A936F, #0B7A4D)',
                 width: `${completion * 100}%`,
-                transition: 'width 0.8s' 
-              }} 
+                transition: 'width 0.8s'
+              }}
             />
           </div>
         </div>
@@ -338,7 +341,7 @@ export function CandidateProfileScreen() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 24 }}>
         {/* Main Column */}
         <div style={{ gridColumn: 'span 8', display: 'grid', gap: 24, alignContent: 'start' }}>
-          
+
           {/* Personal Information Tab */}
           {activeTab === 'personal' && (
             <div style={cardStyle}>
@@ -349,45 +352,45 @@ export function CandidateProfileScreen() {
                 <h3 style={cardTitleStyle}>Datos de Identidad y Contacto</h3>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                <InputField 
-                  label="Nombre Completo" 
-                  value={form.fullName} 
+                <InputField
+                  label="Nombre Completo"
+                  value={form.fullName}
                   onChange={(e) => updateField('fullName', e.target.value)}
                   icon={<FiUser size={16} color="#10B981" />}
                   tone="candidate"
                 />
-                <InputField 
-                  label="Cédula / DNI" 
-                  value={form.cedula} 
+                <InputField
+                  label="Cédula / DNI"
+                  value={form.cedula}
                   onChange={(e) => updateField('cedula', e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="Ej. 11054..."
                   icon={<FiShield size={16} color="#10B981" />}
                   tone="candidate"
                   maxLength={10}
                 />
-                <InputField 
-                  label="Correo Electrónico" 
-                  value={form.email} 
+                <InputField
+                  label="Correo Electrónico"
+                  value={form.email}
                   readonly
                   icon={<FiMail size={16} color="#10B981" />}
                 />
-                <InputField 
-                  label="Teléfono Móvil" 
-                  value={form.phone} 
+                <InputField
+                  label="Teléfono Móvil"
+                  value={form.phone}
                   onChange={(e) => updateField('phone', e.target.value)}
                   icon={<FiPhone size={16} color="#10B981" />}
                   tone="candidate"
                 />
-                <InputField 
-                  label="Ciudad de Residencia" 
-                  value={form.city} 
+                <InputField
+                  label="Ciudad de Residencia"
+                  value={form.city}
                   onChange={(e) => updateField('city', e.target.value)}
                   icon={<FiMap size={16} color="#10B981" />}
                   tone="candidate"
                 />
-                <InputField 
-                  label="Dirección Domiciliaria" 
-                  value={form.address} 
+                <InputField
+                  label="Dirección Domiciliaria"
+                  value={form.address}
                   onChange={(e) => updateField('address', e.target.value)}
                   icon={<FiMapPin size={16} color="#10B981" />}
                   tone="candidate"
@@ -409,17 +412,17 @@ export function CandidateProfileScreen() {
                 </div>
                 <div style={{ display: 'grid', gap: 20 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                    <InputField 
-                      label="Nivel de Educación" 
-                      value={form.educationLevel} 
+                    <InputField
+                      label="Nivel de Educación"
+                      value={form.educationLevel}
                       onChange={(e) => updateField('educationLevel', e.target.value)}
                       placeholder="Ej. Universitario / Maestría"
                       icon={<FiBookOpen size={16} color="#6366F1" />}
                       tone="candidate"
                     />
-                    <InputField 
-                      label="Título Obtenido" 
-                      value={form.degree} 
+                    <InputField
+                      label="Título Obtenido"
+                      value={form.degree}
                       onChange={(e) => updateField('degree', e.target.value)}
                       placeholder="Ej. Ing. Civil"
                       icon={<FiAward size={16} color="#6366F1" />}
@@ -484,17 +487,47 @@ export function CandidateProfileScreen() {
                   <h3 style={cardTitleStyle}>Trayectoria General</h3>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 24 }}>
-                  <InputField 
-                    label="Años en el Sector" 
-                    value={form.yearsExperience} 
+                  <InputField
+                    label="Años en el Sector"
+                    value={form.yearsExperience}
                     onChange={(e) => updateField('yearsExperience', e.target.value)}
                     placeholder="Ej. 5 años"
                     icon={<FiCalendar size={16} color="#EA580C" />}
                     tone="candidate"
                   />
+                  <div style={{ marginTop: 24 }}>
+                    <label style={labelStyle}>Sector Industrial Principal *</label>
+                    <select
+                      value={form.sectorIndustrial}
+                      onChange={(e) => updateField('sectorIndustrial', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        borderRadius: '12px',
+                        border: '1px solid #E5E7EB',
+                        fontSize: '15px',
+                        color: form.sectorIndustrial ? '#1E293B' : '#94A3B8',
+                        background: '#F9FAFB',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="">Selecciona tu sector principal...</option>
+                      <option value="tecnologia">Tecnología y Software</option>
+                      <option value="salud">Salud y Medicina</option>
+                      <option value="educacion">Educación</option>
+                      <option value="finanzas">Finanzas y Contabilidad</option>
+                      <option value="manufactura">Manufactura e Industria</option>
+                      <option value="comercio">Comercio y Ventas</option>
+                      <option value="logistica">Logística y Transporte</option>
+                      <option value="construccion">Construcción e Ingeniería</option>
+                    </select>
+                    <p style={{ fontSize: 12, color: '#64748B', marginTop: 8 }}>
+                      Este campo es <strong>obligatorio</strong> para mostrarte ofertas relevantes.
+                    </p>
+                  </div>
                   <div>
                     <label style={labelStyle}>Resumen de Experiencia</label>
-                    <textarea 
+                    <textarea
                       value={form.experienceSummary}
                       onChange={(e) => updateField('experienceSummary', e.target.value)}
                       placeholder="Menciona tus roles más relevantes..."
@@ -513,15 +546,15 @@ export function CandidateProfileScreen() {
                     </div>
                     <h3 style={cardTitleStyle}>Historial Laboral</h3>
                   </div>
-                  <button 
-                    onClick={handleAddExperience} 
-                    style={{ 
-                      padding: '10px 16px', 
-                      borderRadius: '12px', 
-                      background: '#F3F4F6', 
-                      border: 'none', 
-                      color: '#0B7A4D', 
-                      fontWeight: 700, 
+                  <button
+                    onClick={handleAddExperience}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '12px',
+                      background: '#F3F4F6',
+                      border: 'none',
+                      color: '#0B7A4D',
+                      fontWeight: 700,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -573,7 +606,7 @@ export function CandidateProfileScreen() {
 
         {/* Right Sidebar Column */}
         <div style={{ gridColumn: 'span 4', display: 'grid', gap: 24, alignContent: 'start' }}>
-          
+
           {/* CV Section */}
           <div style={cardStyle}>
             <div style={cardHeaderStyle}>
@@ -585,8 +618,8 @@ export function CandidateProfileScreen() {
             <p style={{ fontSize: 13, color: '#64748B', margin: '-8px 0 16px', lineHeight: '1.4' }}>
               Sube tu hoja de vida para que los reclutadores puedan verla directamente.
             </p>
-            <CvUploadDropzone 
-              cvUrl={cvUrl} 
+            <CvUploadDropzone
+              cvUrl={cvUrl}
               uploading={uploadingCv}
               onUpload={async (file) => {
                 setUploadingCv(true);
@@ -601,7 +634,7 @@ export function CandidateProfileScreen() {
                 } finally {
                   setUploadingCv(false);
                 }
-              }} 
+              }}
               onDelete={async () => {
                 setUploadingCv(true);
                 try {
@@ -613,7 +646,7 @@ export function CandidateProfileScreen() {
                 } finally {
                   setUploadingCv(false);
                 }
-              }} 
+              }}
             />
           </div>
 
@@ -637,13 +670,13 @@ export function CandidateProfileScreen() {
           </div>
 
           {/* Action Box */}
-            <div 
-              style={{ 
-                background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', 
-                borderRadius: 20, 
-                padding: '24px', 
-                border: '1px solid #A7F3D0', 
-              display: 'grid', 
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
+              borderRadius: 20,
+              padding: '24px',
+              border: '1px solid #A7F3D0',
+              display: 'grid',
               gap: 16,
               boxShadow: '0 10px 20px -5px rgba(11, 122, 77, 0.1)'
             }}
@@ -714,11 +747,11 @@ export function CandidateProfileScreen() {
               </div>
               <div>
                 <label style={labelStyle}>Descripción de Funciones</label>
-                <textarea 
-                  value={currentExperience.description || ''} 
+                <textarea
+                  value={currentExperience.description || ''}
                   onChange={(e) => setCurrentExperience({ ...currentExperience, description: e.target.value })}
                   placeholder="Describe tus principales responsabilidades..."
-                  style={textAreaStyle} 
+                  style={textAreaStyle}
                 />
               </div>
               <Button label="Registrar Experiencia" onPress={handleSaveExperience} fullWidth />
