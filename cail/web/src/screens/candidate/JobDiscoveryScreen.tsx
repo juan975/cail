@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiCheck, FiSend, FiAward, FiBriefcase, FiTarget, FiInfo, FiAlertCircle, FiSearch } from 'react-icons/fi';
 import { colors } from '../../theme/colors';
+import { useNotifications } from '../../components/ui/Notifications';
 import { useResponsiveLayout } from '../../hooks/useResponsive';
 import { Chip } from '../../components/ui/Chip';
 import { JobOffer } from '../../types';
@@ -80,6 +81,7 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
 
 export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps) {
   const { contentWidth } = useResponsiveLayout();
+  const notifications = useNotifications();
   const [filters, setFilters] = useState<FilterState>({ modality: 'Todos' });
   const [offers, setOffers] = useState<JobOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -158,9 +160,10 @@ export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps
 
     // Validar CV
     if (!currentUser?.candidateProfile?.cvUrl) {
-      alert('⚠️ Para postular a una oferta, necesitas subir tu hoja de vida (CV) en tu perfil.');
-      // Opcional: Redirigir al perfil
-      window.location.href = '/candidate/profile';
+      notifications.alert(
+        'Para postular a una oferta, necesitas subir tu hoja de vida (CV) en tu perfil.',
+        'Hoja de vida requerida'
+      );
       return;
     }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { FiArrowLeft, FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { LoadingSplash } from '../../components/ui/LoadingSplash';
 import { useNotifications } from '../../components/ui/Notifications';
@@ -24,7 +24,7 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLogin
   const [splashSuccess, setSplashSuccess] = useState(false);
   const [splashError, setSplashError] = useState(false);
   const [splashErrorMessage, setSplashErrorMessage] = useState('');
-  const [pendingData, setPendingData] = useState<any>(null);
+  const pendingDataRef = useRef<any>(null);
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -92,21 +92,21 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLogin
             };
       }
 
-      setPendingData(userData);
+      console.log('✅ [LoginForm] User Data Ready:', userData);
+      pendingDataRef.current = userData;
       setSplashSuccess(true);
     } catch (error: any) {
-      // Manejar error de rol incorrecto con mensaje específico
       if (error instanceof RoleMismatchError) {
         setSplashErrorMessage(error.message);
-      } else if (error?.response?.status === 403 || error?.status === 403) {
-        // Handle 403 Forbidden (e.g., email not verified)
-        const backendMessage = error?.response?.data?.message || error?.message || 'Acceso denegado';
-        console.error('🚫 Access denied (403):', backendMessage);
-        setSplashErrorMessage(backendMessage);
       } else {
-        // Extract message from backend response or use generic
-        const errorMessage = error?.response?.data?.message || error?.message || 'Credenciales inválidas';
-        setSplashErrorMessage(errorMessage);
+        // Traducir error técnico a lenguaje natural
+        const technicalMessage = error?.message || error?.code || '';
+        const friendlyMessage = translateAuthError(technicalMessage);
+
+        // Log para depuración interna (opcional)
+        console.warn('❌ Auth Error:', technicalMessage);
+
+        setSplashErrorMessage(friendlyMessage);
       }
       setSplashError(true);
     } finally {
@@ -114,34 +114,69 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLogin
     }
   };
 
-  const handleSplashComplete = () => {
+  // Función auxiliar para traducir errores
+  const translateAuthError = (errorMessage: string): string => {
+    const lowerMsg = errorMessage.toLowerCase();
+
+    if (lowerMsg.includes('auth/invalid-credential') || lowerMsg.includes('invalid-credential')) {
+      return 'Credenciales incorrectas. Verifica tu correo y contraseña.';
+    }
+    if (lowerMsg.includes('auth/user-not-found') || lowerMsg.includes('user-not-found')) {
+      return 'No encontramos una cuenta con este correo.';
+    }
+    if (lowerMsg.includes('auth/wrong-password') || lowerMsg.includes('wrong-password')) {
+      return 'La contraseña es incorrecta.';
+    }
+    if (lowerMsg.includes('auth/too-many-requests')) {
+      return 'Demasiados intentos fallidos. Intenta más tarde.';
+    }
+    if (lowerMsg.includes('auth/user-disabled')) {
+      return 'Esta cuenta ha sido deshabilitada.';
+    }
+    if (lowerMsg.includes('auth/email-already-in-use')) {
+      return 'Este correo ya está registrado.';
+    }
+    if (lowerMsg.includes('network-request-failed')) {
+      return 'Error de conexión. Verifica tu internet.';
+    }
+
+    // Fallback genérico pero amigable
+    return 'Ocurrió un problema al iniciar sesión. Intenta nuevamente.';
+  };
+
+  const handleSplashComplete = useCallback(() => {
     setShowSplash(false);
     setSplashSuccess(false);
     setLoading(false);
-    if (pendingData) {
-      onSuccess(pendingData);
+    const data = pendingDataRef.current;
+    console.log('🌊 [LoginForm] Validating Splash Complete. PendingData:', data);
+    if (data) {
+      console.log('🚀 [LoginForm] Triggering onSuccess');
+      onSuccess(data);
+    } else {
+      console.error('❌ [LoginForm] Splash completed but NO pendingData!');
     }
-  };
+  }, [onSuccess]);
 
-  const handleSplashErrorComplete = () => {
+  const handleSplashErrorComplete = useCallback(() => {
     setShowSplash(false);
     setSplashError(false);
     setSplashErrorMessage('');
     setLoading(false);
-  };
+  }, []);
 
   const roleColor = role === 'candidate' ? '#10B981' : '#F59E0B';
-  const roleGradient = role === 'candidate' 
+  const roleGradient = role === 'candidate'
     ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)'
     : 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)';
 
   return (
     <div style={{ ...screenContainerStyle, background: roleGradient }}>
-      <LoadingSplash 
-        visible={showSplash || splashError} 
-        success={!splashError} 
+      <LoadingSplash
+        visible={showSplash || splashError}
+        success={!splashError}
         message={splashError ? (splashErrorMessage || 'Error al iniciar sesión') : 'Validando credenciales...'}
-        onComplete={splashError ? handleSplashErrorComplete : handleSplashComplete} 
+        onComplete={splashError ? handleSplashErrorComplete : handleSplashComplete}
       />
 
       {/* Header with Back Button */}

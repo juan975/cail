@@ -25,6 +25,7 @@ import {
   FiBookOpen,
   FiCalendar,
   FiActivity,
+  FiChevronDown,
 } from 'react-icons/fi';
 import { Button } from '../../components/ui/Button';
 import { InputField } from '../../components/ui/InputField';
@@ -89,7 +90,7 @@ export function CandidateProfileScreen() {
 
   const handleSaveExperience = () => {
     if (!currentExperience.company || !currentExperience.position || !currentExperience.startDate) {
-      window.alert('Completa los campos obligatorios (*)');
+      notifications.alert('Completa los campos obligatorios (*)', 'Información incompleta');
       return;
     }
 
@@ -486,52 +487,126 @@ export function CandidateProfileScreen() {
                   </div>
                   <h3 style={cardTitleStyle}>Trayectoria General</h3>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 24 }}>
-                  <InputField
-                    label="Años en el Sector"
-                    value={form.yearsExperience}
-                    onChange={(e) => updateField('yearsExperience', e.target.value)}
-                    placeholder="Ej. 5 años"
-                    icon={<FiCalendar size={16} color="#EA580C" />}
-                    tone="candidate"
-                  />
-                  <div style={{ marginTop: 24 }}>
-                    <label style={labelStyle}>Sector Industrial Principal *</label>
-                    <select
-                      value={form.sectorIndustrial}
-                      onChange={(e) => updateField('sectorIndustrial', e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        borderRadius: '12px',
-                        border: '1px solid #E5E7EB',
-                        fontSize: '15px',
-                        color: form.sectorIndustrial ? '#1E293B' : '#94A3B8',
-                        background: '#F9FAFB',
-                        outline: 'none',
-                      }}
-                    >
-                      <option value="">Selecciona tu sector principal...</option>
-                      <option value="tecnologia">Tecnología y Software</option>
-                      <option value="salud">Salud y Medicina</option>
-                      <option value="educacion">Educación</option>
-                      <option value="finanzas">Finanzas y Contabilidad</option>
-                      <option value="manufactura">Manufactura e Industria</option>
-                      <option value="comercio">Comercio y Ventas</option>
-                      <option value="logistica">Logística y Transporte</option>
-                      <option value="construccion">Construcción e Ingeniería</option>
-                    </select>
-                    <p style={{ fontSize: 12, color: '#64748B', marginTop: 8 }}>
-                      Este campo es <strong>obligatorio</strong> para mostrarte ofertas relevantes.
-                    </p>
+
+                <div style={{ display: 'grid', gap: 24 }}>
+                  {/* Top Row: Years + Sector */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20, alignItems: 'start' }}>
+
+                    {/* Years in Sector */}
+                    <div>
+                      <label style={labelStyle}>
+                        <FiCalendar style={{ marginRight: 6, verticalAlign: 'text-bottom' }} />
+                        Años en el Sector
+                      </label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="number"
+                          value={form.yearsExperience}
+                          onChange={(e) => updateField('yearsExperience', e.target.value)}
+                          placeholder="Ej. 2"
+                          min="0"
+                          style={{
+                            width: '100%',
+                            padding: '14px 16px',
+                            borderRadius: '12px',
+                            border: '1px solid #E5E7EB',
+                            fontSize: '15px',
+                            color: '#1E293B',
+                            background: '#F9FAFB',
+                            outline: 'none',
+                            fontWeight: 600,
+                            textAlign: 'center',
+                            zIndex: 2,
+                            position: 'relative',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                        <span style={{
+                          position: 'absolute',
+                          right: 16,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          fontSize: 13,
+                          color: '#94A3B8',
+                          fontWeight: 500,
+                          pointerEvents: 'none',
+                          zIndex: 3
+                        }}>años</span>
+                      </div>
+                    </div>
+
+                    {/* Sector (with better visual hierarchy) */}
+                    <div>
+                      <label style={labelStyle}>Sector Industrial Principal *</label>
+                      <div style={{ position: 'relative' }}>
+                        <select
+                          value={form.sectorIndustrial}
+                          onChange={(e) => updateField('sectorIndustrial', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '14px 16px',
+                            borderRadius: '12px',
+                            border: '1px solid #E5E7EB',
+                            fontSize: '15px',
+                            color: form.sectorIndustrial ? '#1E293B' : '#94A3B8',
+                            background: '#F9FAFB',
+                            outline: 'none',
+                            cursor: 'pointer',
+                            appearance: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          <option value="">Selecciona tu sector principal...</option>
+                          <option value="tecnologia">Tecnología y Software</option>
+                          <option value="salud">Salud y Medicina</option>
+                          <option value="educacion">Educación</option>
+                          <option value="finanzas">Finanzas y Contabilidad</option>
+                          <option value="manufactura">Manufactura e Industria</option>
+                          <option value="comercio">Comercio y Ventas</option>
+                          <option value="logistica">Logística y Transporte</option>
+                          <option value="construccion">Construcción e Ingeniería</option>
+                        </select>
+                        <FiChevronDown
+                          size={18}
+                          color="#94A3B8"
+                          style={{
+                            position: 'absolute',
+                            right: 16,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            pointerEvents: 'none'
+                          }}
+                        />
+                      </div>
+                      <p style={{ fontSize: 12, color: '#64748B', marginTop: 8 }}>
+                        Este campo es <strong>obligatorio</strong> para mostrarte ofertas relevantes.
+                      </p>
+                    </div>
                   </div>
+
+                  {/* Bottom Row: Summary */}
                   <div>
                     <label style={labelStyle}>Resumen de Experiencia</label>
                     <textarea
                       value={form.experienceSummary}
                       onChange={(e) => updateField('experienceSummary', e.target.value)}
-                      placeholder="Menciona tus roles más relevantes..."
-                      style={{ ...textAreaStyle, minHeight: '80px' }}
+                      placeholder="Resume brevemente tu perfil profesional para los reclutadores. Ej: Desarrollador Full Stack con 3 años de experiencia en React y Node.js..."
+                      style={{
+                        ...textAreaStyle,
+                        minHeight: '100px',
+                        background: '#fff',
+                        border: '1px solid #E2E8F0',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                        transition: 'all 0.2s'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#3B82F6';
+                        e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#E2E8F0';
+                        e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
+                      }}
                     />
                   </div>
                 </div>
