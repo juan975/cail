@@ -7,7 +7,9 @@
  * Flujo:
  * 1. Reclutador crea o actualiza una oferta
  * 2. Trigger detecta el cambio
- * 3. Si cambió título, descripción o habilidades, regenera el embedding
+ * 3. Si cambió título, descripción o habilidades:
+ *    a. Llama al ETL para preprocesar el texto
+ *    b. Envía texto procesado a Vertex AI para embeddings
  * 4. Almacena embedding_oferta en el documento
  */
 
@@ -16,8 +18,9 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { createEmbeddingProvider } from '../infrastructure/providers/VertexAIEmbeddingProvider';
 
 // Configuración del proyecto
-const PROJECT_ID = process.env.GCLOUD_PROJECT || 'cail-b6e7c';
+const PROJECT_ID = process.env.GCLOUD_PROJECT || 'cail-backend-prod';
 const REGION = 'us-central1';
+const ETL_SERVICE_URL = `https://${REGION}-${PROJECT_ID}.cloudfunctions.net/etl`;
 
 // Inicializar providers
 const embeddingProvider = createEmbeddingProvider(PROJECT_ID, REGION);
@@ -38,6 +41,18 @@ interface OfertaData {
     embedding_oferta?: number[];
 }
 
+interface ETLResponse {
+    success: boolean;
+    data?: {
+        processedText: string;
+        skillsObligatorias?: string[];
+        skillsDeseables?: string[];
+        keyPhrases?: string[];
+        processingTimeMs?: number;
+    };
+    error?: string;
+}
+
 /**
  * Extrae nombres de habilidades de un array que puede ser strings o objetos
  */
@@ -52,9 +67,45 @@ function extractSkillNames(skills: Array<string | { nombre: string }> | undefine
 }
 
 /**
- * Construye el texto para generar el embedding basado en la oferta
+ * Llama al servicio ETL para preprocesar el texto de la oferta
  */
-function buildOfferEmbeddingText(oferta: OfertaData): string {
+async function preprocessOfferWithETL(oferta: OfertaData): Promise<string> {
+    try {
+        const response = await fetch(`${ETL_SERVICE_URL}/preprocess/offer`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                titulo: oferta.titulo || '',
+                descripcion: oferta.descripcion || '',
+                habilidades_obligatorias: extractSkillNames(oferta.habilidades_obligatorias),
+                habilidades_deseables: extractSkillNames(oferta.habilidades_deseables),
+                competencias_requeridas: oferta.competencias_requeridas || []
+            })
+        });
+
+        if (!response.ok) {
+            console.warn(`[SyncOferta] ETL respondió con error ${response.status}, usando fallback`);
+            return buildFallbackEmbeddingText(oferta);
+        }
+
+        const result = await response.json() as ETLResponse;
+
+        if (result.success && result.data?.processedText) {
+            console.log(`[SyncOferta] ETL procesó texto en ${result.data.processingTimeMs}ms`);
+            return result.data.processedText;
+        }
+
+        return buildFallbackEmbeddingText(oferta);
+    } catch (error) {
+        console.warn(`[SyncOferta] Error llamando a ETL, usando fallback:`, error);
+        return buildFallbackEmbeddingText(oferta);
+    }
+}
+
+/**
+ * Construye el texto para generar el embedding sin ETL (fallback)
+ */
+function buildFallbackEmbeddingText(oferta: OfertaData): string {
     const parts: string[] = [];
 
     if (oferta.titulo) {
@@ -155,10 +206,14 @@ export const syncOfertaEmbedding = onDocumentWritten(
         console.log(`[SyncOferta] Generando embedding para oferta ${ofertaId}`);
 
         try {
-            const embeddingText = buildOfferEmbeddingText(afterData);
-            console.log(`[SyncOferta] Texto para embedding: "${embeddingText.substring(0, 150)}..."`);
+            // Paso 1: Preprocesar con ETL
+            console.log(`[SyncOferta] Preprocesando con ETL...`);
+            const processedText = await preprocessOfferWithETL(afterData);
+            console.log(`[SyncOferta] Texto procesado: "${processedText.substring(0, 150)}..."`);
 
-            const vector = await embeddingProvider.generateEmbedding(embeddingText);
+            // Paso 2: Generar embedding con Vertex AI
+            console.log(`[SyncOferta] Generando embedding con Vertex AI...`);
+            const vector = await embeddingProvider.generateEmbedding(processedText);
 
             // Actualizar el documento con el nuevo embedding
             await db.collection('ofertas').doc(ofertaId).update({
@@ -193,10 +248,14 @@ export const regenerateOfertaEmbeddings = async (ofertaId?: string): Promise<{ p
     for (const doc of snapshot.docs) {
         try {
             const ofertaData = doc.data() as OfertaData;
-            const embeddingText = buildOfferEmbeddingText(ofertaData);
 
+            // Preprocesar con ETL
+            console.log(`[RegenerateOfertaEmbeddings] Preprocesando ${doc.id} con ETL...`);
+            const processedText = await preprocessOfferWithETL(ofertaData);
+
+            // Generar embedding
             console.log(`[RegenerateOfertaEmbeddings] Generando embedding para ${doc.id}`);
-            const vector = await embeddingProvider.generateEmbedding(embeddingText);
+            const vector = await embeddingProvider.generateEmbedding(processedText);
 
             await db.collection('ofertas').doc(doc.id).update({
                 embedding_oferta: FieldValue.vector(vector),

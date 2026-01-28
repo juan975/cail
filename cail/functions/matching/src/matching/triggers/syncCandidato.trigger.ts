@@ -8,7 +8,9 @@
  * 1. Usuario actualiza su perfil en `usuarios.candidateProfile`
  * 2. Trigger detecta el cambio
  * 3. Sincroniza datos relevantes a `candidatos`
- * 4. Si cambiaron las habilidades, regenera el embedding
+ * 4. Si cambiaron las habilidades:
+ *    a. Llama al ETL para preprocesar el texto
+ *    b. Envía texto procesado a Vertex AI para embeddings
  */
 
 import { onDocumentWritten, Change, FirestoreEvent } from 'firebase-functions/v2/firestore';
@@ -16,8 +18,9 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { createEmbeddingProvider } from '../infrastructure/providers/VertexAIEmbeddingProvider';
 
 // Configuración del proyecto
-const PROJECT_ID = process.env.GCLOUD_PROJECT || 'cail-b6e7c';
+const PROJECT_ID = process.env.GCLOUD_PROJECT || 'cail-backend-prod';
 const REGION = 'us-central1';
+const ETL_SERVICE_URL = `https://${REGION}-${PROJECT_ID}.cloudfunctions.net/etl`;
 
 // Inicializar providers
 const embeddingProvider = createEmbeddingProvider(PROJECT_ID, REGION);
@@ -44,10 +47,56 @@ interface UserDocument {
     candidateProfile?: CandidateProfileData;
 }
 
+interface ETLResponse {
+    success: boolean;
+    data?: {
+        processedText: string;
+        skillsNormalized?: string[];
+        keyPhrases?: string[];
+        processingTimeMs?: number;
+    };
+    error?: string;
+}
+
 /**
- * Construye el texto para generar el embedding basado en las habilidades del candidato
+ * Llama al servicio ETL para preprocesar el texto del candidato
  */
-function buildEmbeddingText(profile: CandidateProfileData): string {
+async function preprocessCandidateWithETL(profile: CandidateProfileData): Promise<string> {
+    try {
+        const response = await fetch(`${ETL_SERVICE_URL}/preprocess/candidate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                habilidadesTecnicas: profile.habilidadesTecnicas || [],
+                softSkills: profile.softSkills || [],
+                resumenProfesional: profile.resumenProfesional || '',
+                competencias: profile.competencias || []
+            })
+        });
+
+        if (!response.ok) {
+            console.warn(`[SyncCandidato] ETL respondió con error ${response.status}, usando fallback`);
+            return buildFallbackEmbeddingText(profile);
+        }
+
+        const result = await response.json() as ETLResponse;
+
+        if (result.success && result.data?.processedText) {
+            console.log(`[SyncCandidato] ETL procesó texto en ${result.data.processingTimeMs}ms`);
+            return result.data.processedText;
+        }
+
+        return buildFallbackEmbeddingText(profile);
+    } catch (error) {
+        console.warn(`[SyncCandidato] Error llamando a ETL, usando fallback:`, error);
+        return buildFallbackEmbeddingText(profile);
+    }
+}
+
+/**
+ * Construye el texto de embedding sin ETL (fallback)
+ */
+function buildFallbackEmbeddingText(profile: CandidateProfileData): string {
     const parts: string[] = [];
 
     if (profile.habilidadesTecnicas?.length) {
@@ -88,7 +137,11 @@ function skillsChanged(
         ...(after?.competencias || [])
     ].sort().join(',');
 
-    return beforeSkills !== afterSkills;
+    // También verificar si cambió el resumen
+    const beforeResumen = before?.resumenProfesional || '';
+    const afterResumen = after?.resumenProfesional || '';
+
+    return beforeSkills !== afterSkills || beforeResumen !== afterResumen;
 }
 
 /**
@@ -154,10 +207,14 @@ export const syncCandidatoFromUsuario = onDocumentWritten(
         // Regenerar embedding si las habilidades cambiaron
         if (shouldRegenerateEmbedding) {
             try {
-                const embeddingText = buildEmbeddingText(profile);
-                console.log(`[SyncCandidato] Generando embedding para: "${embeddingText.substring(0, 100)}..."`);
+                // Paso 1: Preprocesar con ETL
+                console.log(`[SyncCandidato] Preprocesando con ETL...`);
+                const processedText = await preprocessCandidateWithETL(profile);
+                console.log(`[SyncCandidato] Texto procesado: "${processedText.substring(0, 100)}..."`);
 
-                const vector = await embeddingProvider.generateEmbedding(embeddingText);
+                // Paso 2: Generar embedding con Vertex AI
+                console.log(`[SyncCandidato] Generando embedding con Vertex AI...`);
+                const vector = await embeddingProvider.generateEmbedding(processedText);
                 candidatoData.embedding_habilidades = FieldValue.vector(vector);
                 candidatoData.fecha_actualizacion_vector = new Date();
 
@@ -197,9 +254,12 @@ export const regenerateEmbeddings = async (userId?: string): Promise<{ processed
         try {
             const userData = doc.data() as UserDocument;
             const profile = userData.candidateProfile || {};
-            const embeddingText = buildEmbeddingText(profile);
 
-            const vector = await embeddingProvider.generateEmbedding(embeddingText);
+            // Preprocesar con ETL
+            const processedText = await preprocessCandidateWithETL(profile);
+
+            // Generar embedding
+            const vector = await embeddingProvider.generateEmbedding(processedText);
 
             await db.collection('candidatos').doc(doc.id).set({
                 nombre: userData.nombreCompleto || '',

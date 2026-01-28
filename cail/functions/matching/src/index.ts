@@ -127,12 +127,16 @@ app.use(errorHandler);
 // Exportar para Cloud Functions
 http('matching', app);
 
-// Servidor local para desarrollo (NO iniciar durante tests)
+// Servidor local para desarrollo (NO iniciar durante tests o despliegue)
 const isTest = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
 const isProduction = process.env.NODE_ENV === 'production';
 const isCloudFunction = process.env.FUNCTION_TARGET !== undefined;
+const isFirebaseDeployment = process.env.FIREBASE_CONFIG !== undefined ||
+    process.env.GCLOUD_PROJECT !== undefined ||
+    process.env.K_SERVICE !== undefined;
 
-if (!isTest && !isProduction && !isCloudFunction) {
+// Solo iniciar servidor local para desarrollo manual
+if (!isTest && !isProduction && !isCloudFunction && !isFirebaseDeployment) {
     const PORT = config.port;
     app.listen(PORT, () => {
         console.log(`🚀 Matching Function running on port ${PORT}`);

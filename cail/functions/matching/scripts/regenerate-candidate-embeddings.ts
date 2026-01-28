@@ -1,16 +1,13 @@
 /**
- * Script para regenerar embeddings de ofertas usando ETL + Vertex AI
+ * Script para regenerar embeddings de candidatos usando ETL + Vertex AI
  * 
- * Ejecutar con: npx ts-node scripts/regenerate-offer-embeddings.ts
+ * Ejecutar con: npx ts-node scripts/regenerate-candidate-embeddings.ts
  * 
  * Flujo:
- * 1. Lee ofertas activas de Firestore
- * 2. Envía cada oferta al servicio ETL para preprocesamiento
+ * 1. Lee candidatos de Firestore (colección candidatos)
+ * 2. Envía cada candidato al servicio ETL para preprocesamiento
  * 3. Genera embedding con Vertex AI
  * 4. Actualiza el documento en Firestore
- * 
- * Requiere:
- * - GOOGLE_APPLICATION_CREDENTIALS apuntando al archivo de credenciales de servicio
  */
 
 import * as admin from 'firebase-admin';
@@ -20,8 +17,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 const PROJECT_ID = 'cail-backend-prod';
 const REGION = 'us-central1';
 const ETL_SERVICE_URL = `https://${REGION}-${PROJECT_ID}.cloudfunctions.net/etl`;
-const USE_ETL = true;  // Cambiar a false para usar procesamiento local
-const USE_VERTEX_AI = true;  // Cambiar a false para usar mock embeddings
+const USE_ETL = true;
+const USE_VERTEX_AI = true;
 const EMBEDDING_DIMENSION = 768;
 
 // Inicializar Firebase Admin
@@ -34,94 +31,71 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 /**
- * Interfaz para los datos de una oferta
+ * Interfaz para los datos de un candidato
  */
-interface OfertaData {
-    titulo?: string;
-    descripcion?: string;
-    habilidades_obligatorias?: Array<string | { nombre: string }>;
-    habilidades_deseables?: Array<string | { nombre: string }>;
-    competencias_requeridas?: string[];
-    estado?: string;
-    embedding_oferta?: number[];
+interface CandidatoData {
+    nombre?: string;
+    habilidades_tecnicas?: string[];
+    soft_skills?: string[];
+    competencias?: string[];
+    resumen_profesional?: string;
+    id_nivel_actual?: string;
+    id_sector_industrial?: string;
 }
 
 interface ETLResponse {
     success: boolean;
     data?: {
         processedText: string;
-        skillsObligatorias?: string[];
-        skillsDeseables?: string[];
-        keyPhrases?: string[];
         processingTimeMs?: number;
     };
     error?: string;
 }
 
 /**
- * Extrae nombres de habilidades
- */
-function extractSkillNames(skills: Array<string | { nombre: string }> | undefined): string[] {
-    if (!skills || !Array.isArray(skills)) return [];
-
-    return skills.map(skill => {
-        if (typeof skill === 'string') return skill;
-        if (typeof skill === 'object' && skill.nombre) return skill.nombre;
-        return '';
-    }).filter(Boolean);
-}
-
-/**
  * Construye el texto para generar el embedding (fallback local)
  */
-function buildOfferEmbeddingText(oferta: OfertaData): string {
+function buildCandidateEmbeddingText(candidato: CandidatoData): string {
     const parts: string[] = [];
 
-    if (oferta.titulo) {
-        parts.push(`Puesto: ${oferta.titulo}`);
+    if (candidato.habilidades_tecnicas?.length) {
+        parts.push(`Habilidades técnicas: ${candidato.habilidades_tecnicas.join(', ')}`);
     }
 
-    if (oferta.descripcion) {
-        parts.push(`Descripción: ${oferta.descripcion}`);
+    if (candidato.soft_skills?.length) {
+        parts.push(`Habilidades blandas: ${candidato.soft_skills.join(', ')}`);
     }
 
-    const obligatorias = extractSkillNames(oferta.habilidades_obligatorias);
-    if (obligatorias.length) {
-        parts.push(`Habilidades requeridas: ${obligatorias.join(', ')}`);
+    if (candidato.competencias?.length) {
+        parts.push(`Competencias: ${candidato.competencias.join(', ')}`);
     }
 
-    const deseables = extractSkillNames(oferta.habilidades_deseables);
-    if (deseables.length) {
-        parts.push(`Habilidades deseables: ${deseables.join(', ')}`);
+    if (candidato.resumen_profesional) {
+        parts.push(`Perfil: ${candidato.resumen_profesional}`);
     }
 
-    if (oferta.competencias_requeridas?.length) {
-        parts.push(`Competencias: ${oferta.competencias_requeridas.join(', ')}`);
-    }
-
-    return parts.join('. ') || 'Sin información especificada';
+    return parts.join('. ') || 'Sin habilidades especificadas';
 }
 
 /**
- * Llama al servicio ETL para preprocesar el texto de la oferta
+ * Llama al servicio ETL para preprocesar el texto del candidato
  */
-async function preprocessWithETL(oferta: OfertaData): Promise<string> {
+async function preprocessWithETL(candidato: CandidatoData): Promise<string> {
     try {
-        const response = await fetch(`${ETL_SERVICE_URL}/preprocess/offer`, {
+        const response = await fetch(`${ETL_SERVICE_URL}/preprocess/candidate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                titulo: oferta.titulo || '',
-                descripcion: oferta.descripcion || '',
-                habilidades_obligatorias: extractSkillNames(oferta.habilidades_obligatorias),
-                habilidades_deseables: extractSkillNames(oferta.habilidades_deseables),
-                competencias_requeridas: oferta.competencias_requeridas || []
+                habilidadesTecnicas: candidato.habilidades_tecnicas || [],
+                softSkills: candidato.soft_skills || [],
+                resumenProfesional: candidato.resumen_profesional || '',
+                competencias: candidato.competencias || []
             })
         });
 
         if (!response.ok) {
             console.log(`   ⚠️ ETL retornó ${response.status}, usando fallback local`);
-            return buildOfferEmbeddingText(oferta);
+            return buildCandidateEmbeddingText(candidato);
         }
 
         const result = await response.json() as ETLResponse;
@@ -131,10 +105,10 @@ async function preprocessWithETL(oferta: OfertaData): Promise<string> {
             return result.data.processedText;
         }
 
-        return buildOfferEmbeddingText(oferta);
+        return buildCandidateEmbeddingText(candidato);
     } catch (error) {
         console.log(`   ⚠️ Error en ETL: ${(error as Error).message}, usando fallback`);
-        return buildOfferEmbeddingText(oferta);
+        return buildCandidateEmbeddingText(candidato);
     }
 }
 
@@ -142,14 +116,6 @@ async function preprocessWithETL(oferta: OfertaData): Promise<string> {
  * Genera embedding usando Vertex AI
  */
 async function generateVertexAIEmbedding(text: string): Promise<number[]> {
-    const { VertexAI } = await import('@google-cloud/vertexai');
-
-    const vertexAI = new VertexAI({
-        project: PROJECT_ID,
-        location: REGION
-    });
-
-    // Usar text-embedding-004 (modelo estable de embeddings)
     const endpoint = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/text-embedding-004:predict`;
 
     const { GoogleAuth } = await import('google-auth-library');
@@ -171,8 +137,7 @@ async function generateVertexAIEmbedding(text: string): Promise<number[]> {
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Vertex AI error: ${response.status} - ${errorText}`);
+        throw new Error(`Vertex AI error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json() as any;
@@ -206,35 +171,33 @@ function generateMockEmbedding(text: string): number[] {
 /**
  * Función principal para regenerar embeddings
  */
-async function regenerateOfertaEmbeddings(): Promise<void> {
-    console.log('🚀 Iniciando regeneración de embeddings de ofertas...\n');
+async function regenerateCandidatoEmbeddings(): Promise<void> {
+    console.log('🚀 Iniciando regeneración de embeddings de candidatos...\n');
     console.log(`📌 Configuración:`);
     console.log(`   - ETL Service: ${USE_ETL ? 'ACTIVADO' : 'DESACTIVADO'}`);
     console.log(`   - Vertex AI: ${USE_VERTEX_AI ? 'ACTIVADO' : 'Mock'}`);
     console.log('');
 
-    // Obtener todas las ofertas activas
-    const snapshot = await db.collection('ofertas')
-        .where('estado', '==', 'ACTIVA')
-        .get();
+    // Obtener todos los candidatos
+    const snapshot = await db.collection('candidatos').get();
 
-    console.log(`📊 Encontradas ${snapshot.size} ofertas activas\n`);
+    console.log(`📊 Encontrados ${snapshot.size} candidatos\n`);
 
     let processed = 0;
     let errors = 0;
 
     for (const doc of snapshot.docs) {
         try {
-            const ofertaData = doc.data() as OfertaData;
+            const candidatoData = doc.data() as CandidatoData;
 
-            console.log(`📝 [${processed + 1}/${snapshot.size}] Procesando: ${ofertaData.titulo}`);
+            console.log(`📝 [${processed + 1}/${snapshot.size}] Procesando: ${candidatoData.nombre || doc.id}`);
 
             // Paso 1: Preprocesar con ETL o local
             let processedText: string;
             if (USE_ETL) {
-                processedText = await preprocessWithETL(ofertaData);
+                processedText = await preprocessWithETL(candidatoData);
             } else {
-                processedText = buildOfferEmbeddingText(ofertaData);
+                processedText = buildCandidateEmbeddingText(candidatoData);
             }
             console.log(`   Texto: "${processedText.substring(0, 80)}..."`);
 
@@ -248,9 +211,9 @@ async function regenerateOfertaEmbeddings(): Promise<void> {
             }
 
             // Paso 3: Actualizar documento
-            await db.collection('ofertas').doc(doc.id).update({
-                embedding_oferta: FieldValue.vector(vector),
-                fecha_actualizacion_embedding: new Date()
+            await db.collection('candidatos').doc(doc.id).update({
+                embedding_habilidades: FieldValue.vector(vector),
+                fecha_actualizacion_vector: new Date()
             });
 
             processed++;
@@ -266,13 +229,13 @@ async function regenerateOfertaEmbeddings(): Promise<void> {
 
     console.log('═'.repeat(50));
     console.log(`\n🎉 Completado!`);
-    console.log(`   ✅ Procesadas: ${processed}`);
+    console.log(`   ✅ Procesados: ${processed}`);
     console.log(`   ❌ Errores: ${errors}`);
     console.log(`   📊 Total: ${snapshot.size}`);
 }
 
 // Ejecutar
-regenerateOfertaEmbeddings()
+regenerateCandidatoEmbeddings()
     .then(() => {
         console.log('\n✨ Script finalizado exitosamente');
         process.exit(0);

@@ -2,13 +2,20 @@
     "name": "cail-matching-function",
     "version": "1.0.0",
     "description": "Cloud Function de Matching Candidato-Oferta (CAIL)",
+    "engines": {
+        "node": "20"
+    },
     "main": "dist/index.js",
     "scripts": {
         "build": "tsc",
         "start": "node dist/index.js",
         "dev": "nodemon --watch src --exec ts-node src/index.ts",
         "test": "jest --coverage",
-        "deploy": "gcloud functions deploy matching --gen2 --runtime=nodejs20 --trigger-http --entry-point=matching --source=."
+        "deploy": "gcloud functions deploy matching --gen2 --runtime=nodejs20 --trigger-http --entry-point=matching --source=.",
+        "seed:offers": "ts-node scripts/seed-offers.ts",
+        "regen:offers": "ts-node scripts/regenerate-offer-embeddings.ts",
+        "regen:candidates": "ts-node scripts/regenerate-candidate-embeddings.ts",
+        "fix:user": "ts-node scripts/fix-user-embedding.ts"
     },
     "keywords": [
         "cail",
