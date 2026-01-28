@@ -35,7 +35,7 @@ Establecer nuevos estándares en la industria, siendo sinónimo de lógica, func
   <tr>
     <td align="center"><img src="https://github.com/user-attachments/assets/b3371101-ce8b-4489-b87b-2d16157cd30a" width="150" alt="Alex Ramírez"></td>
     <td align="center"><img src="https://github.com/user-attachments/assets/bf1f82ed-4b7e-4ea3-ab2d-fb2b95a2a8e8" width="120" alt="Sebastián Calderón"></td>
-    <td align="center"><img src="https://github.com/user-attachments/assets/9b9625ad-382d-499c-98de-5e0caf2f0b03" width="130" alt="Carlos Mejia"></td>
+    <td align="center"><img src="https://github.com/user-attachments/assets/e74cd0f4-ece5-44fd-adb7-a1d5cc01f4db" width="130" alt="Carlos Mejia"></td>
   </tr>
   <tr>
     <td align="center"><a href="https://github.com/ALISrj">Alex Ramírez</a></td>
