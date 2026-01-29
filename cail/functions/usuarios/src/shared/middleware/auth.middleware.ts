@@ -5,17 +5,17 @@ import { getAuth, getDb } from '../../config/firebase.config';
 /**
  * Payload del usuario autenticado
  */
-export interface FirebaseTokenPayload {
+export interface JwtPayload {
     uid: string;
     email: string;
-    tipoUsuario?: string;
+    tipoUsuario: string;
 }
 
 /**
  * Request extendido con información del usuario autenticado
  */
 export interface AuthRequest extends Request {
-    user?: FirebaseTokenPayload;
+    user?: JwtPayload;
 }
 
 /**
@@ -80,15 +80,14 @@ export const authenticate = async (
 
 /**
  * Middleware de autorización por roles
- * Verifica que el usuario tenga uno de los roles permitidos
  */
 export const authorize = (...allowedRoles: string[]) => {
-    return async (req: AuthRequest, res: Response, next: NextFunction) => {
+    return (req: AuthRequest, res: Response, next: NextFunction) => {
         if (!req.user) {
             return next(new AppError(401, 'Not authenticated'));
         }
 
-        if (!req.user.tipoUsuario || !allowedRoles.includes(req.user.tipoUsuario)) {
+        if (!allowedRoles.includes(req.user.tipoUsuario)) {
             return next(new AppError(403, 'Not authorized to access this resource'));
         }
 

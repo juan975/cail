@@ -12,10 +12,17 @@ export class FirestoreOfertaRepository implements IOfertaRepository {
     }
 
     async save(oferta: Oferta): Promise<Oferta> {
-        const data = {
-            ...oferta.toJSON(),
-            updatedAt: new Date(),
-        };
+        const rawData = oferta.toJSON();
+        // Remove undefined values to prevent Firestore errors
+        const data = Object.entries(rawData).reduce((acc, [key, value]) => {
+            if (value !== undefined) {
+                acc[key] = value;
+            }
+            return acc;
+        }, {} as any);
+
+        data.updatedAt = new Date();
+
         await this.getCollection().doc(oferta.idOferta).set(data, { merge: true });
         return oferta;
     }
@@ -23,7 +30,7 @@ export class FirestoreOfertaRepository implements IOfertaRepository {
     async findById(id: string): Promise<Oferta | null> {
         const doc = await this.getCollection().doc(id).get();
         if (!doc.exists) return null;
-        return this.mapToEntity(doc.data()!);
+        return this.mapToEntity(doc.data()!, doc.id);
     }
 
     async findAll(filters?: OfertaFilters): Promise<Oferta[]> {
@@ -55,7 +62,7 @@ export class FirestoreOfertaRepository implements IOfertaRepository {
             }
 
             const snapshot = await query.get();
-            let ofertas = snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+            let ofertas = snapshot.docs.map(doc => this.mapToEntity(doc.data(), doc.id));
 
             // Ordenar en memoria si se usaron filtros
             if (needsInMemorySort) {
@@ -80,7 +87,7 @@ export class FirestoreOfertaRepository implements IOfertaRepository {
                 .get();
 
             // Ordenar en memoria para evitar necesidad de índice compuesto
-            const ofertas = snapshot.docs.map(doc => this.mapToEntity(doc.data()));
+            const ofertas = snapshot.docs.map(doc => this.mapToEntity(doc.data(), doc.id));
             return ofertas.sort((a, b) => {
                 const dateA = a.fechaPublicacion instanceof Date ? a.fechaPublicacion : new Date(a.fechaPublicacion);
                 const dateB = b.fechaPublicacion instanceof Date ? b.fechaPublicacion : new Date(b.fechaPublicacion);
@@ -96,9 +103,10 @@ export class FirestoreOfertaRepository implements IOfertaRepository {
         await this.getCollection().doc(id).delete();
     }
 
-    private mapToEntity(data: any): Oferta {
+    private mapToEntity(data: any, docId?: string): Oferta {
         return new Oferta({
-            idOferta: data.idOferta,
+            // Use docId as fallback if idOferta is not stored in document
+            idOferta: data.idOferta || docId,
             titulo: data.titulo,
             descripcion: data.descripcion,
             empresa: data.empresa,
@@ -107,9 +115,10 @@ export class FirestoreOfertaRepository implements IOfertaRepository {
             tipoContrato: data.tipoContrato,
             salarioMin: data.salarioMin,
             salarioMax: data.salarioMax,
-            experiencia_requerida: data.experiencia_requerida,
-            formacion_requerida: data.formacion_requerida,
+            experiencia_requerida: data.experiencia_requerida || '',
+            formacion_requerida: data.formacion_requerida || '',
             competencias_requeridas: data.competencias_requeridas || [],
+            nivelJerarquico: data.nivelJerarquico,
             fechaPublicacion: data.fechaPublicacion?.toDate?.() || new Date(data.fechaPublicacion),
             fechaCierre: data.fechaCierre?.toDate?.() || undefined,
             estado: data.estado,

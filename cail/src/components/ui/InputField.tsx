@@ -7,10 +7,12 @@ interface InputFieldProps extends TextInputProps {
   helperText?: string;
   tone?: 'default' | 'employer' | 'candidate';
   readonly?: boolean;
+  badge?: string;
+  containerStyle?: any;
 }
 
 export const InputField = forwardRef<TextInput, InputFieldProps>(
-  ({ label, helperText, multiline, tone = 'default', readonly = false, style, onFocus, onBlur, editable, ...rest }, ref) => {
+  ({ label, helperText, multiline, tone = 'default', readonly = false, badge, style, containerStyle, onFocus, onBlur, editable, ...rest }, ref) => {
     const [focused, setFocused] = useState(false);
     const accent =
       tone === 'employer' ? colors.employer : tone === 'candidate' ? colors.candidate : colors.accent;
@@ -18,13 +20,13 @@ export const InputField = forwardRef<TextInput, InputFieldProps>(
     const isReadonly = readonly || editable === false;
 
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, containerStyle]}>
         {label && (
           <View style={styles.labelRow}>
             <Text style={styles.label}>{label}</Text>
-            {isReadonly && (
+            {(isReadonly || badge) && (
               <View style={styles.readonlyBadge}>
-                <Text style={styles.readonlyBadgeText}>Solo lectura</Text>
+                <Text style={styles.readonlyBadgeText}>{badge || 'Solo lectura'}</Text>
               </View>
             )}
           </View>

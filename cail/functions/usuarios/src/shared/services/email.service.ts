@@ -286,6 +286,166 @@ class EmailService {
             });
         }
     }
+
+    /**
+     * Envía solicitud de autorización al Supervisor (Nuevo Flujo)
+     */
+    async sendAuthorizationRequest(
+        supervisorEmail: string,
+        recruiterName: string,
+        companyName: string,
+        ruc: string,
+        verificationToken: string
+    ): Promise<void> {
+        // URL del endpoint de verificación (que actúa como autorización)
+        const baseUrl = config.nodeEnv === 'production'
+            ? 'https://us-central1-cail-backend-prod.cloudfunctions.net/usuarios'
+            : 'http://localhost:8080';
+        const authorizationLink = `${baseUrl}/auth/verify-email?token=${verificationToken}`;
+
+        const content = `
+            <div style="text-align: center; margin-bottom: 24px;">
+                <span style="font-size: 48px;">🛡️</span>
+            </div>
+            
+            <h2 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: ${this.brandColors.textPrimary}; text-align: center;">
+                Solicitud de Autorización de Reclutador
+            </h2>
+            
+            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: ${this.brandColors.textSecondary}; text-align: center;">
+                Un nuevo usuario ha solicitado acceso como reclutador en <strong style="color: ${this.brandColors.primary};">CAIL</strong>.
+            </p>
+
+            <div style="background-color: ${this.brandColors.background}; border-radius: 12px; padding: 24px; margin: 24px 0;">
+                <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: ${this.brandColors.textPrimary};">
+                    Detalles del Reclutador:
+                </p>
+                <ul style="margin: 0; padding-left: 20px; color: ${this.brandColors.textSecondary}; font-size: 14px; line-height: 2;">
+                    <li><strong>Nombre:</strong> ${recruiterName}</li>
+                    <li><strong>Empresa:</strong> ${companyName}</li>
+                    <li><strong>RUC:</strong> ${ruc}</li>
+                </ul>
+            </div>
+            
+            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: ${this.brandColors.textSecondary}; text-align: center;">
+                Por favor valida si esta persona está autorizada para reclutar a nombre de la empresa.
+            </p>
+            
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 32px 0;">
+                <a href="${authorizationLink}" style="display: inline-block; background: linear-gradient(135deg, ${this.brandColors.primary} 0%, ${this.brandColors.primaryDark} 100%); color: ${this.brandColors.white}; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 18px; box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.4);">
+                    ✓ Autorizar Reclutador
+                </a>
+            </div>
+            
+            <div style="background-color: #fef2f2; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                <p style="margin: 0; font-size: 14px; color: #991b1b;">
+                    ⚠️ <strong>Importante:</strong> Al autorizar, el usuario tendrá acceso inmediato a la plataforma.
+                </p>
+            </div>
+        `;
+
+        const mailOptions = {
+            from: `CAIL Seguridad <${this.fromEmail}>`,
+            to: supervisorEmail,
+            subject: `🛡️ Autorización Requerida: ${recruiterName} - ${companyName}`,
+            html: this.getBaseTemplate(content),
+        };
+
+        if (this.transporter) {
+            try {
+                await this.transporter.sendMail(mailOptions);
+                console.log(`✅ Authorization request sent to supervisor: ${supervisorEmail}`);
+            } catch (error: any) {
+                console.error('❌ Error sending authorization email:', error);
+                throw new Error(`Error enviando solicitud de autorización: ${error.message || error}`);
+            }
+        } else {
+            console.log('📧 [DEV] Authorization email would be sent to supervisor:', {
+                to: supervisorEmail,
+                recruiter: recruiterName,
+                link: authorizationLink
+            });
+        }
+    }
+
+    /**
+     * Envía email con Magic Link para verificación de reclutadores
+     */
+    async sendVerificationMagicLink(email: string, verificationToken: string, name: string): Promise<void> {
+        // URL del endpoint de verificación
+        const baseUrl = config.nodeEnv === 'production'
+            ? 'https://us-central1-cail-backend-prod.cloudfunctions.net/usuarios'
+            : 'http://localhost:8080';
+        const verificationLink = `${baseUrl}/auth/verify-email?token=${verificationToken}`;
+
+        const content = `
+            <div style="text-align: center; margin-bottom: 24px;">
+                <span style="font-size: 48px;">✅</span>
+            </div>
+            
+            <h2 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: ${this.brandColors.textPrimary}; text-align: center;">
+                ¡Hola ${name}! 👋
+            </h2>
+            
+            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: ${this.brandColors.textSecondary}; text-align: center;">
+                Tu cuenta de empleador en <strong style="color: ${this.brandColors.primary};">CAIL</strong> ha sido creada. 
+                Solo falta un paso para activarla.
+            </p>
+            
+            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: ${this.brandColors.textSecondary}; text-align: center;">
+                Haz clic en el siguiente botón para <strong>verificar tu correo electrónico</strong> y poder iniciar sesión:
+            </p>
+            
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 32px 0;">
+                <a href="${verificationLink}" style="display: inline-block; background: linear-gradient(135deg, ${this.brandColors.success} 0%, #059669 100%); color: ${this.brandColors.white}; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 18px; box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.4);">
+                    ✓ Verificar mi Correo
+                </a>
+            </div>
+            
+            <p style="margin: 24px 0 0 0; font-size: 14px; color: ${this.brandColors.textSecondary}; text-align: center;">
+                Si el botón no funciona, copia y pega el siguiente enlace en tu navegador:<br>
+                <a href="${verificationLink}" style="color: ${this.brandColors.primary}; word-break: break-all;">${verificationLink}</a>
+            </p>
+            
+            <div style="background-color: #fef2f2; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                <p style="margin: 0; font-size: 14px; color: #991b1b;">
+                    ⚠️ <strong>Importante:</strong> Este enlace expirará en 24 horas. 
+                    Si no verificas tu correo, no podrás iniciar sesión.
+                </p>
+            </div>
+            
+            <div style="background-color: ${this.brandColors.background}; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                <p style="margin: 0; font-size: 14px; color: ${this.brandColors.textSecondary};">
+                    <strong>¿No solicitaste esta cuenta?</strong><br>
+                    Si no te registraste en CAIL, puedes ignorar este correo de forma segura.
+                </p>
+            </div>
+        `;
+
+        const mailOptions = {
+            from: `CAIL <${this.fromEmail}>`,
+            to: email,
+            subject: '✅ Verifica tu correo para activar tu cuenta de CAIL',
+            html: this.getBaseTemplate(content),
+        };
+
+        if (this.transporter) {
+            try {
+                await this.transporter.sendMail(mailOptions);
+                console.log(`✅ Verification magic link sent to: ${email}`);
+            } catch (error) {
+                console.error('❌ Error sending verification email:', error);
+                throw new Error('Error enviando el correo de verificación');
+            }
+        } else {
+            console.log('📧 [DEV] Verification magic link would be sent:', {
+                to: email,
+                link: verificationLink
+            });
+        }
+    }
 }
 
 export const emailService = new EmailService();

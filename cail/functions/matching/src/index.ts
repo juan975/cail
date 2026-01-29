@@ -33,6 +33,7 @@ import {
     FirestorePostulacionRepository,
     CatalogoValidator
 } from './matching/infrastructure/repositories/FirestorePostulacionRepository';
+import { FirestoreUsuarioRepository } from './matching/infrastructure/repositories/FirestoreUsuarioRepository';
 import { createEmbeddingProvider } from './matching/infrastructure/providers/VertexAIEmbeddingProvider';
 import { setMatchingService } from './matching/infrastructure/controllers/Matching.controller';
 
@@ -50,6 +51,7 @@ const initializeServices = (): void => {
     const matchingRepository = new FirestoreAplicacionRepository(db);
     const postulacionRepository = new FirestorePostulacionRepository(db);
     const catalogoRepository = new CatalogoValidator();
+    const usuarioRepository = new FirestoreUsuarioRepository();
 
     // Crear provider de embeddings (Infraestructura)
     const embeddingProvider = createEmbeddingProvider(
@@ -65,10 +67,14 @@ const initializeServices = (): void => {
         embeddingProvider
     );
 
+    // Inyectar repositorio de usuarios para postulaciones enriquecidas
+    matchingService.setUsuarioRepository(usuarioRepository);
+
     // Registrar servicio globalmente para los controllers
     setMatchingService(matchingService);
 
     console.log('✅ MatchingService inicializado con todas las dependencias');
+    console.log('✅ FirestoreUsuarioRepository configurado para postulaciones enriquecidas');
 };
 
 // Inicializar servicios
@@ -121,12 +127,16 @@ app.use(errorHandler);
 // Exportar para Cloud Functions
 http('matching', app);
 
-// Servidor local para desarrollo (NO iniciar durante tests)
+// Servidor local para desarrollo (NO iniciar durante tests o despliegue)
 const isTest = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
 const isProduction = process.env.NODE_ENV === 'production';
 const isCloudFunction = process.env.FUNCTION_TARGET !== undefined;
+const isFirebaseDeployment = process.env.FIREBASE_CONFIG !== undefined ||
+    process.env.GCLOUD_PROJECT !== undefined ||
+    process.env.K_SERVICE !== undefined;
 
-if (!isTest && !isProduction && !isCloudFunction) {
+// Solo iniciar servidor local para desarrollo manual
+if (false && !isTest && !isProduction && !isCloudFunction && !isFirebaseDeployment) {
     const PORT = config.port;
     app.listen(PORT, () => {
         console.log(`🚀 Matching Function running on port ${PORT}`);
@@ -138,3 +148,13 @@ if (!isTest && !isProduction && !isCloudFunction) {
 }
 
 export default app;
+
+// ============================================
+// FIRESTORE TRIGGERS (Firebase Functions v2)
+// ============================================
+// Trigger para sincronizar usuarios → candidatos (genera embedding_habilidades)
+export { syncCandidatoFromUsuario } from './matching/triggers/syncCandidato.trigger';
+
+// Trigger para generar embeddings de ofertas (genera embedding_oferta)
+export { syncOfertaEmbedding } from './matching/triggers/syncOferta.trigger';
+

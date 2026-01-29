@@ -1,11 +1,34 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { offersService } from '../../services/offers.service';
 import { applicationsService } from '../../services/applications.service';
+import { userService } from '../../services/user.service';
 import { Offer, CreateOfferDTO, OfferStatus as ApiOfferStatus } from '../../types/offers.types';
-import { Application, ApplicationStatusColors } from '../../types/applications.types';
+import { Application, ApplicationStatusColors, ApplicationWithCandidate } from '../../types/applications.types';
 import { colors } from '../../theme/colors';
 import { InputField } from '../../components/ui/InputField';
 import { Button } from '../../components/ui/Button';
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+
+// Lista de competencias comunes para autocompletado
+const COMMON_COMPETENCIES = [
+  'JavaScript', 'TypeScript', 'React', 'React Native', 'Angular', 'Vue.js', 'Node.js',
+  'Python', 'Java', 'C#', 'C++', 'PHP', 'Ruby', 'Go', 'Rust', 'Swift', 'Kotlin',
+  'SQL', 'MySQL', 'PostgreSQL', 'MongoDB', 'Firebase', 'Redis', 'GraphQL',
+  'AWS', 'Google Cloud', 'Azure', 'Docker', 'Kubernetes', 'CI/CD', 'DevOps',
+  'Git', 'GitHub', 'GitLab', 'Jira', 'Agile', 'Scrum', 'Kanban',
+  'HTML', 'CSS', 'SASS', 'Tailwind CSS', 'Bootstrap', 'Material UI',
+  'REST API', 'Microservicios', 'Arquitectura de Software',
+  'Machine Learning', 'Inteligencia Artificial', 'Data Science', 'Big Data',
+  'Seguridad Informática', 'Pentesting', 'Ciberseguridad',
+  'Comunicación', 'Trabajo en Equipo', 'Liderazgo', 'Resolución de Problemas',
+  'Gestión de Proyectos', 'Negociación', 'Presentaciones', 'Ventas',
+  'Inglés', 'Español', 'Portugués', 'Francés', 'Alemán',
+  'Excel', 'Power BI', 'Tableau', 'SAP', 'ERP', 'CRM', 'Salesforce',
+  'Marketing Digital', 'SEO', 'SEM', 'Google Analytics', 'Redes Sociales',
+  'Diseño Gráfico', 'UI/UX', 'Figma', 'Adobe Photoshop', 'Adobe Illustrator',
+  'Contabilidad', 'Finanzas', 'Recursos Humanos', 'Administración de Empresas',
+  'Atención al Cliente', 'Soporte Técnico', 'Help Desk',
+];
 
 type OfferStatus = 'active' | 'archived' | 'deleted';
 type OfferAction = 'archive' | 'restore' | 'delete';
@@ -28,6 +51,10 @@ interface JobOffer {
   requiredExperience: string;
   apiId?: string;
   apiEstado?: ApiOfferStatus;
+  salaryMin?: number;
+  salaryMax?: number;
+  hierarchyLevel?: string;
+  contractType?: string;
 }
 
 const mapApiStatusToUI = (estado: ApiOfferStatus): OfferStatus => {
@@ -52,13 +79,24 @@ const mapApiOfferToUI = (offer: Offer): JobOffer => {
     department: offer.empresa,
     description: offer.descripcion,
     location: offer.ciudad,
-    salary:
-      offer.salarioMin && offer.salarioMax
-        ? `$${offer.salarioMin} - $${offer.salarioMax}`
-        : offer.salarioMin
-        ? `$${offer.salarioMin}+`
-        : 'A convenir',
-    modality: offer.modalidad,
+    salary: (offer.salarioMin || offer.salarioMax || (offer as any).salario_min || (offer as any).salario_max)
+      ? (() => {
+          const sMin = offer.salarioMin || (offer as any).salario_min;
+          const sMax = offer.salarioMax || (offer as any).salario_max;
+          if (sMin && sMax) return `$${sMin} - $${sMax}`;
+          if (sMin) return `$${sMin}+`;
+          if (sMax) return `$${sMax}`;
+          return 'A convenir';
+        })()
+      : 'A convenir',
+    modality: (() => {
+      if (!offer.modalidad) return 'Presencial';
+      const m = offer.modalidad.toUpperCase();
+      if (m === 'PRESENCIAL') return 'Presencial';
+      if (m === 'REMOTO') return 'Remoto';
+      if (m === 'HIBRIDO' || m === 'HÍBRIDO') return 'Híbrido';
+      return offer.modalidad;
+    })(),
     priority: 'Media',
     publishedDate: fechaPub.toLocaleDateString('es-EC'),
     status: mapApiStatusToUI(offer.estado),
@@ -68,10 +106,18 @@ const mapApiOfferToUI = (offer: Offer): JobOffer => {
     requiredEducation: offer.formacion_requerida ? [offer.formacion_requerida] : [],
     requiredExperience: offer.experiencia_requerida || '',
     apiEstado: offer.estado,
+    salaryMin: offer.salarioMin,
+    salaryMax: offer.salarioMax,
+    hierarchyLevel: offer.nivelJerarquico,
+    contractType: offer.tipoContrato,
   };
 };
 
-export function OffersManagementScreen() {
+interface OffersManagementScreenProps {
+  searchQuery?: string;
+}
+
+export function OffersManagementScreen({ searchQuery = '' }: OffersManagementScreenProps) {
   const [selectedTab, setSelectedTab] = useState<OfferStatus>('active');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -82,10 +128,19 @@ export function OffersManagementScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
-  const [selectedOfferApplications, setSelectedOfferApplications] = useState<Application[]>([]);
+  const [selectedOfferApplications, setSelectedOfferApplications] = useState<ApplicationWithCandidate[]>([]);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [applicationsOffer, setApplicationsOffer] = useState<JobOffer | null>(null);
+
+  // Company name from recruiter's profile
+  const [companyName, setCompanyName] = useState('');
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  // Autocomplete state for competencies
+  const [competencySuggestions, setCompetencySuggestions] = useState<string[]>([]);
+  const [showCompetencySuggestions, setShowCompetencySuggestions] = useState(false);
+  const competencyInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -100,6 +155,8 @@ export function OffersManagementScreen() {
   const [newEducation, setNewEducation] = useState('');
   const [tipoContrato, setTipoContrato] = useState('Tiempo Completo');
   const [experiencia, setExperiencia] = useState('');
+  const [formacionRequerida, setFormacionRequerida] = useState('');
+  const [nivelJerarquico, setNivelJerarquico] = useState<'Junior' | 'Semi-Senior' | 'Senior' | 'Gerencial'>('Junior');
 
   const loadOffers = useCallback(async () => {
     try {
@@ -119,7 +176,32 @@ export function OffersManagementScreen() {
     loadOffers();
   }, [loadOffers]);
 
-  const filteredOffers = offers.filter((offer) => offer.status === selectedTab);
+  // Load recruiter profile to get company name
+  useEffect(() => {
+    const loadRecruiterProfile = async () => {
+      try {
+        const profile = await userService.getProfile();
+        if (profile.employerProfile?.nombreEmpresa) {
+          setCompanyName(profile.employerProfile.nombreEmpresa);
+        }
+      } catch (error) {
+        console.error('Error loading recruiter profile:', error);
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+    loadRecruiterProfile();
+  }, []);
+
+  const filteredOffers = offers.filter((offer) => {
+    const matchesTab = offer.status === selectedTab;
+    const matchesSearch =
+      searchQuery === '' ||
+      offer.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      offer.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
   const activeCount = offers.filter((o) => o.status === 'active').length;
   const archivedCount = offers.filter((o) => o.status === 'archived').length;
   const deletedCount = offers.filter((o) => o.status === 'deleted').length;
@@ -138,6 +220,8 @@ export function OffersManagementScreen() {
     setNewEducation('');
     setTipoContrato('Tiempo Completo');
     setExperiencia('');
+    setFormacionRequerida('');
+    setNivelJerarquico('Junior');
   };
 
   const openCreateModal = () => {
@@ -150,13 +234,16 @@ export function OffersManagementScreen() {
     setTitle(offer.title);
     setDescription(offer.description);
     setDepartment(offer.department);
-    setSalaryMin('');
-    setSalaryMax('');
+    setSalaryMin(offer.salaryMin ? String(offer.salaryMin) : '');
+    setSalaryMax(offer.salaryMax ? String(offer.salaryMax) : '');
     setModality(offer.modality);
     setLocation(offer.location);
     setCompetencies(offer.requiredCompetencies);
     setEducation(offer.requiredEducation);
     setExperiencia(offer.requiredExperience);
+    setFormacionRequerida(offer.requiredEducation[0] || '');
+    setNivelJerarquico((offer as any).hierarchyLevel || 'Junior');
+    setTipoContrato(offer.contractType || 'Tiempo Completo');
     setShowEditModal(true);
   };
 
@@ -170,15 +257,16 @@ export function OffersManagementScreen() {
       const createData: CreateOfferDTO = {
         titulo: title,
         descripcion: description,
-        empresa: department,
+        empresa: companyName, // Use company name from recruiter's profile
         ciudad: location,
         salarioMin: salaryMin ? Number(salaryMin) : undefined,
         salarioMax: salaryMax ? Number(salaryMax) : undefined,
         modalidad: modality as any,
         tipoContrato: tipoContrato,
         competencias_requeridas: competencies,
-        formacion_requerida: education[0] || '',
+        formacion_requerida: formacionRequerida,
         experiencia_requerida: experiencia,
+        nivelJerarquico: nivelJerarquico,
       };
 
       await offersService.createOffer(createData);
@@ -202,13 +290,16 @@ export function OffersManagementScreen() {
       await offersService.updateOffer(selectedOffer.apiId, {
         titulo: title,
         descripcion: description,
-        empresa: department,
+        empresa: companyName, // Use company name from recruiter's profile
         ciudad: location,
         modalidad: modality as any,
         tipoContrato: tipoContrato,
+        salarioMin: salaryMin ? Number(salaryMin) : undefined,
+        salarioMax: salaryMax ? Number(salaryMax) : undefined,
         competencias_requeridas: competencies,
-        formacion_requerida: education[0] || '',
+        formacion_requerida: formacionRequerida,
         experiencia_requerida: experiencia,
+        nivelJerarquico: nivelJerarquico,
       });
       setShowEditModal(false);
       setToast({ message: 'Oferta actualizada exitosamente', type: 'success' });
@@ -253,7 +344,7 @@ export function OffersManagementScreen() {
     setLoadingApplications(true);
     setApplicationsOffer(offer);
     try {
-      const data = await applicationsService.getOfferApplications(offer.apiId);
+      const data = await applicationsService.getOfferApplicationsWithCandidates(offer.apiId);
       setSelectedOfferApplications(data);
       setShowApplicationsModal(true);
     } catch (error: any) {
@@ -263,10 +354,37 @@ export function OffersManagementScreen() {
     }
   };
 
-  const addCompetency = () => {
-    if (!newCompetency.trim()) return;
-    setCompetencies((prev) => [...prev, newCompetency.trim()]);
+  const addCompetency = (comp?: string) => {
+    const competencyToAdd = comp || newCompetency.trim();
+    if (!competencyToAdd) return;
+    // Avoid duplicates
+    if (competencies.includes(competencyToAdd)) {
+      setNewCompetency('');
+      setShowCompetencySuggestions(false);
+      return;
+    }
+    setCompetencies((prev) => [...prev, competencyToAdd]);
     setNewCompetency('');
+    setShowCompetencySuggestions(false);
+  };
+
+  const removeCompetency = (comp: string) => {
+    setCompetencies((prev) => prev.filter((c) => c !== comp));
+  };
+
+  const handleCompetencyInputChange = (value: string) => {
+    setNewCompetency(value);
+    if (value.length > 0) {
+      const filtered = COMMON_COMPETENCIES.filter(
+        (c) =>
+          c.toLowerCase().includes(value.toLowerCase()) &&
+          !competencies.includes(c)
+      ).slice(0, 8);
+      setCompetencySuggestions(filtered);
+      setShowCompetencySuggestions(filtered.length > 0);
+    } else {
+      setShowCompetencySuggestions(false);
+    }
   };
 
   const addEducation = () => {
@@ -306,60 +424,224 @@ export function OffersManagementScreen() {
       >
         <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{titleLabel}</h3>
         <InputField label="Título" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <InputField label="Descripción" value={description} onChange={(e) => setDescription(e.target.value)} multiline />
-        <InputField label="Empresa" value={department} onChange={(e) => setDepartment(e.target.value)} />
-        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <InputField label="Salario mínimo" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} />
-          <InputField label="Salario máximo" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} />
+        <div>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#4C5672', marginBottom: 6 }}>Descripción</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            style={{
+              width: '100%',
+              padding: '12px 14px',
+              borderRadius: 10,
+              border: '1px solid #E5E7EB',
+              fontSize: 15,
+              outline: 'none',
+              resize: 'vertical',
+              fontFamily: 'inherit',
+            }}
+          />
         </div>
-        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <InputField label="Modalidad" value={modality} onChange={(e) => setModality(e.target.value)} />
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr' }}>
+          <InputField label="Salario mínimo" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value.replace(/[^0-9]/g, ''))} />
+          <InputField label="Salario máximo" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value.replace(/[^0-9]/g, ''))} />
+        </div>
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#4C5672', marginBottom: 6 }}>Modalidad</label>
+            <div
+              style={{
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: '#DFE7F5',
+                borderRadius: '18px',
+                backgroundColor: '#FFFFFF',
+                padding: '4px',
+                boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)',
+                transition: 'all 0.2s',
+              }}
+            >
+              <select
+                value={modality}
+                onChange={(e) => setModality(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  fontSize: 15,
+                  color: '#0F172A',
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <option value="Presencial">Presencial</option>
+                <option value="Híbrido">Híbrida</option>
+                <option value="Remoto">Remoto</option>
+              </select>
+            </div>
+          </div>
           <InputField label="Ubicación" value={location} onChange={(e) => setLocation(e.target.value)} />
         </div>
         <InputField label="Tipo de contrato" value={tipoContrato} onChange={(e) => setTipoContrato(e.target.value)} />
-        <InputField label="Experiencia requerida" value={experiencia} onChange={(e) => setExperiencia(e.target.value)} />
+        <InputField label="Experiencia requerida" value={experiencia} onChange={(e) => setExperiencia(e.target.value)} placeholder="Ej: 2-3 años en desarrollo web" />
+        <InputField label="Formación requerida" value={formacionRequerida} onChange={(e) => setFormacionRequerida(e.target.value)} placeholder="Ej: Ingeniería en Sistemas, Tecnólogo en Informática" />
+        {/* Nivel Jerárquico */}
         <div>
-          <label style={{ fontSize: 13, fontWeight: 600 }}>Competencias</label>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#4C5672', marginBottom: 6 }}>Nivel jerárquico</label>
+          <select
+            value={nivelJerarquico}
+            onChange={(e) => setNivelJerarquico(e.target.value as any)}
+            style={{
+              width: '100%',
+              padding: '12px 14px',
+              borderRadius: 10,
+              border: '1px solid #E5E7EB',
+              fontSize: 15,
+              outline: 'none',
+              background: '#fff',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="Junior">Junior (0-2 años)</option>
+            <option value="Semi-Senior">Semi-Senior (2-5 años)</option>
+            <option value="Senior">Senior (5+ años)</option>
+            <option value="Gerencial">Gerencial / Liderazgo</option>
+          </select>
+        </div>
+        <div style={{ position: 'relative' }}>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#4C5672', marginBottom: 6 }}>Competencias</label>
           <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-            <input
-              value={newCompetency}
-              onChange={(e) => setNewCompetency(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addCompetency()}
-              style={{
-                flex: 1,
-                padding: '10px 12px',
-                borderRadius: 10,
-                border: '1px solid #E5E7EB',
-                fontSize: 14,
-                outline: 'none',
-              }}
-            />
+            <div style={{ flex: 1, position: 'relative' }}>
+              <input
+                ref={competencyInputRef}
+                value={newCompetency}
+                onChange={(e) => handleCompetencyInputChange(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && addCompetency()}
+                onBlur={() => setTimeout(() => setShowCompetencySuggestions(false), 150)}
+                onFocus={() => {
+                  if (newCompetency.length > 0 && competencySuggestions.length > 0) {
+                    setShowCompetencySuggestions(true);
+                  }
+                }}
+                placeholder="Escribe para buscar competencias..."
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  border: '1px solid #E5E7EB',
+                  fontSize: 14,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  height: '44px',
+                }}
+              />
+              {/* Autocomplete dropdown */}
+              {showCompetencySuggestions && competencySuggestions.length > 0 && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    background: '#fff',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: 10,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    zIndex: 10,
+                    marginTop: 4,
+                    maxHeight: 200,
+                    overflowY: 'auto',
+                  }}
+                >
+                  {competencySuggestions.map((suggestion) => (
+                    <div
+                      key={suggestion}
+                      onMouseDown={() => addCompetency(suggestion)}
+                      style={{
+                        padding: '10px 12px',
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        borderBottom: '1px solid #F3F4F6',
+                        transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = '#FFF7ED')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}
+                    >
+                      {suggestion}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               type="button"
-              onClick={addCompetency}
+              onClick={() => addCompetency()}
               style={{
-                padding: '10px 16px',
+                padding: '10px 12px',
                 borderRadius: 10,
-                border: 'none',
-                background: '#F1842D',
-                color: '#fff',
+                border: '2px solid #F1842D',
+                background: '#fff',
+                color: '#F1842D',
                 cursor: 'pointer',
                 fontWeight: 600,
                 whiteSpace: 'nowrap',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#FFF7ED';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#fff';
               }}
             >
-              Agregar
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
             </button>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
             {competencies.map((comp) => (
-              <span key={comp} style={{ background: '#F3F4F6', padding: '6px 10px', borderRadius: 8, fontSize: 12 }}>
+              <span
+                key={comp}
+                style={{
+                  background: '#F3F4F6',
+                  padding: '6px 10px',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
                 {comp}
+                <button
+                  type="button"
+                  onClick={() => removeCompetency(comp)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: '#6B7280',
+                  }}
+                >
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </span>
             ))}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
           <button
             type="button"
             onClick={() => {
@@ -367,12 +649,21 @@ export function OffersManagementScreen() {
               setShowEditModal(false);
             }}
             style={{
-              padding: '10px 16px',
+              padding: '12px 20px',
               borderRadius: 12,
-              border: '1px solid #E5E7EB',
-              background: '#fff',
+              border: 'none',
+              background: '#F3F4F6',
+              color: '#374151',
               cursor: 'pointer',
               fontWeight: 600,
+              fontSize: 15,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#E5E7EB';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#F3F4F6';
             }}
           >
             Cancelar
@@ -382,13 +673,25 @@ export function OffersManagementScreen() {
             onClick={onSubmit}
             disabled={isSubmitting}
             style={{
-              padding: '10px 16px',
+              padding: '12px 20px',
               borderRadius: 12,
               border: 'none',
               background: isSubmitting ? '#9CA3AF' : '#F1842D',
               color: '#fff',
               cursor: isSubmitting ? 'not-allowed' : 'pointer',
               fontWeight: 600,
+              fontSize: 15,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (!isSubmitting) {
+                e.currentTarget.style.background = '#EA580C';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isSubmitting) {
+                e.currentTarget.style.background = '#F1842D';
+              }
             }}
           >
             {isSubmitting ? 'Guardando...' : 'Guardar'}
@@ -400,16 +703,12 @@ export function OffersManagementScreen() {
 
   const statusTabs: { id: OfferStatus; label: string; count: number }[] = [
     { id: 'active', label: 'Activas', count: activeCount },
-    { id: 'archived', label: 'Archivadas', count: archivedCount },
-    { id: 'deleted', label: 'Retiradas', count: deletedCount },
+    { id: 'archived', label: 'Pausadas', count: archivedCount },
+    { id: 'deleted', label: 'Cerradas', count: deletedCount },
   ];
 
   if (isLoading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
-        <div style={{ color: '#6B7280' }}>Cargando ofertas...</div>
-      </div>
-    );
+    return <LoadingSpinner message="Cargando ofertas laborales..." />;
   }
 
   if (error) {
@@ -497,7 +796,6 @@ export function OffersManagementScreen() {
         </button>
       </div>
 
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {statusTabs.map((tab) => (
           <button
@@ -514,7 +812,24 @@ export function OffersManagementScreen() {
               fontSize: 13,
             }}
           >
-            {tab.label} ({tab.count})
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {tab.id === 'active' && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+              {tab.id === 'archived' && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              {tab.id === 'deleted' && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              )}
+              {tab.label} ({tab.count})
+            </span>
           </button>
         ))}
       </div>
@@ -530,7 +845,6 @@ export function OffersManagementScreen() {
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
               <div>
                 <div style={{ fontWeight: 700 }}>{offer.title}</div>
-                <div style={{ fontSize: 13, color: colors.textSecondary }}>{offer.department}</div>
               </div>
               <div style={{ fontSize: 12, color: colors.textSecondary }}>{offer.publishedDate}</div>
             </div>
@@ -557,7 +871,12 @@ export function OffersManagementScreen() {
               </span>
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-              {offer.requiredCompetencies.slice(0, 3).map((comp) => (
+              {offer.hierarchyLevel && (
+                <span style={{ background: '#EEF2FF', color: '#4F46E5', padding: '4px 8px', borderRadius: 8, fontSize: 12, fontWeight: 500 }}>
+                  {offer.hierarchyLevel}
+                </span>
+              )}
+              {offer.requiredCompetencies.map((comp) => (
                 <span key={comp} style={{ background: '#F3F4F6', padding: '4px 8px', borderRadius: 8, fontSize: 12 }}>
                   {comp}
                 </span>
@@ -769,7 +1088,7 @@ export function OffersManagementScreen() {
                   const statusInfo = ApplicationStatusColors[app.estado];
                   return (
                     <div
-                      key={app.idAplicacion}
+                      key={app.idAplicacion || Math.random().toString()}
                       style={{
                         background: '#fff',
                         borderRadius: 14,
@@ -781,9 +1100,15 @@ export function OffersManagementScreen() {
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 700 }}>{app.idPostulante}</div>
+                        <div style={{ fontWeight: 700 }}>{app.candidato?.nombreCompleto || 'Candidato sin nombre'}</div>
                         <div style={{ fontSize: 12, color: colors.textSecondary }}>
-                          Aplicado: {new Date(app.fechaAplicacion).toLocaleDateString('es-EC')}
+                          ID: {app.idPostulante} • Aplicado: {
+                            app.fechaAplicacion
+                              ? (typeof app.fechaAplicacion === 'object' && '_seconds' in (app.fechaAplicacion as any)
+                                ? new Date((app.fechaAplicacion as any)._seconds * 1000).toLocaleDateString('es-EC')
+                                : new Date(app.fechaAplicacion).toLocaleDateString('es-EC'))
+                              : 'Fecha desconocida'
+                          }
                         </div>
                       </div>
                       <span

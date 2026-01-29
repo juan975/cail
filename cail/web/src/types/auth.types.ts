@@ -22,6 +22,7 @@ export interface CandidateProfileData {
     ciudad: string;
     resumenProfesional?: string;
     habilidadesTecnicas?: string[];
+    softSkills?: string[];
     nivelEducacion?: string;
     titulo?: string;
     competencias?: string[];
@@ -34,6 +35,11 @@ export interface EmployerProfileData {
     nombreEmpresa: string;
     cargo: string;
     nombreContacto: string;
+    direccion?: string;
+    ciudad?: string;
+    sitioWeb?: string;
+    descripcion?: string;
+    ruc?: string;
 }
 
 export interface RegisterRequest {

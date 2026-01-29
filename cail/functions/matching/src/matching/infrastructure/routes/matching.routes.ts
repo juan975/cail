@@ -7,7 +7,11 @@ import {
     getCandidatesForOffer,
     applyToOffer,
     getMyApplications,
-    getOfferApplications
+    getOfferApplications,
+    getOfferApplicationsDetailed,
+    updateApplicationStatus,
+    getOffersForCandidate,
+    regenerateEmbeddings
 } from '../controllers/Matching.controller';
 
 const router = Router();
@@ -58,6 +62,18 @@ router.get(
     getMyApplications
 );
 
+/**
+ * @route   GET /matching/discover
+ * @desc    Obtener ofertas rankeadas para el candidato autenticado
+ * @access  Private - Solo CANDIDATO/POSTULANTE
+ */
+router.get(
+    '/discover',
+    authenticate,
+    authorize('CANDIDATO', 'POSTULANTE'),
+    getOffersForCandidate
+);
+
 // ============================================
 // RUTAS PARA RECLUTADORES Y ADMINISTRADORES
 // ============================================
@@ -84,6 +100,46 @@ router.get(
     authenticate,
     authorize('RECLUTADOR', 'ADMIN'),
     getOfferApplications
+);
+
+/**
+ * @route   GET /matching/oferta/:idOferta/applications-detailed
+ * @desc    Listar postulaciones CON DATOS DEL CANDIDATO (nombre, email, skills, etc)
+ * @access  Private - Solo RECLUTADOR/ADMIN
+ */
+router.get(
+    '/oferta/:idOferta/applications-detailed',
+    authenticate,
+    authorize('RECLUTADOR', 'ADMIN'),
+    getOfferApplicationsDetailed
+);
+
+/**
+ * @route   PATCH /matching/postulacion/:idAplicacion/status
+ * @desc    Actualizar el estado de una postulación (Aceptar/Rechazar)
+ * @access  Private - Solo RECLUTADOR/ADMIN
+ */
+router.patch(
+    '/postulacion/:idAplicacion/status',
+    authenticate,
+    authorize('RECLUTADOR', 'ADMIN'),
+    updateApplicationStatus
+);
+
+// ============================================
+// RUTAS DE ADMINISTRACIÓN
+// ============================================
+
+/**
+ * @route   POST /matching/admin/regenerate-embeddings
+ * @desc    Regenerar embeddings de ofertas existentes
+ * @access  Private - Solo ADMIN
+ */
+router.post(
+    '/admin/regenerate-embeddings',
+    authenticate,
+    authorize('ADMIN'),
+    regenerateEmbeddings
 );
 
 export default router;

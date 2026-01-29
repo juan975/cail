@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -15,6 +14,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { MotiView, AnimatePresence } from 'moti';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
@@ -24,6 +24,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { JobOffer } from '@/types';
 import { offersService } from '@/services/offers.service';
 import { applicationsService } from '@/services/applications.service';
+import { userService } from '@/services/user.service';
+import { useNotifications } from '@/components/ui/Notifications';
 import { Offer } from '@/types/offers.types';
 import { Application, ApplicationStatusColors } from '@/types/applications.types';
 import { colors } from '@/theme/colors';
@@ -42,6 +44,10 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
 
   // Mapeo de modalidad
   const modalityMap: Record<string, JobOffer['modality']> = {
+    'PRESENCIAL': 'Presencial',
+    'REMOTO': 'Remoto',
+    'HIBRIDO': 'Híbrido',
+    'HÍBRIDO': 'Híbrido',
     'Presencial': 'Presencial',
     'Remoto': 'Remoto',
     'Híbrido': 'Híbrido',
@@ -50,39 +56,52 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
 
   // Mapeo de tipo de contrato
   const employmentTypeMap: Record<string, JobOffer['employmentType']> = {
+    'TIEMPO_COMPLETO': 'Tiempo completo',
     'Tiempo Completo': 'Tiempo completo',
     'Tiempo completo': 'Tiempo completo',
+    'MEDIO_TIEMPO': 'Medio tiempo',
     'Medio tiempo': 'Medio tiempo',
+    'CONTRATO': 'Contrato',
     'Contrato': 'Contrato',
+    'FREELANCE': 'Freelance',
+    'PART_TIME': 'Medio tiempo',
+    'FULL_TIME': 'Tiempo completo',
   };
+
+  const sMin = offer.salarioMin || (offer as any).salario_min;
+  const sMax = offer.salarioMax || (offer as any).salario_max;
 
   return {
     id: offer.idOferta,
-    title: offer.titulo,
-    company: offer.empresa,
-    description: offer.descripcion,
-    location: offer.ciudad,
-    modality: modalityMap[offer.modalidad] || 'Presencial',
-    salaryRange: offer.salarioMin && offer.salarioMax
-      ? `$${offer.salarioMin} - $${offer.salarioMax}`
-      : offer.salarioMin
-        ? `$${offer.salarioMin}+`
-        : 'A convenir',
-    employmentType: employmentTypeMap[offer.tipoContrato] || 'Tiempo completo',
-    industry: offer.empresa || 'General',
-    hierarchyLevel: 'Semi-Senior',
-    requiredCompetencies: offer.competencias_requeridas || [],
-    requiredExperience: offer.experiencia_requerida || 'No especificada',
-    requiredEducation: offer.formacion_requerida || 'No especificada',
-    professionalArea: offer.empresa || 'General',
-    economicSector: offer.empresa || 'General',
-    experienceLevel: offer.experiencia_requerida || 'No especificada',
-    postedDate: fechaPub.toLocaleDateString('es-EC'),
+    title: String(offer.titulo || 'Oferta sin título'),
+    company: '',
+    description: String(offer.descripcion || 'Sin descripción'),
+    location: String(offer.ciudad || 'Ubicación no especificada'),
+    modality: modalityMap[String(offer.modalidad || '').toUpperCase()] || modalityMap[offer.modalidad] || offer.modalidad || 'Presencial',
+    salaryRange: (sMin || sMax)
+      ? (sMin && sMax)
+        ? `$${sMin} - $${sMax}`
+        : sMin
+          ? `$${sMin}+`
+          : `$${sMax}`
+      : 'A convenir',
+    employmentType: employmentTypeMap[offer.tipoContrato] || offer.tipoContrato || 'Tiempo completo',
+    industry: 'General',
+    requiredCompetencies: Array.isArray(offer.competencias_requeridas) ? offer.competencias_requeridas : [],
+    requiredExperience: String(offer.experiencia_requerida || 'No especificada'),
+    requiredEducation: String(offer.formacion_requerida || 'No especificada'),
+    professionalArea: 'General',
+    economicSector: 'General',
+    experienceLevel: String(offer.experiencia_requerida || 'No especificada'),
+    postedDate: fechaPub instanceof Date && !isNaN(fechaPub.getTime()) 
+      ? fechaPub.toLocaleDateString('es-EC') 
+      : 'Reciente',
   };
 };
 
 export function JobDiscoveryScreen() {
   const { contentWidth } = useResponsiveLayout();
+  const notifications = useNotifications();
   const [filters, setFilters] = useState<FilterState>({
     search: '',
     modality: 'Todos',
@@ -100,6 +119,10 @@ export function JobDiscoveryScreen() {
   const [appliedOffers, setAppliedOffers] = useState<Map<string, Application>>(new Map());
   const [isApplying, setIsApplying] = useState(false);
 
+  // Estado para verificar CV del usuario
+  const [userCvUrl, setUserCvUrl] = useState<string | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
   // Cargar ofertas del API
   const loadOffers = useCallback(async (showRefresh = false) => {
     try {
@@ -110,9 +133,50 @@ export function JobDiscoveryScreen() {
       }
       setError(null);
 
-      // Obtener solo ofertas ACTIVAS
-      const apiOffers = await offersService.getOffers({ estado: 'ACTIVA' });
-      const mappedOffers = apiOffers.map(mapApiOfferToJobOffer);
+      // 1. Obtener todas las ofertas ACTIVAS
+      const allActivePromise = offersService.getOffers({ estado: 'ACTIVA' });
+      
+      // 2. Intentar obtener ofertas rankeadas (matching) en paralelo
+      const matchedPromise = offersService.getMatchedOffers(100).catch(() => []);
+
+      const [allActive, matched] = await Promise.all([allActivePromise, matchedPromise]);
+
+      // 3. Crear lookup de scores
+      const scoreMap = new Map<string, number>();
+      matched.forEach((mo: any) => {
+        const id = mo.idOferta || mo.id;
+        if (id && mo.match_score !== undefined) {
+          scoreMap.set(id, mo.match_score);
+        }
+      });
+
+      // 4. Transformar y enriquecer
+      const mappedOffers = allActive.map((offer: Offer) => {
+        const job = mapApiOfferToJobOffer(offer);
+        if (scoreMap.has(job.id)) {
+          job.matchScore = scoreMap.get(job.id);
+        }
+        return job;
+      });
+
+      // 5. Ordenar: Score (desc) y luego Fecha (desc)
+      mappedOffers.sort((a: JobOffer, b: JobOffer) => {
+        const scoreA = a.matchScore || 0;
+        const scoreB = b.matchScore || 0;
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        
+        // Ordenar por fecha (asumiendo formato local es-EC DD/MM/YYYY)
+        try {
+          const partsA = a.postedDate.split('/');
+          const partsB = b.postedDate.split('/');
+          const timeA = new Date(`${partsA[2]}-${partsA[1]}-${partsA[0]}`).getTime();
+          const timeB = new Date(`${partsB[2]}-${partsB[1]}-${partsB[0]}`).getTime();
+          return timeB - timeA;
+        } catch (e) {
+          return 0;
+        }
+      });
+
       setOffers(mappedOffers);
     } catch (err: any) {
       console.error('Error loading offers:', err);
@@ -133,10 +197,28 @@ export function JobDiscoveryScreen() {
     }
   }, []);
 
+  // Cargar perfil del usuario para verificar CV
+  const loadUserProfile = useCallback(async () => {
+    try {
+      const profile = await userService.getProfile();
+      console.log('📄 [CV CHECK] User profile loaded:', {
+        hasCandidateProfile: !!profile.candidateProfile,
+        cvUrl: profile.candidateProfile?.cvUrl,
+      });
+      setUserCvUrl(profile.candidateProfile?.cvUrl || null);
+    } catch (err) {
+      console.error('❌ [CV CHECK] Could not load user profile:', err);
+      setUserCvUrl(null);
+    } finally {
+      setLoadingProfile(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadOffers();
     loadAppliedOffers();
-  }, [loadOffers, loadAppliedOffers]);
+    loadUserProfile();
+  }, [loadOffers, loadAppliedOffers, loadUserProfile]);
 
   const handleRefresh = () => {
     loadOffers(true);
@@ -160,15 +242,17 @@ export function JobDiscoveryScreen() {
 
   const filteredOffers = useMemo(() => {
     return offers.filter((offer) => {
+      // 1. Excluir ofertas a las que ya se aplicó
+      if (appliedOffers.has(offer.id)) return false;
+
       const matchesSearch =
         filters.search.length === 0 ||
-        offer.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-        offer.company.toLowerCase().includes(filters.search.toLowerCase());
+        offer.title.toLowerCase().includes(filters.search.toLowerCase());
       const matchesModality = filters.modality === 'Todos' || offer.modality === filters.modality;
       const matchesIndustry = filters.industry === 'Todos' || offer.industry === filters.industry;
       return matchesSearch && matchesModality && matchesIndustry;
     });
-  }, [filters, offers]);
+  }, [filters, offers, appliedOffers]);
 
   const widthLimiter = useMemo<ViewStyle>(
     () => ({
@@ -188,6 +272,14 @@ export function JobDiscoveryScreen() {
 
     setIsApplying(true);
     try {
+      // Validar que el usuario tenga un CV subido antes de aplicar
+      if (!userCvUrl || userCvUrl.trim() === '') {
+        setIsApplying(false);
+        resetModal();
+        notifications.error('Debes subir tu CV antes de postularte a ofertas. Ve a tu perfil para cargar tu currículum.');
+        return;
+      }
+
       const application = await applicationsService.applyToOffer(selectedOffer.id);
 
       // Actualizar el mapa de ofertas aplicadas
@@ -197,25 +289,21 @@ export function JobDiscoveryScreen() {
         return newMap;
       });
 
-      Alert.alert(
-        'Postulación Exitosa',
+      notifications.success(
         'Tu postulación ha sido enviada correctamente. El empleador revisará tu perfil.',
-        [{ text: 'Entendido', onPress: resetModal }]
+        'Postulación Exitosa'
       );
+      resetModal();
     } catch (error: any) {
       if (error.status === 409) {
-        Alert.alert('Ya Aplicaste', 'Ya has aplicado a esta oferta anteriormente.');
-        // Refrescar el mapa por si acaso
+        notifications.alert('Ya has aplicado a esta oferta anteriormente.', 'Ya Aplicaste');
         loadAppliedOffers();
       } else if (error.status === 401) {
-        Alert.alert('Sesión Expirada', 'Por favor, inicia sesión nuevamente.');
-      } else if (error.status === 403) {
-        Alert.alert('No Autorizado', 'Solo los candidatos pueden postular a ofertas.');
+        notifications.alert('Por favor, inicia sesión nuevamente.', 'Sesión Expirada');
       } else {
-        Alert.alert(
-          'Error',
+        notifications.error(
           error.message || 'No se pudo enviar la postulación. Intenta de nuevo.',
-          [{ text: 'Reintentar', onPress: handleApply }, { text: 'Cancelar', style: 'cancel' }]
+          'Error'
         );
       }
     } finally {
@@ -233,27 +321,27 @@ export function JobDiscoveryScreen() {
     return appliedOffers.get(offerId);
   };
 
-  const renderOffer = ({ item }: { item: JobOffer }) => {
+  const renderOffer = ({ item, index }: { item: JobOffer, index: number }) => {
     const applied = hasApplied(item.id);
     const application = getApplicationStatus(item.id);
     const statusInfo = application ? ApplicationStatusColors[application.estado] : null;
 
     return (
-      <Card style={[styles.offerCard, widthLimiter]}>
+      <MotiView
+        from={{ opacity: 0, translateY: 20 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{
+          type: 'timing',
+          duration: 400,
+          delay: index * 100,
+        }}
+        style={[styles.offerCard, widthLimiter]}
+      >
+        <Card style={{ padding: 0, backgroundColor: 'transparent', elevation: 0 }}>
         <View style={styles.offerHeader}>
           <View style={styles.offerTitleWrap}>
             <View style={styles.titleRow}>
               <Text style={styles.offerTitle}>{item.title}</Text>
-              {applied && statusInfo ? (
-                <View style={[styles.appliedBadge, { backgroundColor: statusInfo.bg }]}>
-                  <Feather name="check-circle" size={12} color={statusInfo.text} />
-                  <Text style={[styles.appliedBadgeText, { color: statusInfo.text }]}>
-                    {statusInfo.label}
-                  </Text>
-                </View>
-              ) : (
-                <StatusBadge label={item.hierarchyLevel} tone="success" />
-              )}
             </View>
           </View>
         </View>
@@ -269,9 +357,9 @@ export function JobDiscoveryScreen() {
         </View>
 
         <View style={styles.tagList}>
-          <Chip label={item.employmentType} />
-          {item.requiredCompetencies.slice(0, 3).map((competency) => (
-            <Chip key={competency} label={competency} />
+          <Chip label={String(item.employmentType)} />
+          {Array.isArray(item.requiredCompetencies) && item.requiredCompetencies.map((competency) => (
+            <Chip key={String(competency)} label={String(competency)} />
           ))}
         </View>
 
@@ -286,15 +374,18 @@ export function JobDiscoveryScreen() {
             <Text style={styles.appliedText}>Ya postulaste a esta oferta</Text>
           </View>
         ) : (
-          <Button
-            label="Postular a Oferta"
+          <TouchableOpacity
+            style={styles.simpleApplyBtn}
             onPress={() => setSelectedOffer(item)}
-            style={styles.applyButton}
-          />
+            activeOpacity={0.7}
+          >
+            <Text style={styles.simpleApplyBtnText}>Postular a Oferta</Text>
+          </TouchableOpacity>
         )}
 
         <Text style={styles.publishDate}>Publicado: {item.postedDate || '24/10/2025'}</Text>
-      </Card>
+        </Card>
+      </MotiView>
     );
   };
 
@@ -340,17 +431,23 @@ export function JobDiscoveryScreen() {
         ListHeaderComponent={
           <View style={[styles.headerArea, widthLimiter]}>
             {/* Hero Card */}
-            <Card spacing="lg" style={styles.heroCard}>
-              <View style={styles.heroContent}>
-                <View style={styles.heroIcon}>
-                  <Feather name="search" size={24} color="#FFFFFF" />
+            <MotiView
+              from={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', damping: 15 }}
+            >
+              <Card spacing="lg" style={styles.heroCard}>
+                <View style={styles.heroContent}>
+                  <View style={styles.heroIcon}>
+                    <Feather name="search" size={24} color="#FFFFFF" />
+                  </View>
+                  <View style={styles.heroText}>
+                    <Text style={styles.heroTitle}>Descubrimiento y Postulación</Text>
+                    <Text style={styles.heroSubtitle}>Explora las mejores oportunidades laborales para ti</Text>
+                  </View>
                 </View>
-                <View style={styles.heroText}>
-                  <Text style={styles.heroTitle}>Descubrimiento y Postulación</Text>
-                  <Text style={styles.heroSubtitle}>Catálogo de ofertas - Encuentra las mejores oportunidades</Text>
-                </View>
-              </View>
-            </Card>
+              </Card>
+            </MotiView>
 
             {/* Filters Card */}
             <Card spacing="md" style={styles.filtersCard}>
@@ -401,84 +498,116 @@ export function JobDiscoveryScreen() {
         }
       />
 
-      {/* Modal de Postulación */}
-      <Modal visible={!!selectedOffer} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalContainer}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitle}>{selectedOffer?.title}</Text>
-                <Text style={styles.modalSubtitle}>{selectedOffer?.location}</Text>
-              </View>
-              <TouchableOpacity onPress={resetModal} style={styles.closeButton}>
-                <Feather name="x" size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={styles.modalBody}>
-                <View style={styles.confirmationMessage}>
-                  <Feather name="send" size={32} color="#0B7A4D" />
-                  <Text style={styles.confirmationTitle}>Confirmar Postulación</Text>
-                  <Text style={styles.confirmationText}>
-                    Al postularte, el reclutador podrá ver tu perfil y datos de contacto.
-                  </Text>
+      <Modal 
+        visible={selectedOffer !== null} 
+        animationType="slide" 
+        transparent
+        onRequestClose={resetModal}
+      >
+        <View style={styles.bottomSheetOverlay}>
+          {selectedOffer && (
+            <View style={styles.fullModalContent}>
+              <View style={styles.fullModalHeader}>
+                <View style={styles.fullModalTitleRow}>
+                  <View style={styles.fullModalIconBox}>
+                    <Feather name="briefcase" size={24} color="#059669" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fullModalEyebrow}>POSTULAR A</Text>
+                    <Text style={styles.fullModalTitle}>{String(selectedOffer.title)}</Text>
+                    <Text style={styles.fullModalSubtitle}>{String(selectedOffer.location)}</Text>
+                  </View>
                 </View>
-
-                {selectedOffer && (
-                  <View style={styles.requirementsBox}>
-                    <Text style={styles.requirementsTitle}>Requisitos de la oferta:</Text>
-                    <View style={styles.requirementItem}>
-                      <Text style={styles.requirementBullet}>•</Text>
-                      <Text style={styles.requirementText}>
-                        Formación: {selectedOffer.requiredEducation}
-                      </Text>
-                    </View>
-                    <View style={styles.requirementItem}>
-                      <Text style={styles.requirementBullet}>•</Text>
-                      <Text style={styles.requirementText}>
-                        Experiencia: {selectedOffer.requiredExperience}
-                      </Text>
-                    </View>
-                    <View style={styles.requirementItem}>
-                      <Text style={styles.requirementBullet}>•</Text>
-                      <Text style={styles.requirementText}>
-                        Competencias: {selectedOffer.requiredCompetencies.slice(0, 3).join(', ')}
-                      </Text>
+                <TouchableOpacity onPress={resetModal} style={styles.fullModalCloseBtn}>
+                  <Feather name="x" size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView style={styles.fullModalScroll} showsVerticalScrollIndicator={false}>
+                <View style={styles.fullModalBody}>
+                  <View style={styles.fullConfirmBox}>
+                    <Feather name="send" size={20} color="#059669" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.fullConfirmTitle}>Confirmar postulación</Text>
+                      <Text style={styles.fullConfirmText}>Estás por postularte a <Text style={{ fontWeight: '700' }}>{selectedOffer.title}</Text>.</Text>
                     </View>
                   </View>
-                )}
 
-                <View style={styles.modalActions}>
-                  <TouchableOpacity
-                    style={styles.cancelButton}
+                  <View style={styles.fullRequirementsBox}>
+                    <View style={styles.reqItem}>
+                      <Feather name="award" size={14} color="#0B7A4D" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reqLabel}>Formación</Text>
+                        <Text style={styles.reqValue}>{String(selectedOffer.requiredEducation)}</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.reqItem}>
+                      <Feather name="briefcase" size={14} color="#0B7A4D" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reqLabel}>Experiencia</Text>
+                        <Text style={styles.reqValue}>{String(selectedOffer.requiredExperience)}</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.reqItem}>
+                      <Feather name="target" size={14} color="#0B7A4D" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reqLabel}>Competencias claves</Text>
+                        <Text style={styles.reqValue}>{Array.isArray(selectedOffer.requiredCompetencies) ? selectedOffer.requiredCompetencies.join(', ') : ''}</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.reqItem}>
+                      <Feather name="clock" size={14} color="#0B7A4D" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reqLabel}>Modalidad</Text>
+                        <Text style={styles.reqValue}>{String(selectedOffer.modality)} - {String(selectedOffer.employmentType)}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.reqItem}>
+                      <Feather name="dollar-sign" size={14} color="#0B7A4D" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reqLabel}>Salario</Text>
+                        <Text style={[styles.reqValue, { color: '#059669', fontWeight: '700' }]}>
+                          {selectedOffer.salaryRange}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+
+                </View>
+              </ScrollView>
+
+              <View style={styles.fullModalFooter}>
+                <View style={styles.simpleModalButtons}>
+                  <TouchableOpacity 
+                    style={[styles.simpleBtn, styles.simpleCancelBtn]} 
                     onPress={resetModal}
                     disabled={isApplying}
                   >
-                    <Text style={styles.cancelButtonText}>Cancelar</Text>
+                    <Text style={styles.simpleCancelBtnText}>Cancelar</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.confirmButton, isApplying && styles.confirmButtonDisabled]}
+                  <TouchableOpacity 
+                    style={[styles.simpleBtn, styles.improvedConfirmBtn]} 
                     onPress={handleApply}
                     disabled={isApplying}
                   >
                     {isApplying ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator color="#fff" />
                     ) : (
-                      <>
-                        <Feather name="check" size={18} color="#FFFFFF" />
-                        <Text style={styles.confirmButtonText}>Confirmar Postulación</Text>
-                      </>
+                      <View style={styles.confirmButtonContent}>
+                        <Text style={styles.improvedConfirmBtnText}>Confirmar postulación</Text>
+                      </View>
                     )}
                   </TouchableOpacity>
                 </View>
               </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
+            </View>
+          )}
+        </View>
       </Modal>
     </View>
   );
@@ -487,8 +616,7 @@ export function JobDiscoveryScreen() {
 function MetaItem({ icon, label }: { icon: keyof typeof Feather.glyphMap; label: string }) {
   return (
     <View style={styles.metaItem}>
-      <Feather name={icon} size={14} color={colors.textSecondary} />
-      <Text style={styles.metaText}>{label}</Text>
+      <Feather name={icon} size={14} color={colors.textSecondary} /><Text style={styles.metaText}>{label}</Text>
     </View>
   );
 }
@@ -496,10 +624,7 @@ function MetaItem({ icon, label }: { icon: keyof typeof Feather.glyphMap; label:
 function RequirementItem({ icon, text }: { icon: keyof typeof Feather.glyphMap; text: string }) {
   return (
     <View style={styles.requirementRow}>
-      <View style={styles.requirementIcon}>
-        <Feather name={icon} size={12} color={colors.danger} />
-      </View>
-      <Text style={styles.requirementRowText}>{text}</Text>
+      <View style={styles.requirementIcon}><Feather name={icon} size={12} color={colors.danger} /></View><Text style={styles.requirementRowText}>{text}</Text>
     </View>
   );
 }
@@ -753,7 +878,7 @@ const styles = StyleSheet.create({
   // Modal
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -761,68 +886,94 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 20,
-    paddingBottom: 16,
+  modalHeaderClean: {
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F2F5',
+    borderBottomColor: '#F3F4F6',
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
-  modalTitle: {
-    fontSize: 18,
+  modalDragIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  modalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  companyLogoPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F0FDF4',
+  },
+  modalEyebrow: {
+    fontSize: 11,
     fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 4,
+    color: '#059669',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  modalTitleLarge: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+    lineHeight: 24,
   },
   modalSubtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
   },
   closeButton: {
     padding: 4,
   },
   modalBody: {
-    padding: 20,
-    gap: 16,
+    padding: 24,
   },
-  modalLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  fileSelector: {
-    backgroundColor: '#F8FAFB',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E4E9',
-    borderStyle: 'dashed',
+  confirmationBox: {
+    flexDirection: 'row',
+    gap: 14,
+    backgroundColor: '#ECFDF5',
     padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    marginBottom: 24,
+  },
+  confirmationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 60,
   },
-  fileSelectorText: {
+  confirmationTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#065F46',
+    marginBottom: 4,
+  },
+  confirmationText: {
     fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
+    color: '#047857',
+    lineHeight: 18,
   },
-  modalHelper: {
-    fontSize: 12,
-    color: colors.muted,
-    marginTop: -8,
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
+
   requirementsBox: {
     backgroundColor: '#F0F7FF',
     borderRadius: 8,
@@ -883,22 +1034,7 @@ const styles = StyleSheet.create({
     color: '#059669',
   },
   // Confirmation modal styles
-  confirmationMessage: {
-    alignItems: 'center',
-    paddingVertical: 16,
-    gap: 12,
-  },
-  confirmationTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  confirmationText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+
   modalActions: {
     flexDirection: 'row',
     gap: 12,
@@ -938,5 +1074,275 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+
+  // Simple UI Styles
+  simpleApplyBtn: {
+    backgroundColor: '#0B7A4D',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  simpleApplyBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  simpleModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  bottomSheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  simpleModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: '100%',
+    overflow: 'hidden',
+  },
+  simpleModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  simpleModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    flex: 1,
+    marginRight: 10,
+  },
+  simpleModalBody: {
+    padding: 20,
+  },
+  simpleModalText: {
+    fontSize: 16,
+    color: '#444',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  simpleModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  simpleBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  simpleCancelBtn: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  simpleCancelBtnText: {
+    color: '#666',
+    fontWeight: '600',
+  },
+  simpleConfirmBtn: {
+    backgroundColor: '#0B7A4D',
+  },
+  simpleConfirmBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  improvedConfirmBtn: {
+    backgroundColor: '#059669',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  confirmButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  improvedConfirmBtnText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 15,
+  },
+
+  // Full Modal Styles
+  fullModalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    width: '100%',
+    maxHeight: '90%',
+    overflow: 'hidden',
+  },
+  fullModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  fullModalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  fullModalIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#F0FDF4',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullModalEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  fullModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  fullModalSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  fullModalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullModalScroll: {
+    maxHeight: 400,
+  },
+  fullModalBody: {
+    padding: 20,
+    gap: 16,
+  },
+  fullConfirmBox: {
+    flexDirection: 'row',
+    gap: 12,
+    backgroundColor: '#ECFDF5',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  fullConfirmTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#065F46',
+    marginBottom: 4,
+  },
+  fullConfirmText: {
+    fontSize: 13,
+    color: '#047857',
+    lineHeight: 18,
+  },
+  fullRequirementsBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  reqHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  fullSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  reqItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 12,
+  },
+  reqLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#64748B',
+  },
+  reqValue: {
+    fontSize: 13,
+    color: '#1F2937',
+    marginTop: 2,
+  },
+  fullReqItem: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  fullReqBullet: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0052CC',
+  },
+  fullReqText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#0052CC',
+    lineHeight: 18,
+  },
+  fullInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  fullInfoBox: {
+    width: '48%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  fullInfoLabel: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  fullInfoValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  fullModalFooter: {
+    padding: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
   },
 });

@@ -10,11 +10,13 @@ export interface CandidateProfileData {
     ciudad: string;
     resumenProfesional?: string;
     habilidadesTecnicas?: string[];
+    softSkills?: string[];
     nivelEducacion?: string;
     titulo?: string;
     competencias?: string[];
     anosExperiencia?: string;
     resumenExperiencia?: string;
+    cvUrl?: string;
 }
 
 /**
@@ -24,11 +26,18 @@ export interface EmployerProfileData {
     nombreEmpresa: string;
     cargo: string;
     nombreContacto: string;
+    ruc?: string; // RUC para validación contra colección empresas
     industry?: string;
     numberOfEmployees?: string;
     description?: string;
     website?: string;
     address?: string;
+    companyValidationStatus?: 'PENDIENTE' | 'VERIFICADA' | 'RECHAZADA';
+    status?: 'ACTIVO' | 'PENDIENTE' | 'NO_AUTORIZADO';
+    // Campos para verificación de email (Magic Link)
+    emailVerified?: boolean;
+    emailVerificationToken?: string;
+    emailVerificationExpiry?: Date;
 }
 
 /**
@@ -45,11 +54,9 @@ export interface RegisterRequestDto {
     nombreCompleto: string;
     telefono?: string;
     tipoUsuario: TipoUsuario;
-    // Firebase UID for candidates (created client-side)
-    firebaseUid?: string;
+    firebaseUid?: string; // UID del usuario creado en Firebase Auth por el frontend
     candidateData?: CandidateProfileData;
     employerData?: EmployerProfileData;
-    firebaseUid?: string; // UID del usuario creado en Firebase Auth por el frontend
 }
 
 /**

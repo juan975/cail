@@ -51,6 +51,30 @@ paths:
         '200':
           description: Lista de aplicaciones
 
+  /matching/oferta/{idOferta}/applications-detailed:
+    get:
+      tags:
+        - Matching
+      summary: Listar aplicaciones CON DATOS DEL CANDIDATO (nombre, email, skills)
+      description: >
+        Retorna las postulaciones enriquecidas con información del perfil del candidato.
+        Incluye: nombreCompleto, email, telefono, ciudad, nivelEducativo, habilidades.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: idOferta
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de aplicaciones con datos del candidato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationsDetailedResponse'
+
   /matching/apply:
     post:
       tags:
@@ -123,3 +147,66 @@ components:
                     type: integer
                   detalles:
                     type: object
+
+    ApplicationsDetailedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationWithCandidate'
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+            ofertaId:
+              type: string
+
+    ApplicationWithCandidate:
+      type: object
+      properties:
+        idAplicacion:
+          type: string
+        idPostulante:
+          type: string
+        idOferta:
+          type: string
+        fechaAplicacion:
+          type: string
+          format: date-time
+        estado:
+          type: string
+          enum: [PENDIENTE, EN_REVISION, ACEPTADA, RECHAZADA]
+        matchScore:
+          type: number
+        candidato:
+          $ref: '#/components/schemas/CandidatoPerfil'
+
+    CandidatoPerfil:
+      type: object
+      properties:
+        nombreCompleto:
+          type: string
+        email:
+          type: string
+        telefono:
+          type: string
+        ciudad:
+          type: string
+        nivelEducativo:
+          type: string
+        resumenProfesional:
+          type: string
+        habilidadesTecnicas:
+          type: array
+          items:
+            type: string
+        habilidadesBlandas:
+          type: array
+          items:
+            type: string
+        experienciaAnios:
+          type: integer

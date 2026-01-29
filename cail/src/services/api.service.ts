@@ -119,6 +119,12 @@ class ApiService {
         return response.data;
     }
 
+    async patch<T>(url: string, data?: any): Promise<T> {
+        const { client, cleanUrl } = this.getClientForPath(url);
+        const response = await client.patch<T>(cleanUrl, data);
+        return response.data;
+    }
+
     async delete<T>(url: string): Promise<T> {
         const { client, cleanUrl } = this.getClientForPath(url);
         const response = await client.delete<T>(cleanUrl);

@@ -16,6 +16,14 @@ const authController = new AuthController();
  */
 
 /**
+ * @route   GET /auth/companies
+ * @desc    Obtener lista de empresas validadas (para dropdown de registro)
+ * @access  Public
+ */
+router.get('/companies', authController.getCompanies);
+router.get('/test-email', authController.testEmail);
+
+/**
  * @route   POST /auth/register
  * @desc    Registrar nuevo usuario (candidato o reclutador)
  * @access  Public
@@ -42,6 +50,13 @@ router.post('/password-changed', authenticate, authController.confirmPasswordCha
  * @access  Private (requiere Firebase ID Token)
  */
 router.post('/validate-token', authenticate, authController.validateToken);
+
+/**
+ * @route   GET /auth/verify-email
+ * @desc    Verifica el email de un reclutador usando el Magic Link
+ * @access  Public (el usuario hace clic en el enlace del email)
+ */
+router.get('/verify-email', authController.verifyEmail);
 
 // =========================================
 // DEPRECATED ROUTES (mantener por compatibilidad temporal)

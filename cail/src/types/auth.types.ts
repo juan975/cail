@@ -69,11 +69,23 @@ export interface CandidateProfileData {
     ciudad: string;
     resumenProfesional?: string;
     habilidadesTecnicas?: string[];
+    softSkills?: string[];
     nivelEducacion?: string;
     titulo?: string;
     competencias?: string[];
     anosExperiencia?: string;
     resumenExperiencia?: string;
+    experienciaLaboral?: WorkExperienceData[];
+}
+
+export interface WorkExperienceData {
+    id?: string;
+    company: string;
+    position: string;
+    startDate: string;
+    endDate?: string;
+    isCurrent: boolean;
+    description: string;
 }
 
 export interface EmployerProfileData {
@@ -85,6 +97,11 @@ export interface EmployerProfileData {
     description?: string;
     website?: string;
     address?: string;
+    direccion?: string;
+    ciudad?: string;
+    sitioWeb?: string;
+    descripcion?: string;
+    ruc?: string;
 }
 
 // =========================================

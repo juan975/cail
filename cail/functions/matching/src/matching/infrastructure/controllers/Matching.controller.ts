@@ -135,6 +135,18 @@ export const applyToOffer = asyncHandler(
 );
 
 /**
+ * Mapea una postulación del backend (snake_case) al formato del frontend (camelCase)
+ */
+const mapPostulacionToResponse = (postulacion: any) => ({
+    idAplicacion: postulacion.id,
+    idPostulante: postulacion.id_postulante,
+    idOferta: postulacion.id_oferta,
+    fechaAplicacion: postulacion.fecha_postulacion,
+    estado: postulacion.estado,
+    matchScore: postulacion.match_score,
+});
+
+/**
  * GET /matching/my-applications
  * Obtiene las postulaciones del candidato autenticado
  * Acceso: CANDIDATO
@@ -161,11 +173,14 @@ export const getMyApplications = asyncHandler(
             const service = getMatchingService();
             const postulaciones = await service.obtenerMisPostulaciones(req.user.uid);
 
+            // Mapear a formato camelCase para el frontend
+            const mappedPostulaciones = postulaciones.map(mapPostulacionToResponse);
+
             return res.status(200).json({
                 success: true,
-                data: postulaciones,
+                data: mappedPostulaciones,
                 meta: {
-                    total: postulaciones.length
+                    total: mappedPostulaciones.length
                 }
             });
         } catch (error) {
@@ -179,6 +194,74 @@ export const getMyApplications = asyncHandler(
  * Acceso: CANDIDATO
  */
 export const getApplications = getMyApplications;
+
+/**
+ * GET /matching/discover
+ * Obtiene ofertas rankeadas para el candidato autenticado
+ * Acceso: CANDIDATO, POSTULANTE
+ */
+export const getOffersForCandidate = asyncHandler(
+    async (req: AuthRequest, res: Response): Promise<Response> => {
+        // Validar autenticación
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'No autenticado'
+            });
+        }
+
+        // Validar rol
+        if (req.user.tipoUsuario !== 'CANDIDATO' && req.user.tipoUsuario !== 'POSTULANTE') {
+            return res.status(403).json({
+                success: false,
+                message: 'Solo los candidatos pueden acceder a ofertas recomendadas'
+            });
+        }
+
+        try {
+            const service = getMatchingService();
+            const limite = parseInt(req.query.limit as string) || 20;
+
+            const resultados = await service.getOffersForCandidate(req.user.uid, limite);
+
+            // Mapear a formato del frontend con campos adicionales de la oferta
+            const offersWithScore = resultados.map(r => ({
+                id: r.oferta.id,
+                titulo: r.oferta.titulo,
+                descripcion: r.oferta.descripcion,
+                modalidad: r.oferta.modalidad,
+                id_sector_industrial: r.oferta.id_sector_industrial,
+                id_nivel_requerido: r.oferta.id_nivel_requerido,
+                habilidades_obligatorias: r.oferta.habilidades_obligatorias,
+                habilidades_deseables: r.oferta.habilidades_deseables,
+                // Campos extendidos
+                ...(r.oferta as any),
+                // Score de matching
+                match_score: r.match_score,
+                score_detalle: r.score_detalle
+            }));
+
+            return res.status(200).json({
+                success: true,
+                data: offersWithScore,
+                meta: {
+                    total: offersWithScore.length
+                }
+            });
+        } catch (error) {
+            // Si el candidato no existe en 'candidatos', devolver lista vacía
+            if (error instanceof Error && error.message === 'Candidato no encontrado') {
+                return res.status(200).json({
+                    success: true,
+                    data: [],
+                    meta: { total: 0 },
+                    message: 'Complete su perfil para ver ofertas recomendadas'
+                });
+            }
+            return handleDomainError(error, res);
+        }
+    }
+);
 
 /**
  * GET /matching/oferta/:idOferta/applications
@@ -226,6 +309,191 @@ export const getOfferApplications = asyncHandler(
             });
         } catch (error) {
             return handleDomainError(error, res);
+        }
+    }
+);
+
+/**
+ * Mapea PostulacionConCandidato a formato de respuesta para el frontend
+ */
+const mapPostulacionConCandidatoToResponse = (postulacion: any) => {
+    const candidat = postulacion.candidato || {};
+    const profile = candidat.candidateProfile || {};
+    return {
+        idAplicacion: postulacion.id,
+        idPostulante: postulacion.id_postulante,
+        idOferta: postulacion.id_oferta,
+        fechaAplicacion: postulacion.fecha_postulacion,
+        estado: postulacion.estado,
+        matchScore: postulacion.match_score,
+        candidato: postulacion.candidato ? {
+            nombreCompleto: candidat.nombreCompleto,
+            email: candidat.email,
+            telefono: candidat.telefono || profile.phone,
+
+            ciudad: profile.ciudad || candidat.ciudad,
+            nivelEducativo: profile.nivelEducacion || candidat.nivelEducativo,
+            resumenProfesional: profile.resumenProfesional || candidat.resumenProfesional,
+
+            habilidadesTecnicas: profile.habilidadesTecnicas || candidat.habilidadesTecnicas || [],
+            habilidadesBlandas: profile.softSkills || candidat.habilidadesBlandas || [],
+
+            experienciaAnios: profile.anosExperiencia || candidat.experienciaAnios,
+            cvUrl: profile.cvUrl || candidat.cvUrl,
+
+            candidateProfile: profile
+        } : undefined
+    };
+};
+
+/**
+ * GET /matching/oferta/:idOferta/applications-detailed
+ * Lista las postulaciones recibidas para una oferta CON INFORMACIÓN DEL CANDIDATO
+ * Acceso: RECLUTADOR, ADMIN
+ */
+export const getOfferApplicationsDetailed = asyncHandler(
+    async (req: AuthRequest, res: Response): Promise<Response> => {
+        // Validar autenticación
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'No autenticado'
+            });
+        }
+
+        // Validar rol
+        if (req.user.tipoUsuario !== 'RECLUTADOR' && req.user.tipoUsuario !== 'ADMIN') {
+            return res.status(403).json({
+                success: false,
+                message: 'Solo reclutadores y administradores pueden ver postulaciones de ofertas'
+            });
+        }
+
+        const { idOferta } = req.params;
+
+        if (!idOferta) {
+            return res.status(400).json({
+                success: false,
+                message: 'El parámetro idOferta es requerido'
+            });
+        }
+
+        try {
+            const service = getMatchingService();
+            const postulaciones = await service.obtenerPostulacionesConCandidatos(idOferta);
+
+            // Mapear a formato camelCase para el frontend
+            const mappedPostulaciones = postulaciones.map(mapPostulacionConCandidatoToResponse);
+
+            return res.status(200).json({
+                success: true,
+                data: mappedPostulaciones,
+                meta: {
+                    total: mappedPostulaciones.length,
+                    ofertaId: idOferta
+                }
+            });
+        } catch (error) {
+            return handleDomainError(error, res);
+        }
+    }
+);
+
+
+
+/**
+ * PATCH /matching/postulacion/:idAplicacion/status
+ * Actualiza el estado de una postulación
+ * Acceso: RECLUTADOR, ADMIN
+ */
+export const updateApplicationStatus = asyncHandler(
+    async (req: AuthRequest, res: Response): Promise<Response> => {
+        // Validar autenticación
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'No autenticado'
+            });
+        }
+
+        // Validar rol
+        if (req.user.tipoUsuario !== 'RECLUTADOR' && req.user.tipoUsuario !== 'ADMIN') {
+            return res.status(403).json({
+                success: false,
+                message: 'Solo reclutadores y administradores pueden actualizar postulaciones'
+            });
+        }
+
+        const { idAplicacion } = req.params;
+        const { estado } = req.body;
+
+        if (!idAplicacion || !estado) {
+            return res.status(400).json({
+                success: false,
+                message: 'idAplicacion y estado son requeridos'
+            });
+        }
+
+        const estadosValidos = ['PENDIENTE', 'EN_REVISION', 'ACEPTADA', 'RECHAZADA'];
+        if (!estadosValidos.includes(estado)) {
+            return res.status(400).json({
+                success: false,
+                message: `Estado inválido. Valores permitidos: ${estadosValidos.join(', ')}`
+            });
+        }
+
+        try {
+            const service = getMatchingService();
+            await service.actualizarEstadoPostulacion(idAplicacion, estado as any);
+
+            return res.status(200).json({
+                success: true,
+                message: 'Estado actualizado correctamente',
+                data: { idAplicacion, nuevoEstado: estado }
+            });
+        } catch (error) {
+            return handleDomainError(error, res);
+        }
+    }
+);
+
+/**
+ * POST /matching/admin/regenerate-embeddings
+ * Regenera embeddings de ofertas existentes
+ * Acceso: Solo ADMIN
+ */
+export const regenerateEmbeddings = asyncHandler(
+    async (req: AuthRequest, res: Response): Promise<Response> => {
+        // Solo ADMIN puede ejecutar esta acción sensible
+        if (!req.user || req.user.tipoUsuario !== 'ADMIN') {
+            return res.status(403).json({
+                success: false,
+                message: 'Solo administradores pueden regenerar embeddings'
+            });
+        }
+
+        const { ofertaId } = req.body; // Opcional: regenerar solo una oferta
+
+        try {
+            // Import dinámico para evitar problemas de dependencias circulares
+            const { regenerateOfertaEmbeddings } = await import('../../triggers/syncOferta.trigger');
+
+            console.log(`[Admin] Iniciando regeneración de embeddings${ofertaId ? ` para oferta ${ofertaId}` : ' para todas las ofertas activas'}`);
+
+            const result = await regenerateOfertaEmbeddings(ofertaId);
+
+            return res.status(200).json({
+                success: true,
+                message: `Embeddings regenerados correctamente`,
+                data: result
+            });
+        } catch (error) {
+            console.error('[Admin] Error regenerando embeddings:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Error regenerando embeddings',
+                error: (error as Error).message
+            });
         }
     }
 );

@@ -33,6 +33,11 @@ class OffersService {
         }
 
         const response = await apiService.get<OfferApiResponse<Offer[]>>(url);
+        console.log('📋 [OFFERS] API returned offers count:', response.data?.length);
+        if (response.data?.length > 0) {
+            console.log('📋 [OFFERS] First offer sample:', JSON.stringify(response.data[0], null, 2));
+            console.log('📋 [OFFERS] First offer idOferta:', response.data[0].idOferta);
+        }
         return response.data;
     }
 
@@ -94,6 +99,17 @@ class OffersService {
      */
     async closeOffer(id: string): Promise<Offer> {
         return this.updateOffer(id, { estado: 'CERRADA' });
+    }
+
+    /**
+     * Obtiene ofertas rankeadas para el candidato autenticado
+     */
+    async getMatchedOffers(limit?: number): Promise<Offer[]> {
+        const params = limit ? `?limit=${limit}` : '';
+        const response = await apiService.get<OfferApiResponse<Offer[]>>(
+            `/matching/discover${params}`
+        );
+        return response.data;
     }
 }
 
