@@ -4,6 +4,8 @@ const logo = require('@/assets/logo.png');
 import { Feather } from '@expo/vector-icons';
 import { authService } from '@/services/auth.service';
 import { PasswordStrength, validatePassword } from '@/components/ui/PasswordStrength';
+import { useNotifications } from '@/components/ui/Notifications';
+import { MotiView } from 'moti';
 import { TermsScreen } from '../legal/TermsScreen';
 
 interface RegisterEmployerFormProps {
@@ -16,6 +18,7 @@ interface RegisterEmployerFormProps {
 // Empresas cargadas dinámicamente desde el backend
 
 export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: RegisterEmployerFormProps) {
+  const notifications = useNotifications();
   const [empresaNombre, setEmpresaNombre] = useState('');
   const [cargo, setCargo] = useState('');
   const [contacto, setContacto] = useState('');
@@ -48,7 +51,7 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
         setCompanies(data);
       } catch (error) {
         console.error('Error fetching companies:', error);
-        Alert.alert('Error', 'No se pudieron cargar las empresas.');
+        notifications.error('No se pudieron cargar las empresas.');
       }
     };
     fetchCompanies();
@@ -75,29 +78,29 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
 
   const handleSubmit = async () => {
     if (!empresaNombre || !cargo || !contacto || !telefono || !correo || !password || !confirmPassword) {
-      Alert.alert('Campos incompletos', 'Completa todos los campos del formulario.');
+      notifications.error('Completa todos los campos del formulario.', 'Campos incompletos');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden.');
+      notifications.error('Las contraseñas no coinciden.');
       return;
     }
 
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.isValid) {
-      Alert.alert('Contraseña inválida', passwordValidation.errors[0]);
+      notifications.error(passwordValidation.errors[0], 'Contraseña inválida');
       return;
     }
 
     if (password.length < 8) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 8 caracteres.');
+      notifications.error('La contraseña debe tener al menos 8 caracteres.');
       return;
     }
 
     // Validate terms acceptance
     if (!acceptTerms) {
-      Alert.alert('Términos requeridos', 'Debes aceptar los términos y condiciones para continuar.');
+      notifications.alert('Debes aceptar los términos y condiciones para continuar.', 'Términos requeridos');
       return;
     }
 
@@ -135,7 +138,7 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
       setShowWelcomeModal(true);
     } catch (error: any) {
       setLoading(false);
-      Alert.alert('Error', error.message || 'Error al crear la cuenta');
+      notifications.error(error.message || 'Error al crear la cuenta', 'Error');
     }
   };
 
@@ -150,7 +153,11 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
   return (
     <View style={styles.container}>
       {/* Main Card */}
-      <View style={styles.card}>
+      <MotiView 
+        from={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        style={styles.card}
+      >
         {/* Header */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -443,7 +450,7 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </MotiView>
 
       {/* Welcome Modal */}
       <Modal

@@ -59,20 +59,8 @@ class ApplicationsService {
                     return {
                         ...app,
                         oferta: {
-                            titulo: offer.titulo,
+                            ...offer,
                             empresa: '', // Restricted for candidates
-                            ciudad: offer.ciudad,
-                            modalidad: offer.modalidad,
-                            descripcion: offer.descripcion,
-                            salarioMin: offer.salarioMin,
-                            salarioMax: offer.salarioMax,
-                            tipoContrato: offer.tipoContrato,
-                            experiencia_requerida: offer.experiencia_requerida,
-                            formacion_requerida: offer.formacion_requerida,
-                            competencias_requeridas: offer.competencias_requeridas,
-                            habilidades_obligatorias: offer.habilidades_obligatorias,
-                            habilidades_deseables: offer.habilidades_deseables,
-                            nivelJerarquico: offer.nivelJerarquico,
                         }
                     };
                 } catch {

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { MotiView } from 'moti';
+import { useNotifications } from '@/components/ui/Notifications';
 import { InputField } from '@/components/ui/InputField';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Button } from '@/components/ui/Button';
@@ -27,7 +29,8 @@ const emptyEmployerProfile: EmployerProfileForm = {
 };
 
 export function EmployerProfileScreen() {
-  const { isDesktop, contentWidth, horizontalGutter } = useResponsiveLayout();
+  const { contentWidth, isDesktop } = useResponsiveLayout();
+  const notifications = useNotifications();
   const [form, setForm] = useState<EmployerProfileForm>(emptyEmployerProfile);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -58,7 +61,7 @@ export function EmployerProfileScreen() {
         });
       }
     } catch (error: any) {
-      Alert.alert('Error', 'No se pudo cargar el perfil');
+      notifications.error('No se pudo cargar el perfil');
     } finally {
       setLoading(false);
     }
@@ -84,22 +87,22 @@ export function EmployerProfileScreen() {
         nombreCompleto: form.contactName,
         telefono: form.phone,
         employerProfile: {
-          nombreEmpresa: form.companyName,
-          cargo: form.cargo || '',
-          nombreContacto: form.contactName,
+          ruc: form.ruc,
+          tipoEmpresa: form.tipoEmpresa || '',
           industry: form.industry,
-          numberOfEmployees: form.numberOfEmployees,
           description: form.description,
           website: form.website,
           address: form.address,
-          ruc: form.ruc,
-          tipoEmpresa: form.tipoEmpresa,
-          ciudad: form.ciudad,
+          ciudad: form.ciudad || '',
+          nombreEmpresa: form.commercialName || form.companyName,
+          cargo: form.cargo,
+          nombreContacto: form.contactName,
+          numberOfEmployees: form.numberOfEmployees,
         },
       });
-      Alert.alert('Éxito', 'Perfil actualizado correctamente');
+      notifications.success('Tu perfil ha sido actualizado correctamente.', '¡Excelente!');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudieron guardar los cambios');
+      notifications.error(error.message || 'No se pudieron guardar los cambios', 'Error al guardar');
     } finally {
       setSaving(false);
     }
@@ -112,7 +115,9 @@ export function EmployerProfileScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.pageStack}>
-        <View
+        <MotiView
+          from={{ opacity: 0, translateY: -20 }}
+          animate={{ opacity: 1, translateY: 0 }}
           style={[
             styles.surfaceCard,
             styles.block,
@@ -130,9 +135,14 @@ export function EmployerProfileScreen() {
               </Text>
             </View>
           </View>
-        </View>
+        </MotiView>
 
-        <View style={[styles.surfaceCard, styles.block]}>
+        <MotiView 
+          from={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 100 }}
+          style={[styles.surfaceCard, styles.block]}
+        >
           <SectionHeader
             title="Identidad Empresarial"
             subtitle="Información general de la organización"
@@ -212,9 +222,14 @@ export function EmployerProfileScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </MotiView>
 
-        <View style={[styles.surfaceCard, styles.block]}>
+        <MotiView 
+          from={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 200 }}
+          style={[styles.surfaceCard, styles.block]}
+        >
           <SectionHeader
             title="Ubicación y Canales Digitales"
             subtitle="Presencia física y online"
@@ -227,7 +242,7 @@ export function EmployerProfileScreen() {
                 <InputField
                   tone="employer"
                   label="Ciudad"
-                  value={form.ciudad}
+                  value={form.ciudad || ''}
                   onChangeText={(text) => updateField('ciudad', text)}
                 />
               </View>
@@ -252,9 +267,14 @@ export function EmployerProfileScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </MotiView>
 
-        <View style={[styles.surfaceCard, styles.block]}>
+        <MotiView 
+          from={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 300 }}
+          style={[styles.surfaceCard, styles.block]}
+        >
           <SectionHeader
             title="Contacto Directo"
             subtitle="Información del responsable"
@@ -299,11 +319,43 @@ export function EmployerProfileScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </MotiView>
 
+        <MotiView 
+          from={{ opacity: 0, translateY: 20 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ delay: 400 }}
+          style={[styles.surfaceCard, styles.actionBlock]}
+        >
+          <Button
+            tone="employer"
+            label={saving ? 'Guardando...' : 'Actualizar Perfil de Empresa'}
+            onPress={handleSave}
+            loading={saving}
+            icon={<Feather name="save" size={20} color="#FFF" />}
+          />
+        </MotiView>
 
+        <MotiView 
+          from={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 500 }}
+          style={[styles.surfaceCard, styles.tipBlock]}
+        >
+          <View style={styles.tipIcon}>
+            <Feather name="shield" size={20} color="#F59E0B" />
+          </View>
+          <Text style={styles.tipText}>
+            Tu información será validada por nuestro equipo de seguridad para garantizar la transparencia en los procesos.
+          </Text>
+        </MotiView>
 
-        <View style={[styles.saveCard, styles.block]}>
+        <MotiView 
+          from={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 600 }}
+          style={[styles.saveCard, styles.block]}
+        >
           <View style={styles.disclaimerBox}>
             <Text style={styles.disclaimerText}>
               Los cambios se aplicarán de inmediato y serán visibles para los candidatos.
@@ -318,7 +370,7 @@ export function EmployerProfileScreen() {
             disabled={saving}
             icon={<Feather name="check" size={20} color="#FFF" />}
           />
-        </View>
+        </MotiView>
       </View>
     </ScrollView>
   );
@@ -447,8 +499,33 @@ const styles = StyleSheet.create({
   },
   disclaimerText: {
     fontSize: 13,
-    color: '#9A3412', // Orange-900
-    textAlign: 'center',
-    fontWeight: '500',
+    color: '#64748B',
+    lineHeight: 18,
+  },
+  actionBlock: {
+    padding: 16,
+    gap: 12,
+  },
+  tipBlock: {
+    backgroundColor: '#FFF7ED',
+    borderColor: '#FFEDD5',
+    flexDirection: 'row',
+    gap: 12,
+    padding: 16,
+    borderRadius: 16,
+  },
+  tipIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#FFEDD5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tipText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#9A3412',
+    lineHeight: 18,
   },
 });

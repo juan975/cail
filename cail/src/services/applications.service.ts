@@ -60,10 +60,7 @@ class ApplicationsService {
                     return {
                         ...app,
                         oferta: {
-                            titulo: offer.titulo,
-                            empresa: offer.empresa,
-                            ciudad: offer.ciudad,
-                            modalidad: offer.modalidad,
+                            ...offer, // Include all fields from the offer
                         }
                     };
                 } catch {

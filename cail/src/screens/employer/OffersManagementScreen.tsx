@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { MotiView } from 'moti';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
+import { useNotifications } from '@/components/ui/Notifications';
 import { AutocompleteInput } from '@/components/ui/AutocompleteInput';
 import { offersService } from '@/services/offers.service';
 import { userService } from '@/services/user.service';
@@ -72,7 +74,14 @@ const mapApiOfferToUI = (offer: Offer): JobOffer => {
       : offer.salarioMin
         ? `$${offer.salarioMin}+`
         : 'A convenir',
-    modality: offer.modalidad,
+    modality: (() => {
+      if (!offer.modalidad) return 'Presencial';
+      const m = offer.modalidad.toUpperCase();
+      if (m === 'PRESENCIAL') return 'Presencial';
+      if (m === 'REMOTO') return 'Remoto';
+      if (m === 'HIBRIDO' || m === 'HÍBRIDO') return 'Híbrido';
+      return offer.modalidad;
+    })(),
     priority: 'Media',
     publishedDate: fechaPub.toLocaleDateString('es-EC'),
     status: mapApiStatusToUI(offer.estado),
@@ -89,6 +98,7 @@ const mapApiOfferToUI = (offer: Offer): JobOffer => {
 
 export function OffersManagementScreen() {
   const { isDesktop, contentWidth, horizontalGutter } = useResponsiveLayout();
+  const notifications = useNotifications();
   const [selectedTab, setSelectedTab] = useState<OfferStatus>('active');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -222,7 +232,7 @@ export function OffersManagementScreen() {
 
   const handleCreateOffer = async () => {
     if (!title.trim() || !description.trim()) {
-      Alert.alert('Error', 'El título y la descripción son obligatorios');
+      notifications.error('El título y la descripción son obligatorios');
       return;
     }
 
@@ -250,10 +260,10 @@ export function OffersManagementScreen() {
       setOffers([uiOffer, ...offers]);
       setShowCreateModal(false);
       resetForm();
-      Alert.alert('Éxito', 'Oferta creada correctamente');
+      notifications.success('Oferta creada correctamente', '¡Éxito!');
     } catch (err: any) {
       console.error('Error creating offer:', err);
-      Alert.alert('Error', err.message || 'No se pudo crear la oferta');
+      notifications.error(err.message || 'No se pudo crear la oferta', 'Error');
     } finally {
       setIsSubmitting(false);
     }
@@ -286,10 +296,10 @@ export function OffersManagementScreen() {
       setOffers(offers.map(o => o.id === selectedOffer.id ? uiOffer : o));
       setShowEditModal(false);
       setSelectedOffer(null);
-      Alert.alert('Éxito', 'Oferta actualizada correctamente');
+      notifications.success('Oferta actualizada correctamente');
     } catch (err: any) {
       console.error('Error updating offer:', err);
-      Alert.alert('Error', err.message || 'No se pudo actualizar la oferta');
+      notifications.error(err.message || 'No se pudo actualizar la oferta');
     } finally {
       setIsSubmitting(false);
     }
@@ -311,7 +321,7 @@ export function OffersManagementScreen() {
       setSelectedOfferApplications(apps);
     } catch (err: any) {
       console.error('Error loading applications:', err);
-      Alert.alert('Error', 'No se pudieron cargar las aplicaciones');
+      notifications.error('No se pudieron cargar las aplicaciones');
       setSelectedOfferApplications([]);
     } finally {
       setLoadingApplications(false);
@@ -354,9 +364,10 @@ export function OffersManagementScreen() {
 
       setSelectedTab(type === 'pause' ? 'paused' : type === 'resume' ? 'active' : type === 'close' ? 'closed' : selectedTab);
       setPendingAction(null);
+      notifications.success(`Acción "${type}" completada con éxito`);
     } catch (err: any) {
       console.error('Error performing action:', err);
-      Alert.alert('Error', err.message || 'No se pudo completar la acción');
+      notifications.error(err.message || 'No se pudo completar la acción');
     } finally {
       setIsSubmitting(false);
     }
@@ -428,7 +439,11 @@ export function OffersManagementScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.pageStack}>
-          <View style={[styles.surfaceCard, styles.block, { backgroundColor: '#F59E0B' }]}>
+          <MotiView 
+            from={{ opacity: 0, translateY: -20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            style={[styles.surfaceCard, styles.block, { backgroundColor: '#F59E0B' }]}
+          >
             <View style={styles.headerRow}>
               <View style={styles.headerIconContainer}>
                 <Feather name="briefcase" size={24} color="#FFF" />
@@ -444,7 +459,7 @@ export function OffersManagementScreen() {
               <Feather name="plus" size={18} color="#F59E0B" />
               <Text style={styles.newOfferTextMain}>Nueva Oferta de Trabajo</Text>
             </TouchableOpacity>
-          </View>
+          </MotiView>
 
           <View style={[styles.surfaceCard, styles.block, styles.tabsCard]}>
             <TabButton icon="check-circle" label={`Activas (${activeCount})`} active={selectedTab === 'active'} onPress={() => setSelectedTab('active')} />
@@ -573,6 +588,20 @@ export function OffersManagementScreen() {
                     )}
                   </TouchableOpacity>
                 </View>
+
+                {/* Selection Overlay inside Create Modal */}
+                {selectionModalVisible && (
+                  <SelectionOverlay
+                    visible={selectionModalVisible}
+                    title={selectionTitle}
+                    options={selectionOptions}
+                    onSelect={(item) => {
+                      if (onSelectOption) onSelectOption(item);
+                      setSelectionModalVisible(false);
+                    }}
+                    onClose={() => setSelectionModalVisible(false)}
+                  />
+                )}
               </View>
             </KeyboardAvoidingView>
           </View>
@@ -688,6 +717,20 @@ export function OffersManagementScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
+
+                {/* Selection Overlay inside Edit Modal */}
+                {selectionModalVisible && (
+                  <SelectionOverlay
+                    visible={selectionModalVisible}
+                    title={selectionTitle}
+                    options={selectionOptions}
+                    onSelect={(item) => {
+                      if (onSelectOption) onSelectOption(item);
+                      setSelectionModalVisible(false);
+                    }}
+                    onClose={() => setSelectionModalVisible(false)}
+                  />
+                )}
               </View>
             </KeyboardAvoidingView>
           </View>
@@ -843,41 +886,50 @@ export function OffersManagementScreen() {
         </View>
       </Modal>
 
-      {/* Selection Modal */}
-      <Modal
-        visible={selectionModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setSelectionModalVisible(false)}
+    </View>
+  );
+}
+
+function SelectionOverlay({ 
+  visible, 
+  title, 
+  options, 
+  onSelect, 
+  onClose 
+}: { 
+  visible: boolean; 
+  title: string; 
+  options: string[]; 
+  onSelect: (item: string) => void; 
+  onClose: () => void;
+}) {
+  if (!visible) return null;
+
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      <TouchableOpacity
+        style={styles.selectionModalOverlay}
+        activeOpacity={1}
+        onPress={onClose}
       >
-        <TouchableOpacity
-          style={styles.selectionModalOverlay}
-          activeOpacity={1}
-          onPress={() => setSelectionModalVisible(false)}
-        >
-          <View style={styles.selectionModalContent}>
-            <Text style={styles.selectionModalTitle}>{selectionTitle}</Text>
-            <FlatList
-              data={selectionOptions}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.selectionOption}
-                  onPress={() => {
-                    if (onSelectOption) {
-                      onSelectOption(item);
-                    }
-                    setSelectionModalVisible(false);
-                  }}
-                >
-                  <Text style={styles.selectionOptionText}>{item}</Text>
-                  <Feather name="chevron-right" size={20} color="#9CA3AF" />
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        <View style={styles.selectionModalContent}>
+          <Text style={styles.selectionModalTitle}>{title}</Text>
+          <FlatList
+            data={options}
+            keyExtractor={(item) => item}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.selectionOption}
+                onPress={() => onSelect(item)}
+              >
+                <Text style={styles.selectionOptionText}>{item}</Text>
+                <Feather name="chevron-right" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -1099,7 +1151,6 @@ function OfferForm({
         <Text style={styles.label}>Departamento</Text>
         <TextInput
           style={styles.input}
-          value={department}
           onChangeText={setDepartment}
           placeholder="Ej: Tecnología, RRHH..."
           placeholderTextColor="#9CA3AF"
@@ -1804,11 +1855,12 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
   selectionModalOverlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    zIndex: 1000,
   },
   selectionModalTitle: {
     fontSize: 18,

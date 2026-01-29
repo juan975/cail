@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { MotiView, AnimatePresence } from 'moti';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { AuthScreen } from '@/screens/auth/AuthScreen';
@@ -161,11 +162,22 @@ function RootApp() {
 
   return (
     <View style={styles.appBackground}>
-      {session.role === 'candidate' ? (
-        <CandidateShell userData={session.userData as CandidateUserData} onLogout={handleLogout} />
-      ) : (
-        <EmployerShell userData={session.userData as EmployerUserData} onLogout={handleLogout} />
-      )}
+      <AnimatePresence exitBeforeEnter>
+        <MotiView
+          key={session.role}
+          from={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ type: 'timing', duration: 400 }}
+          style={{ flex: 1 }}
+        >
+          {session.role === 'candidate' ? (
+            <CandidateShell userData={session.userData as CandidateUserData} onLogout={handleLogout} />
+          ) : (
+            <EmployerShell userData={session.userData as EmployerUserData} onLogout={handleLogout} />
+          )}
+        </MotiView>
+      </AnimatePresence>
     </View>
   );
 }

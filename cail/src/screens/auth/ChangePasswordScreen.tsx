@@ -3,7 +3,9 @@ import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, View, TextInput, Tou
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
+import { useNotifications } from '@/components/ui/Notifications';
 import { LoadingSplash } from '@/components/ui/LoadingSplash';
+import { MotiView } from 'moti';
 import { PasswordStrength, validatePassword } from '@/components/ui/PasswordStrength';
 import { authService } from '@/services/auth.service';
 
@@ -15,6 +17,7 @@ interface ChangePasswordScreenProps {
 
 export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: ChangePasswordScreenProps) {
   const { contentWidth, horizontalGutter } = useResponsiveLayout();
+  const notifications = useNotifications();
   const [tempPassword, setTempPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -28,19 +31,19 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
 
   const handleSubmit = async () => {
     if (!tempPassword) {
-      Alert.alert('Campo requerido', 'Ingresa tu contraseña temporal.');
+      notifications.alert('Ingresa tu contraseña temporal.', 'Campo requerido');
       return;
     }
 
     // Validate password strength
     const passwordValidation = validatePassword(newPassword);
     if (!passwordValidation.isValid) {
-      Alert.alert('Contraseña inválida', passwordValidation.errors[0]);
+      notifications.error(passwordValidation.errors[0], 'Contraseña inválida');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Validación', 'Las contraseñas no coinciden.');
+      notifications.error('Las contraseñas no coinciden.', 'Validación');
       return;
     }
 
@@ -66,8 +69,7 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
       } else if (error.message) {
         errorMessage = error.message;
       }
-
-      Alert.alert('Error', errorMessage);
+      notifications.error(errorMessage, 'Error');
       setLoading(false);
     }
   };
@@ -87,7 +89,11 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
           showsVerticalScrollIndicator={false}
         >
           {/* Main Card */}
-          <View style={[styles.card, { maxWidth: contentWidth, alignSelf: 'center' }]}>
+          <MotiView 
+            from={{ opacity: 0, translateY: 20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            style={[styles.card, { maxWidth: contentWidth, alignSelf: 'center' }]}
+          >
             {/* Card Header */}
             <View style={styles.cardHeader}>
               <View style={styles.iconCircle}>
@@ -247,7 +253,7 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
                 <Text style={styles.logoutText}>Cerrar sesión</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </MotiView>
 
           {/* Footer */}
           <Text style={styles.footer}>

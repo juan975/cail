@@ -79,13 +79,24 @@ const mapApiOfferToUI = (offer: Offer): JobOffer => {
     department: offer.empresa,
     description: offer.descripcion,
     location: offer.ciudad,
-    salary:
-      offer.salarioMin && offer.salarioMax
-        ? `$${offer.salarioMin} - $${offer.salarioMax}`
-        : offer.salarioMin
-          ? `$${offer.salarioMin}+`
-          : 'A convenir',
-    modality: offer.modalidad,
+    salary: (offer.salarioMin || offer.salarioMax || (offer as any).salario_min || (offer as any).salario_max)
+      ? (() => {
+          const sMin = offer.salarioMin || (offer as any).salario_min;
+          const sMax = offer.salarioMax || (offer as any).salario_max;
+          if (sMin && sMax) return `$${sMin} - $${sMax}`;
+          if (sMin) return `$${sMin}+`;
+          if (sMax) return `$${sMax}`;
+          return 'A convenir';
+        })()
+      : 'A convenir',
+    modality: (() => {
+      if (!offer.modalidad) return 'Presencial';
+      const m = offer.modalidad.toUpperCase();
+      if (m === 'PRESENCIAL') return 'Presencial';
+      if (m === 'REMOTO') return 'Remoto';
+      if (m === 'HIBRIDO' || m === 'HÍBRIDO') return 'Híbrido';
+      return offer.modalidad;
+    })(),
     priority: 'Media',
     publishedDate: fechaPub.toLocaleDateString('es-EC'),
     status: mapApiStatusToUI(offer.estado),

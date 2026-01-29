@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { UserRole } from '@/types';
+import { MotiView, AnimatePresence } from 'moti';
 import { LoginForm } from './LoginForm';
 import { RegisterCandidateForm } from './RegisterCandidateForm';
 import { RegisterEmployerForm } from './RegisterEmployerForm';
@@ -38,7 +39,12 @@ export function AuthScreen({ onAuthSuccess, onShowTerms, onLoginStart }: AuthScr
         <View style={[styles.inner, { maxWidth: contentWidth }]}>
           {/* Hero Section */}
           {mode === 'select' && (
-            <View style={styles.heroSection}>
+            <MotiView 
+              from={{ opacity: 0, translateY: -30 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ delay: 100 }}
+              style={styles.heroSection}
+            >
               {/* Logo Badge */}
               <View style={styles.logoBadge}>
                 <View style={styles.logoInner}>
@@ -55,12 +61,17 @@ export function AuthScreen({ onAuthSuccess, onShowTerms, onLoginStart }: AuthScr
                 <Text style={styles.headline}>Bolsa de Empleo</Text>
                 <Text style={styles.subtitle}>Cámara de Industrias de Loja</Text>
               </View>
-            </View>
+            </MotiView>
           )}
 
           {/* Selection Mode - Role Cards */}
           {mode === 'select' ? (
-            <View style={[styles.selectionSection, (isTablet || isDesktop) && styles.selectionWide]}>
+            <MotiView 
+              from={{ opacity: 0, translateY: 20 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ delay: 300 }}
+              style={[styles.selectionSection, (isTablet || isDesktop) && styles.selectionWide]}
+            >
               <View style={styles.roleCards}>
                 <RoleCard
                   title="Soy Candidato"
@@ -86,7 +97,7 @@ export function AuthScreen({ onAuthSuccess, onShowTerms, onLoginStart }: AuthScr
                   Conectando talento con oportunidades en Loja
                 </Text>
               </View>
-            </View>
+            </MotiView>
           ) : (
             /* Login/Register Forms */
             <View style={[styles.formCard, (isTablet || isDesktop) && styles.formCardWide]}>

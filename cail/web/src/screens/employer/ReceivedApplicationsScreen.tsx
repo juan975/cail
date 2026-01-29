@@ -152,7 +152,14 @@ export default function ReceivedApplicationsScreen({ searchQuery = '' }: Receive
             offerId: offer.idOferta,
             offerTitle: offer.titulo,
             offerDetails: {
-              salary: offer.salarioMin ? `$${offer.salarioMin} - $${offer.salarioMax}` : 'A convenir',
+              salary: (() => {
+                const sMin = (offer as any).salarioMin || (offer as any).salario_min;
+                const sMax = (offer as any).salarioMax || (offer as any).salario_max;
+                if (sMin && sMax) return `$${sMin} - $${sMax}`;
+                if (sMin) return `$${sMin}+`;
+                if (sMax) return `$${sMax}`;
+                return 'A convenir';
+              })(),
               contract: offer.tipoContrato || 'Tiempo completo',
               level: offer.nivelJerarquico || 'Junior'
             },

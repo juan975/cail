@@ -9,6 +9,7 @@ import { PasswordStrength, validatePassword } from '@/components/ui/PasswordStre
 import { AutocompleteInput, COMMON_TECHNICAL_SKILLS, COMMON_SOFT_SKILLS } from '@/components/ui/AutocompleteInput';
 import { authService } from '@/services/auth.service';
 import { useNotifications } from '@/components/ui/Notifications';
+import { MotiView } from 'moti';
 import { TermsScreen } from '../legal/TermsScreen';
 
 interface RegisterCandidateFormProps {
@@ -187,7 +188,11 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
   return (
     <View style={styles.container}>
       {/* Main Card */}
-      <View style={styles.card}>
+      <MotiView 
+        from={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        style={styles.card}
+      >
         {/* Header + Progress */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -635,7 +640,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </MotiView>
 
         <LoadingSplash
         visible={showSplash}

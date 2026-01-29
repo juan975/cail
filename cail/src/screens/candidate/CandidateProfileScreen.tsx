@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator, Linking, Modal, Switch } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { MotiView } from 'moti';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { InputField } from '@/components/ui/InputField';
@@ -10,6 +11,7 @@ import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { CandidateProfileForm } from '@/types';
 import { colors } from '@/theme/colors';
 import { userService } from '@/services/user.service';
+import { useNotifications } from '@/components/ui/Notifications';
 import { AutocompleteInput, COMMON_TECHNICAL_SKILLS, COMMON_SOFT_SKILLS } from '@/components/ui/AutocompleteInput';
 import * as DocumentPicker from 'expo-document-picker';
 import { WorkExperience } from '@/types';
@@ -47,6 +49,7 @@ const emptyCandidateProfile: CandidateProfileForm = {
 
 export function CandidateProfileScreen() {
   const { contentWidth } = useResponsiveLayout();
+  const notifications = useNotifications();
   const [form, setForm] = useState<CandidateProfileForm>(emptyCandidateProfile);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'personal' | 'professional' | 'experience'>('personal');
@@ -135,7 +138,7 @@ export function CandidateProfileScreen() {
 
   const handleSaveExperience = () => {
     if (!currentExperience.company || !currentExperience.position || !currentExperience.startDate) {
-      Alert.alert('Error', 'Completa los campos obligatorios (*)');
+      notifications.error('Completa los campos obligatorios (*)');
       return;
     }
 
@@ -156,24 +159,24 @@ export function CandidateProfileScreen() {
   };
 
   const handleDeleteExperience = (id: string) => {
-    Alert.alert('Confirmar', '¿Eliminar esta experiencia?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: () => {
-          updateField(
-            'workExperience',
-            form.workExperience.filter((e) => e.id !== id)
-          );
-        },
+    notifications.alert({
+      title: 'Confirmar',
+      message: '¿Eliminar esta experiencia?',
+      secondaryLabel: 'Cancelar',
+      primaryLabel: 'Eliminar',
+      variant: 'danger',
+      onConfirm: () => {
+        updateField(
+          'workExperience',
+          form.workExperience.filter((e) => e.id !== id)
+        );
       },
-    ]);
+    });
   };
 
   const handleSave = async () => {
     if (!form.cedula.trim()) {
-      Alert.alert('Error', 'La cédula es obligatoria');
+      notifications.error('La cédula es obligatoria');
       return;
     }
     setSaving(true);
@@ -197,9 +200,9 @@ export function CandidateProfileScreen() {
           cedula: form.cedula,
         },
       });
-      Alert.alert('Éxito', 'Tus cambios se guardaron correctamente.');
+      notifications.success('Tus cambios se guardaron correctamente.', '¡Perfil actualizado!');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudieron guardar los cambios');
+      notifications.error(error.message || 'No se pudieron guardar los cambios');
     } finally {
       setSaving(false);
     }
@@ -216,37 +219,44 @@ export function CandidateProfileScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
-      {/* Hero Card */}
-      <View style={[styles.heroCard, { maxWidth: contentWidth }]}>
-        <View style={styles.heroContent}>
-          <View style={styles.heroIcon}>
-            <Feather name="user" size={24} color="#FFFFFF" />
-          </View>
-          <View style={styles.heroText}>
-            <Text style={styles.heroTitle}>Mi perfil profesional</Text>
-            <Text style={styles.heroSubtitle}>
-              Administra tus datos personales y profesionales
-            </Text>
-          </View>
-        </View>
-
-        {/* Progress Section */}
-        <View style={styles.progressSection}>
-          <View style={styles.progressHeader}>
-            <View style={styles.progressInfo}>
-              <Feather name="target" size={16} color="#FFFFFF" />
-              <Text style={styles.progressText}>Progreso del perfil</Text>
+        <MotiView 
+          from={{ opacity: 0, translateY: -10 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          style={[styles.heroCard, { maxWidth: contentWidth }]}
+        >
+          <View style={styles.heroContent}>
+            <View style={styles.heroIcon}>
+              <Feather name="user" size={24} color="#FFFFFF" />
             </View>
-            <View style={styles.progressBadge}>
-              <Text style={styles.progressPercentage}>{Math.round(completion * 100)}%</Text>
+            <View style={styles.heroText}>
+              <Text style={styles.heroTitle}>Mi perfil profesional</Text>
+              <Text style={styles.heroSubtitle}>
+                Administra tus datos personales y profesionales
+              </Text>
             </View>
           </View>
-          <View style={styles.progressBarContainer}>
-            <View style={[styles.progressBarFill, { width: `${completion * 100}%` }]} />
-          </View>
-        </View>
 
-        </View>
+          {/* Progress Section */}
+          <View style={styles.progressSection}>
+            <View style={styles.progressHeader}>
+              <View style={styles.progressInfo}>
+                <Feather name="target" size={16} color="#FFFFFF" />
+                <Text style={styles.progressText}>Progreso del perfil</Text>
+              </View>
+              <View style={styles.progressBadge}>
+                <Text style={styles.progressPercentage}>{Math.round(completion * 100)}%</Text>
+              </View>
+            </View>
+            <View style={styles.progressBarContainer}>
+              <MotiView 
+                from={{ width: '0%' }}
+                animate={{ width: `${completion * 100}%` }}
+                transition={{ type: 'timing', duration: 1000 }}
+                style={styles.progressBarFill} 
+              />
+            </View>
+          </View>
+        </MotiView>
 
       {/* Quick Action Save */}
       <Button
@@ -282,7 +292,11 @@ export function CandidateProfileScreen() {
 
       {/* Personal Tab */}
       {activeTab === 'personal' && (
-        <View style={[styles.sectionCard, { maxWidth: contentWidth }]}>
+        <MotiView 
+          from={{ opacity: 0, translateX: 50 }}
+          animate={{ opacity: 1, translateX: 0 }}
+          style={[styles.sectionCard, { maxWidth: contentWidth }]}
+        >
           <View style={styles.sectionHeader}>
             <Feather name="user" size={20} color="#0B7A4D" />
             <View style={{ flex: 1 }}>
@@ -341,12 +355,15 @@ export function CandidateProfileScreen() {
               onChangeText={(text) => updateField('address', text)}
             />
           </View>
-        </View>
+        </MotiView>
       )}
 
       {/* Professional Tab */}
       {activeTab === 'professional' && (
-        <>
+        <MotiView
+          from={{ opacity: 0, translateX: 50 }}
+          animate={{ opacity: 1, translateX: 0 }}
+        >
           {/* Professional Summary */}
           <View style={[styles.sectionCard, { maxWidth: contentWidth }]}>
             <View style={styles.sectionHeader}>
@@ -476,12 +493,15 @@ export function CandidateProfileScreen() {
               />
             </View>
           </View>
-        </>
+        </MotiView>
       )}
 
       {/* Experience Tab */}
       {activeTab === 'experience' && (
-        <>
+        <MotiView
+          from={{ opacity: 0, translateX: 50 }}
+          animate={{ opacity: 1, translateX: 0 }}
+        >
           {/* Competencies */}
           <View style={[styles.sectionCard, { maxWidth: contentWidth }]}>
             <View style={styles.sectionHeader}>
@@ -537,9 +557,9 @@ export function CandidateProfileScreen() {
                     try {
                       await userService.deleteCV();
                       setCvUrl(null);
-                      Alert.alert('Éxito', 'CV eliminado correctamente');
+                      notifications.success('CV eliminado correctamente');
                     } catch (error: any) {
-                      Alert.alert('Error', error.message || 'No se pudo eliminar el CV');
+                      notifications.error(error.message || 'No se pudo eliminar el CV');
                     } finally {
                       setUploadingCv(false);
                     }
@@ -564,7 +584,7 @@ export function CandidateProfileScreen() {
 
                     const file = result.assets[0];
                     if (file.size && file.size > 5 * 1024 * 1024) {
-                      Alert.alert('Error', 'El archivo no puede superar 5MB');
+                      notifications.error('El archivo no puede superar 5MB');
                       return;
                     }
 
@@ -587,10 +607,10 @@ export function CandidateProfileScreen() {
 
                     const response = await userService.uploadCV(formData);
                     setCvUrl(response.cvUrl);
-                    Alert.alert('Éxito', 'CV subido correctamente');
+                    notifications.success('CV subido correctamente');
                   } catch (error: any) {
                     console.error('CV upload error:', error);
-                    Alert.alert('Error', error.message || 'No se pudo subir el CV');
+                    notifications.error(error.message || 'No se pudo subir el CV');
                   } finally {
                     setUploadingCv(false);
                   }
@@ -679,7 +699,7 @@ export function CandidateProfileScreen() {
               ))
             )}
           </View>
-        </>
+        </MotiView>
       )}
 
 

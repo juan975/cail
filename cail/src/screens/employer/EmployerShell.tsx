@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, FontAwesome5 } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { EmployerProfileScreen } from './EmployerProfileScreen';
@@ -93,7 +93,7 @@ export function EmployerShell({ userData, onLogout }: EmployerShellProps) {
             onPress={() => setTab('applications')}
           />
           <EmployerNavItem 
-            icon="building" 
+            icon="home" 
             label="Empresa" 
             active={tab === 'profile'} 
             onPress={() => setTab('profile')} 
@@ -122,8 +122,8 @@ function EmployerNavItem({
       activeOpacity={0.7}
     >
       <View style={[styles.navIcon, active && styles.navIconActive]}>
-        <FontAwesome5 
-          name={icon} 
+        <Feather 
+          name={icon as any} 
           size={20} 
           color={active ? '#F59E0B' : '#6B7280'} 
         />

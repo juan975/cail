@@ -36,10 +36,14 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
   }
 
   const modalityMap: Record<string, JobOffer['modality']> = {
-    Presencial: 'Presencial',
-    Remoto: 'Remoto',
+    'PRESENCIAL': 'Presencial',
+    'REMOTO': 'Remoto',
+    'HIBRIDO': 'Híbrido',
+    'HÍBRIDO': 'Híbrido',
+    'Presencial': 'Presencial',
+    'Remoto': 'Remoto',
     'Híbrido': 'Híbrido',
-    Hibrido: 'Híbrido',
+    'Hibrido': 'Híbrido',
   };
   const employmentTypeMap: Record<string, JobOffer['employmentType']> = {
     'Tiempo completo': 'Tiempo completo',
@@ -55,13 +59,17 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
     company: '',
     description: offer.descripcion,
     location: offer.ciudad,
-    modality: modalityMap[offer.modalidad] || 'Presencial',
-    salaryRange:
-      offer.salarioMin && offer.salarioMax
-        ? `$${offer.salarioMin} - $${offer.salarioMax}`
-        : offer.salarioMin
-          ? `$${offer.salarioMin}+`
-          : 'A convenir',
+    modality: modalityMap[String(offer.modalidad || '').toUpperCase()] || modalityMap[offer.modalidad] || 'Presencial',
+    salaryRange: (offer.salarioMin || offer.salarioMax || (offer as any).salario_min || (offer as any).salario_max)
+      ? (() => {
+          const sMin = offer.salarioMin || (offer as any).salario_min;
+          const sMax = offer.salarioMax || (offer as any).salario_max;
+          if (sMin && sMax) return `$${sMin} - $${sMax}`;
+          if (sMin) return `$${sMin}+`;
+          if (sMax) return `$${sMax}`;
+          return 'A convenir';
+        })()
+      : 'A convenir',
     employmentType: employmentTypeMap[offer.tipoContrato] || 'Tiempo completo',
     industry: 'General',
     hierarchyLevel: 'Semi-Senior',

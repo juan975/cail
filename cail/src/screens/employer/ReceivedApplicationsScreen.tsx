@@ -15,6 +15,8 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { MotiView } from 'moti';
+import { useNotifications } from "@/components/ui/Notifications";
 import { useResponsiveLayout } from "@/hooks/useResponsive";
 import { applicationsService } from "@/services/applications.service";
 import { offersService } from "@/services/offers.service";
@@ -88,6 +90,7 @@ const mapApiToLocal = (app: ApplicationWithCandidate, offerTitle: string): Appli
 
 export default function ApplicationsScreen() {
   const { isDesktop, contentWidth, horizontalGutter } = useResponsiveLayout();
+  const notifications = useNotifications();
 
   // Estados de datos
   const [applications, setApplications] = useState<Application[]>([]);
@@ -248,13 +251,13 @@ export default function ApplicationsScreen() {
       try {
         setIsLoading(true);
         await applicationsService.updateApplicationStatus(selectedApplication.id, 'ACEPTADA');
-        Alert.alert('Éxito', 'Candidato aceptado correctamente');
+        notifications.success('Candidato aceptado correctamente', '¡Éxito!');
         setShowEvaluationModal(false);
         setSelectedApplication(null);
         loadApplications(true);
       } catch (error) {
         console.error('Error accepting candidate:', error);
-        Alert.alert('Error', 'No se pudo aceptar al candidato. Intenta nuevamente.');
+        notifications.error('No se pudo aceptar al candidato. Intenta nuevamente.');
       } finally {
         setIsLoading(false);
       }
@@ -263,41 +266,38 @@ export default function ApplicationsScreen() {
 
   const handleReject = async () => {
     if (selectedApplication) {
-      Alert.alert(
-        'Rechazar Candidato',
-        '¿Estás seguro de que quieres rechazar esta postulación?',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Rechazar',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                setIsLoading(true);
-                await applicationsService.updateApplicationStatus(selectedApplication.id, 'RECHAZADA');
-                setShowEvaluationModal(false);
-                setSelectedApplication(null);
-                loadApplications(true);
-              } catch (error) {
-                console.error('Error rejecting candidate:', error);
-                Alert.alert('Error', 'No se pudo rechazar la postulación.');
-              } finally {
-                setIsLoading(false);
-              }
-            }
+      notifications.alert({
+        title: 'Rechazar Candidato',
+        message: '¿Estás seguro de que quieres rechazar esta postulación?',
+        secondaryLabel: 'Cancelar',
+        primaryLabel: 'Rechazar',
+        variant: 'danger',
+        onConfirm: async () => {
+          try {
+            setIsLoading(true);
+            await applicationsService.updateApplicationStatus(selectedApplication.id, 'RECHAZADA');
+            setShowEvaluationModal(false);
+            setSelectedApplication(null);
+            loadApplications(true);
+            notifications.success('Candidato rechazado correctamente');
+          } catch (error) {
+            console.error('Error rejecting candidate:', error);
+            notifications.error('No se pudo rechazar la postulación.');
+          } finally {
+            setIsLoading(false);
           }
-        ]
-      );
+        }
+      });
     }
   };
 
   const handleDownloadCV = () => {
     if (selectedApplication?.cvFile) {
       Linking.openURL(selectedApplication.cvFile).catch(err =>
-        Alert.alert('Error', 'No se pudo abrir el enlace del CV')
+        notifications.error('No se pudo abrir el enlace del CV')
       );
     } else {
-      Alert.alert('Información', 'Este candidato no ha adjuntado un CV');
+      notifications.alert('Este candidato no ha adjuntado un CV', 'Información');
     }
   };
 
@@ -319,7 +319,11 @@ export default function ApplicationsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.pageStack}>
-          <View style={[styles.surfaceCard, styles.block, { backgroundColor: '#F59E0B' }]}>
+          <MotiView 
+            from={{ opacity: 0, translateY: -20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            style={[styles.surfaceCard, styles.block, { backgroundColor: '#F59E0B' }]}
+          >
             <View style={styles.headerRow}>
               <View style={styles.headerIconContainer}>
                 <Feather name="users" size={24} color="#FFF" />
@@ -337,7 +341,7 @@ export default function ApplicationsScreen() {
               <StatBox label="En Revisión" value={stats.review} isDesktop={isDesktop} light />
               <StatBox label="Aceptados" value={stats.accepted} isDesktop={isDesktop} light />
             </View>
-          </View>
+          </MotiView>
 
           <View style={[styles.surfaceCard, styles.block, styles.filtersCard]}>
             <View style={styles.searchBox}>

@@ -14,6 +14,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { MotiView, AnimatePresence } from 'moti';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
@@ -43,6 +44,10 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
 
   // Mapeo de modalidad
   const modalityMap: Record<string, JobOffer['modality']> = {
+    'PRESENCIAL': 'Presencial',
+    'REMOTO': 'Remoto',
+    'HIBRIDO': 'Híbrido',
+    'HÍBRIDO': 'Híbrido',
     'Presencial': 'Presencial',
     'Remoto': 'Remoto',
     'Híbrido': 'Híbrido',
@@ -63,18 +68,23 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
     'FULL_TIME': 'Tiempo completo',
   };
 
+  const sMin = offer.salarioMin || (offer as any).salario_min;
+  const sMax = offer.salarioMax || (offer as any).salario_max;
+
   return {
     id: offer.idOferta,
     title: String(offer.titulo || 'Oferta sin título'),
     company: '',
     description: String(offer.descripcion || 'Sin descripción'),
     location: String(offer.ciudad || 'Ubicación no especificada'),
-    modality: modalityMap[offer.modalidad] || offer.modalidad || 'Presencial',
-    salaryRange: offer.salarioMin && offer.salarioMax
-      ? `$${offer.salarioMin} - $${offer.salarioMax}`
-      : offer.salarioMin
-        ? `$${offer.salarioMin}+`
-        : 'A convenir',
+    modality: modalityMap[String(offer.modalidad || '').toUpperCase()] || modalityMap[offer.modalidad] || offer.modalidad || 'Presencial',
+    salaryRange: (sMin || sMax)
+      ? (sMin && sMax)
+        ? `$${sMin} - $${sMax}`
+        : sMin
+          ? `$${sMin}+`
+          : `$${sMax}`
+      : 'A convenir',
     employmentType: employmentTypeMap[offer.tipoContrato] || offer.tipoContrato || 'Tiempo completo',
     industry: 'General',
     requiredCompetencies: Array.isArray(offer.competencias_requeridas) ? offer.competencias_requeridas : [],
@@ -311,13 +321,23 @@ export function JobDiscoveryScreen() {
     return appliedOffers.get(offerId);
   };
 
-  const renderOffer = ({ item }: { item: JobOffer }) => {
+  const renderOffer = ({ item, index }: { item: JobOffer, index: number }) => {
     const applied = hasApplied(item.id);
     const application = getApplicationStatus(item.id);
     const statusInfo = application ? ApplicationStatusColors[application.estado] : null;
 
     return (
-      <Card style={[styles.offerCard, widthLimiter]}>
+      <MotiView
+        from={{ opacity: 0, translateY: 20 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{
+          type: 'timing',
+          duration: 400,
+          delay: index * 100,
+        }}
+        style={[styles.offerCard, widthLimiter]}
+      >
+        <Card style={{ padding: 0, backgroundColor: 'transparent', elevation: 0 }}>
         <View style={styles.offerHeader}>
           <View style={styles.offerTitleWrap}>
             <View style={styles.titleRow}>
@@ -364,7 +384,8 @@ export function JobDiscoveryScreen() {
         )}
 
         <Text style={styles.publishDate}>Publicado: {item.postedDate || '24/10/2025'}</Text>
-      </Card>
+        </Card>
+      </MotiView>
     );
   };
 
@@ -410,17 +431,23 @@ export function JobDiscoveryScreen() {
         ListHeaderComponent={
           <View style={[styles.headerArea, widthLimiter]}>
             {/* Hero Card */}
-            <Card spacing="lg" style={styles.heroCard}>
-              <View style={styles.heroContent}>
-                <View style={styles.heroIcon}>
-                  <Feather name="search" size={24} color="#FFFFFF" />
+            <MotiView
+              from={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', damping: 15 }}
+            >
+              <Card spacing="lg" style={styles.heroCard}>
+                <View style={styles.heroContent}>
+                  <View style={styles.heroIcon}>
+                    <Feather name="search" size={24} color="#FFFFFF" />
+                  </View>
+                  <View style={styles.heroText}>
+                    <Text style={styles.heroTitle}>Descubrimiento y Postulación</Text>
+                    <Text style={styles.heroSubtitle}>Explora las mejores oportunidades laborales para ti</Text>
+                  </View>
                 </View>
-                <View style={styles.heroText}>
-                  <Text style={styles.heroTitle}>Descubrimiento y Postulación</Text>
-                  <Text style={styles.heroSubtitle}>Explora las mejores oportunidades laborales para ti</Text>
-                </View>
-              </View>
-            </Card>
+              </Card>
+            </MotiView>
 
             {/* Filters Card */}
             <Card spacing="md" style={styles.filtersCard}>
@@ -499,7 +526,7 @@ export function JobDiscoveryScreen() {
               <ScrollView style={styles.fullModalScroll} showsVerticalScrollIndicator={false}>
                 <View style={styles.fullModalBody}>
                   <View style={styles.fullConfirmBox}>
-                    <Feather name="info" size={20} color="#059669" />
+                    <Feather name="send" size={20} color="#059669" />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.fullConfirmTitle}>Confirmar postulación</Text>
                       <Text style={styles.fullConfirmText}>Estás por postularte a <Text style={{ fontWeight: '700' }}>{selectedOffer.title}</Text>.</Text>
@@ -507,11 +534,6 @@ export function JobDiscoveryScreen() {
                   </View>
 
                   <View style={styles.fullRequirementsBox}>
-                    <View style={styles.reqHeaderRow}>
-                      <Feather name="info" size={16} color="#3B82F6" />
-                      <Text style={styles.fullSectionTitle}>Requisitos de la oferta</Text>
-                    </View>
-                    
                     <View style={styles.reqItem}>
                       <Feather name="award" size={14} color="#0B7A4D" />
                       <View style={{ flex: 1 }}>
@@ -543,6 +565,16 @@ export function JobDiscoveryScreen() {
                         <Text style={styles.reqValue}>{String(selectedOffer.modality)} - {String(selectedOffer.employmentType)}</Text>
                       </View>
                     </View>
+
+                    <View style={styles.reqItem}>
+                      <Feather name="dollar-sign" size={14} color="#0B7A4D" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reqLabel}>Salario</Text>
+                        <Text style={[styles.reqValue, { color: '#059669', fontWeight: '700' }]}>
+                          {selectedOffer.salaryRange}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
 
 
@@ -567,7 +599,6 @@ export function JobDiscoveryScreen() {
                       <ActivityIndicator color="#fff" />
                     ) : (
                       <View style={styles.confirmButtonContent}>
-                        <Feather name="check" size={18} color="#FFFFFF" />
                         <Text style={styles.improvedConfirmBtnText}>Confirmar postulación</Text>
                       </View>
                     )}

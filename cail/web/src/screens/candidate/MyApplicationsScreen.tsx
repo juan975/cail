@@ -67,6 +67,15 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
       .replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
+  const formatModality = (modality?: string) => {
+    if (!modality) return '-';
+    const m = modality.toUpperCase();
+    if (m === 'PRESENCIAL') return 'Presencial';
+    if (m === 'REMOTO') return 'Remoto';
+    if (m === 'HIBRIDO' || m === 'HÍBRIDO') return 'Híbrido';
+    return modality;
+  };
+
   const stats = {
     total: filteredApplications.length,
     pending: filteredApplications.filter((app: ApplicationWithOffer) => app.estado === 'PENDIENTE').length,
@@ -229,9 +238,7 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#64748B' }}>
                           <FiMapPin size={12} /> {item.oferta?.ciudad || '-'}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#64748B' }}>
-                          <FiClock size={12} /> {item.oferta?.modalidad || '-'}
-                        </div>
+                        <FiClock size={12} /> {formatModality(item.oferta?.modalidad)}
                       </div>
                     </div>
                   </div>
@@ -273,14 +280,19 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
                     <FiAward size={14} color="#0B7A4D" />
                     <span>{formatContractType(item.oferta?.tipoContrato)}</span>
                   </div>
-                  {(item.oferta?.salarioMin || item.oferta?.salarioMax) && (
+                  {(item.oferta?.salarioMin || item.oferta?.salarioMax || (item.oferta as any)?.salario_min || (item.oferta as any)?.salario_max) && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: '#F8FAFC', borderRadius: 8, fontSize: 12, color: '#475569', border: '1px solid #F1F5F9' }}>
                       <span style={{ color: '#059669', fontWeight: 700 }}>$</span>
                       <span>
-                        {item.oferta.salarioMin && item.oferta.salarioMax
-                          ? `${item.oferta.salarioMin} - ${item.oferta.salarioMax}`
-                          : item.oferta.salarioMin || item.oferta.salarioMax
-                        }
+                        {(() => {
+                          const o = item.oferta as any;
+                          const sMin = o?.salarioMin || o?.salario_min;
+                          const sMax = o?.salarioMax || o?.salario_max;
+                          if (sMin && sMax) return `${sMin} - ${sMax}`;
+                          if (sMin) return `${sMin}+`;
+                          if (sMax) return `${sMax}`;
+                          return '';
+                        })()}
                       </span>
                     </div>
                   )}
@@ -356,7 +368,7 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
                 <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr' }}>
                   <div>
                     <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Modalidad</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{selectedOffer.modalidad}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{formatModality(selectedOffer.modalidad)}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Tipo de Contrato</div>
@@ -373,7 +385,15 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
                   <div>
                     <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Salario</div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: '#059669' }}>
-                      {selectedOffer.salarioMin ? `$${selectedOffer.salarioMin} - $${selectedOffer.salarioMax}` : 'A convenir'}
+                      {(() => {
+                        const o = selectedOffer as any;
+                        const sMin = o?.salarioMin || o?.salario_min;
+                        const sMax = o?.salarioMax || o?.salario_max;
+                        if (sMin && sMax) return `$${sMin} - $${sMax}`;
+                        if (sMin) return `$${sMin}+`;
+                        if (sMax) return `$${sMax}`;
+                        return 'A convenir';
+                      })()}
                     </div>
                   </div>
                   <div>

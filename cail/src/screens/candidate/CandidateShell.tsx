@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, FontAwesome5 } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '@/theme/colors';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
@@ -138,8 +138,8 @@ function NavItem({
     >
       <View style={styles.navIconContainer}>
         <View style={[styles.navIcon, active && styles.navIconActive]}>
-          <FontAwesome5 
-            name={icon} 
+          <Feather 
+            name={icon as any} 
             size={20} 
             color={active ? '#059669' : '#6B7280'} 
           />

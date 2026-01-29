@@ -19,6 +19,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { MotiView } from 'moti';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { Card } from '@/components/ui/Card';
 import { applicationsService } from '@/services/applications.service';
@@ -103,15 +104,33 @@ export function MyApplicationsScreen() {
       .replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
-  const renderApplication = ({ item }: { item: ApplicationWithOffer }) => {
+  const formatModality = (modality?: string) => {
+    if (!modality) return '-';
+    const m = modality.toUpperCase();
+    if (m === 'PRESENCIAL') return 'Presencial';
+    if (m === 'REMOTO') return 'Remoto';
+    if (m === 'HIBRIDO' || m === 'HÍBRIDO') return 'Híbrido';
+    return modality;
+  };
+
+  const renderApplication = ({ item, index }: { item: ApplicationWithOffer, index: number }) => {
     const statusInfo = ApplicationStatusColors[item.estado];
 
     return (
-      <TouchableOpacity 
-        activeOpacity={0.7}
-        onPress={() => setSelectedApplication(item)}
+      <MotiView
+        from={{ opacity: 0, translateX: -20 }}
+        animate={{ opacity: 1, translateX: 0 }}
+        transition={{
+          type: 'timing',
+          duration: 400,
+          delay: index * 100,
+        }}
       >
-        <Card style={[styles.applicationCard, widthLimiter]}>
+        <TouchableOpacity 
+          activeOpacity={0.7}
+          onPress={() => setSelectedApplication(item)}
+        >
+          <Card style={[styles.applicationCard, widthLimiter]}>
           {/* Header with icon, title and status */}
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
@@ -124,7 +143,7 @@ export function MyApplicationsScreen() {
                   <Feather name="map-pin" size={12} color="#64748B" />
                   <Text style={styles.metaText}>{item.oferta?.ciudad || '-'}</Text>
                   <Feather name="clock" size={12} color="#64748B" style={{ marginLeft: 12 }} />
-                  <Text style={styles.metaText}>{item.oferta?.modalidad || '-'}</Text>
+                  <Text style={styles.metaText}>{formatModality(item.oferta?.modalidad)}</Text>
                 </View>
               </View>
             </View>
@@ -152,13 +171,18 @@ export function MyApplicationsScreen() {
                   {formatContractType((item.oferta as any)?.tipoContrato)}
                 </Text>
               </View>
-              {((item.oferta as any)?.salarioMin || (item.oferta as any)?.salarioMax) && (
+              {((item.oferta as any)?.salarioMin || (item.oferta as any)?.salario_min || (item.oferta as any)?.salarioMax || (item.oferta as any)?.salario_max) && (
                 <View style={styles.infoBadge}>
                   <Text style={styles.salarySymbol}>$</Text>
                   <Text style={styles.infoBadgeText}>
-                    {(item.oferta as any).salarioMin && (item.oferta as any).salarioMax
-                      ? `${(item.oferta as any).salarioMin} - ${(item.oferta as any).salarioMax}`
-                      : (item.oferta as any).salarioMin || (item.oferta as any).salarioMax}
+                    {(() => {
+                      const sMin = (item.oferta as any)?.salarioMin || (item.oferta as any)?.salario_min;
+                      const sMax = (item.oferta as any)?.salarioMax || (item.oferta as any)?.salario_max;
+                      if (sMin && sMax) return `${sMin} - ${sMax}`;
+                      if (sMin) return `${sMin}+`;
+                      if (sMax) return `${sMax}`;
+                      return '';
+                    })()}
                   </Text>
                 </View>
               )}
@@ -170,8 +194,9 @@ export function MyApplicationsScreen() {
               </Text>
             </View>
           </View>
-        </Card>
-      </TouchableOpacity>
+          </Card>
+        </TouchableOpacity>
+      </MotiView>
     );
   };
 
@@ -230,7 +255,12 @@ export function MyApplicationsScreen() {
               </View>
             </Card>
 
-            <View style={styles.statsRow}>
+            <MotiView 
+              from={{ opacity: 0, translateY: 10 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ delay: 200 }}
+              style={styles.statsRow}
+            >
               <View style={styles.statItem}>
                 <Text style={styles.statValue}>{applications.length}</Text>
                 <Text style={styles.statLabel}>Total</Text>
@@ -253,7 +283,7 @@ export function MyApplicationsScreen() {
                 </Text>
                 <Text style={styles.statLabel}>Aceptadas</Text>
               </View>
-            </View>
+            </MotiView>
           </View>
         }
         ListEmptyComponent={
@@ -325,7 +355,7 @@ export function MyApplicationsScreen() {
                       <View style={{ flex: 1 }}>
                         <Text style={styles.reqLabel}>Modalidad</Text>
                         <Text style={styles.reqValue}>
-                          {selectedApplication.oferta?.modalidad || 'N/A'} - {formatContractType((selectedApplication.oferta as any)?.tipoContrato)}
+                          {formatModality(selectedApplication.oferta?.modalidad)} - {formatContractType((selectedApplication.oferta as any)?.tipoContrato)}
                         </Text>
                       </View>
                     </View>
@@ -350,10 +380,16 @@ export function MyApplicationsScreen() {
                       <Feather name="dollar-sign" size={14} color="#0B7A4D" />
                       <View style={{ flex: 1 }}>
                         <Text style={styles.reqLabel}>Salario</Text>
-                        <Text style={[styles.reqValue, { color: '#059669' }]}>
-                          {(selectedApplication.oferta as any)?.salarioMin 
-                            ? `$${(selectedApplication.oferta as any).salarioMin} - $${(selectedApplication.oferta as any).salarioMax}`
-                            : 'A convenir'}
+                        <Text style={[styles.reqValue, { color: '#059669', fontWeight: '700' }]}>
+                          {(() => {
+                            const o = selectedApplication.oferta as any;
+                            const sMin = o?.salarioMin || o?.salario_min;
+                            const sMax = o?.salarioMax || o?.salario_max;
+                            if (sMin && sMax) return `$${sMin} - $${sMax}`;
+                            if (sMin) return `$${sMin}+`;
+                            if (sMax) return `$${sMax}`;
+                            return 'A convenir';
+                          })()}
                         </Text>
                       </View>
                     </View>

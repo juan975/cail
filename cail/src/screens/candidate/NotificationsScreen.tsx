@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { MotiView } from 'moti';
 import { colors } from '@/theme/colors';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 
@@ -51,7 +52,11 @@ export function NotificationsScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={[styles.stack, { maxWidth: contentWidth, alignSelf: 'center', width: '100%' }]}>
         {/* Hero Card */}
-        <View style={styles.heroCard}>
+        <MotiView 
+          from={{ opacity: 0, translateY: -20 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          style={styles.heroCard}
+        >
           <View style={styles.heroContent}>
             <View style={styles.heroIcon}>
               <Feather name="bell" size={24} color="#FFFFFF" />
@@ -61,7 +66,7 @@ export function NotificationsScreen() {
               <Text style={styles.heroSubtitle}>Notificaciones y comunicación</Text>
             </View>
           </View>
-        </View>
+        </MotiView>
 
         {/* Tab Bar */}
         <View style={styles.tabBar}>
@@ -89,7 +94,13 @@ export function NotificationsScreen() {
 
             {/* Notification Items */}
             {NOTIFICATION_ITEMS.map((item, index) => (
-              <View key={item.id} style={styles.notificationCard}>
+              <MotiView 
+                key={item.id} 
+                from={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'timing', delay: index * 100 }}
+                style={styles.notificationCard}
+              >
                 <View style={styles.notificationContent}>
                   {/* Icon Badge */}
                   <View style={[
@@ -134,7 +145,7 @@ export function NotificationsScreen() {
                     </View>
                   </View>
                 </View>
-              </View>
+              </MotiView>
             ))}
           </View>
         ) : (
