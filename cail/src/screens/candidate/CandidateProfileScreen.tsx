@@ -32,6 +32,7 @@ const emptyCandidateProfile: CandidateProfileForm = {
   cedula: '',
   phone: '',
   city: '',
+  sectorIndustrial: '',
   address: '',
   professionalSummary: '',
   educationLevel: '',
@@ -72,6 +73,7 @@ export function CandidateProfileScreen() {
           cedula: profile.candidateProfile.cedula || '',
           phone: profile.telefono || '',
           city: profile.candidateProfile.ciudad,
+          sectorIndustrial: profile.candidateProfile.sectorIndustrial || '',
           address: profile.candidateProfile.direccion || '',
           professionalSummary: profile.candidateProfile.resumenProfesional || '',
           educationLevel: profile.candidateProfile.nivelEducacion || '',
@@ -85,8 +87,8 @@ export function CandidateProfileScreen() {
         });
         setCvUrl(profile.candidateProfile.cvUrl || null);
       }
-    } catch (error: any) {
-      Alert.alert('Error', 'No se pudo cargar el perfil');
+    } catch (error) {
+      console.error('Error loading profile:', error);
     } finally {
       setLoading(false);
     }
@@ -181,6 +183,7 @@ export function CandidateProfileScreen() {
         telefono: form.phone,
         candidateProfile: {
           ciudad: form.city,
+          sectorIndustrial: form.sectorIndustrial,
           direccion: form.address,
           resumenProfesional: form.professionalSummary,
           nivelEducacion: form.educationLevel,
@@ -243,18 +246,17 @@ export function CandidateProfileScreen() {
           </View>
         </View>
 
-        {/* Status Pills */}
-        <View style={styles.statusRow}>
-          <View style={styles.statusPill}>
-            <Feather name="eye" size={12} color="#0B7A4D" />
-            <Text style={styles.statusPillText}>Perfil visible</Text>
-          </View>
-          <View style={[styles.statusPill, styles.statusPillMuted]}>
-            <Feather name="shield" size={12} color={colors.textSecondary} />
-            <Text style={[styles.statusPillText, styles.statusPillMutedText]}>Verificado</Text>
-          </View>
         </View>
-      </View>
+
+      {/* Quick Action Save */}
+      <Button
+        label={saving ? 'Guardando...' : 'Aplicar Cambios'}
+        onPress={handleSave}
+        style={[styles.saveButton, { maxWidth: contentWidth, marginTop: 0, marginBottom: 12 }]}
+        loading={saving}
+        disabled={saving}
+        icon={<Feather name="check" size={20} color="#FFFFFF" />}
+      />
 
       {/* Tab Bar */}
       <View style={[styles.tabBar, { maxWidth: contentWidth }]}>
@@ -327,6 +329,12 @@ export function CandidateProfileScreen() {
                 />
               </View>
             </View>
+            <InputField
+              label="Sector Industrial"
+              value={form.sectorIndustrial}
+              onChangeText={(text) => updateField('sectorIndustrial', text)}
+              placeholder="Ej: Tecnología, Salud, Educación"
+            />
             <InputField
               label="Dirección completa"
               value={form.address}
@@ -518,7 +526,7 @@ export function CandidateProfileScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cvFileName}>CV Subido</Text>
-                  <Pressable onPress={() => Linking.openURL(cvUrl)}>
+                  <Pressable onPress={() => cvUrl && Linking.openURL(cvUrl)}>
                     <Text style={styles.cvViewLink}>Ver documento</Text>
                   </Pressable>
                 </View>
@@ -674,14 +682,6 @@ export function CandidateProfileScreen() {
         </>
       )}
 
-      {/* Save Button */}
-      <Button
-        label={saving ? 'Guardando...' : 'Guardar cambios'}
-        onPress={handleSave}
-        style={[styles.saveButton, { maxWidth: contentWidth }]}
-        loading={saving}
-        disabled={saving}
-      />
 
       {/* Experience Modal */}
       <Modal
@@ -703,7 +703,7 @@ export function CandidateProfileScreen() {
 
             <ScrollView contentContainerStyle={{ gap: 12 }}>
               <InputField
-                label="Empresa *"
+                label="Institución / Organización *"
                 value={currentExperience.company || ''}
                 onChangeText={(text) =>
                   setCurrentExperience({ ...currentExperience, company: text })

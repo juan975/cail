@@ -15,6 +15,8 @@ import {
   View,
   ViewStyle,
   DimensionValue,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
@@ -39,6 +41,7 @@ export function MyApplicationsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedApplication, setSelectedApplication] = useState<ApplicationWithOffer | null>(null);
 
   const loadApplications = useCallback(async (showRefresh = false) => {
     try {
@@ -94,50 +97,81 @@ export function MyApplicationsScreen() {
     }
   };
 
+  const formatContractType = (type?: string) => {
+    if (!type) return 'No especificado';
+    return type.toLowerCase().replace(/_/g, ' ')
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
   const renderApplication = ({ item }: { item: ApplicationWithOffer }) => {
     const statusInfo = ApplicationStatusColors[item.estado];
 
     return (
-      <Card style={[styles.applicationCard, widthLimiter]}>
-        <View style={styles.cardHeader}>
-          <View style={styles.offerInfo}>
-            <Text style={styles.offerTitle}>{item.oferta?.titulo || 'Oferta'}</Text>
-            <Text style={styles.companyName}>{item.oferta?.empresa || '-'}</Text>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
-            <Feather name={getStatusIcon(item.estado)} size={12} color={statusInfo.text} />
-            <Text style={[styles.statusText, { color: statusInfo.text }]}>
-              {statusInfo.label}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.cardMeta}>
-          <View style={styles.metaItem}>
-            <Feather name="map-pin" size={14} color={colors.textSecondary} />
-            <Text style={styles.metaText}>{item.oferta?.ciudad || '-'}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Feather name="briefcase" size={14} color={colors.textSecondary} />
-            <Text style={styles.metaText}>{item.oferta?.modalidad || '-'}</Text>
-          </View>
-        </View>
-
-        <View style={styles.cardFooter}>
-          <View style={styles.dateInfo}>
-            <Feather name="calendar" size={12} color={colors.muted} />
-            <Text style={styles.dateText}>
-              Aplicado: {formatDate(item.fechaAplicacion)}
-            </Text>
-          </View>
-          {item.matchScore !== undefined && (
-            <View style={styles.scoreContainer}>
-              <Text style={styles.scoreLabel}>Match:</Text>
-              <Text style={styles.scoreValue}>{item.matchScore}%</Text>
+      <TouchableOpacity 
+        activeOpacity={0.7}
+        onPress={() => setSelectedApplication(item)}
+      >
+        <Card style={[styles.applicationCard, widthLimiter]}>
+          {/* Header with icon, title and status */}
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderLeft}>
+              <View style={styles.iconContainer}>
+                <Feather name="briefcase" size={22} color="#0B7A4D" />
+              </View>
+              <View style={styles.titleContainer}>
+                <Text style={styles.offerTitle}>{item.oferta?.titulo || 'Oferta'}</Text>
+                <View style={styles.metaRow}>
+                  <Feather name="map-pin" size={12} color="#64748B" />
+                  <Text style={styles.metaText}>{item.oferta?.ciudad || '-'}</Text>
+                  <Feather name="clock" size={12} color="#64748B" style={{ marginLeft: 12 }} />
+                  <Text style={styles.metaText}>{item.oferta?.modalidad || '-'}</Text>
+                </View>
+              </View>
             </View>
+            <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
+              <Feather name={getStatusIcon(item.estado)} size={12} color={statusInfo.text} />
+              <Text style={[styles.statusText, { color: statusInfo.text }]}>
+                {statusInfo.label}
+              </Text>
+            </View>
+          </View>
+
+          {/* Description */}
+          {(item.oferta as any)?.descripcion && (
+            <Text style={styles.description} numberOfLines={2}>
+              {(item.oferta as any).descripcion}
+            </Text>
           )}
-        </View>
-      </Card>
+
+          {/* Footer with contract type, salary and date */}
+          <View style={styles.cardFooter}>
+            <View style={styles.badgesRow}>
+              <View style={styles.infoBadge}>
+                <Feather name="award" size={14} color="#0B7A4D" />
+                <Text style={styles.infoBadgeText}>
+                  {formatContractType((item.oferta as any)?.tipoContrato)}
+                </Text>
+              </View>
+              {((item.oferta as any)?.salarioMin || (item.oferta as any)?.salarioMax) && (
+                <View style={styles.infoBadge}>
+                  <Text style={styles.salarySymbol}>$</Text>
+                  <Text style={styles.infoBadgeText}>
+                    {(item.oferta as any).salarioMin && (item.oferta as any).salarioMax
+                      ? `${(item.oferta as any).salarioMin} - ${(item.oferta as any).salarioMax}`
+                      : (item.oferta as any).salarioMin || (item.oferta as any).salarioMax}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.dateInfo}>
+              <Feather name="calendar" size={13} color="#94A3B8" />
+              <Text style={styles.dateText}>
+                Aplicado el {formatDate(item.fechaAplicacion)}
+              </Text>
+            </View>
+          </View>
+        </Card>
+      </TouchableOpacity>
     );
   };
 
@@ -232,9 +266,121 @@ export function MyApplicationsScreen() {
           </View>
         }
       />
+
+      {/* Modal de Detalles de Oferta - Bottom Sheet Style */}
+      <Modal
+        visible={selectedApplication !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSelectedApplication(null)}
+      >
+        <View style={styles.bottomSheetOverlay}>
+          {selectedApplication && (
+            <View style={styles.bottomSheetContent}>
+              <View style={styles.bottomSheetHeader}>
+                <View style={styles.bottomSheetTitleRow}>
+                  <View style={styles.bottomSheetIconBox}>
+                    <Feather name="briefcase" size={24} color="#059669" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.bottomSheetEyebrow}>DETALLES DE POSTULACIÓN</Text>
+                    <Text style={styles.bottomSheetTitle}>{selectedApplication.oferta?.titulo || 'Oferta'}</Text>
+                    <Text style={styles.bottomSheetSubtitle}>{selectedApplication.oferta?.ciudad || ''}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity onPress={() => setSelectedApplication(null)} style={styles.bottomSheetCloseBtn}>
+                  <Feather name="x" size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView style={styles.bottomSheetScroll} showsVerticalScrollIndicator={false}>
+                <View style={styles.bottomSheetBody}>
+                  {/* Description */}
+                  {(selectedApplication.oferta as any)?.descripcion && (
+                    <View style={styles.descriptionBox}>
+                      <Text style={styles.descriptionTitle}>Descripción del puesto</Text>
+                      <Text style={styles.descriptionText}>
+                        {(selectedApplication.oferta as any).descripcion}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Requirements */}
+                  <View style={styles.requirementsBox}>
+                    <View style={styles.reqHeaderRow}>
+                      <Feather name="info" size={16} color="#3B82F6" />
+                      <Text style={styles.requirementsTitle}>Requisitos y Detalles</Text>
+                    </View>
+                    
+                    <View style={styles.reqItem}>
+                      <Feather name="map-pin" size={14} color="#0B7A4D" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reqLabel}>Ubicación</Text>
+                        <Text style={styles.reqValue}>{selectedApplication.oferta?.ciudad || 'N/A'}</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.reqItem}>
+                      <Feather name="clock" size={14} color="#0B7A4D" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reqLabel}>Modalidad</Text>
+                        <Text style={styles.reqValue}>
+                          {selectedApplication.oferta?.modalidad || 'N/A'} - {formatContractType((selectedApplication.oferta as any)?.tipoContrato)}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.reqItem}>
+                      <Feather name="briefcase" size={14} color="#0B7A4D" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reqLabel}>Experiencia</Text>
+                        <Text style={styles.reqValue}>{(selectedApplication.oferta as any)?.experiencia_requerida || 'N/A'}</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.reqItem}>
+                      <Feather name="award" size={14} color="#0B7A4D" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reqLabel}>Formación</Text>
+                        <Text style={styles.reqValue}>{(selectedApplication.oferta as any)?.formacion_requerida || 'N/A'}</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.reqItem}>
+                      <Feather name="dollar-sign" size={14} color="#0B7A4D" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reqLabel}>Salario</Text>
+                        <Text style={[styles.reqValue, { color: '#059669' }]}>
+                          {(selectedApplication.oferta as any)?.salarioMin 
+                            ? `$${(selectedApplication.oferta as any).salarioMin} - $${(selectedApplication.oferta as any).salarioMax}`
+                            : 'A convenir'}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    {(selectedApplication.oferta as any)?.competencias_requeridas && 
+                     (selectedApplication.oferta as any).competencias_requeridas.length > 0 && (
+                      <View style={styles.reqItem}>
+                        <Feather name="target" size={14} color="#0B7A4D" />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.reqLabel}>Competencias claves</Text>
+                          <Text style={styles.reqValue}>
+                            {(selectedApplication.oferta as any).competencias_requeridas.join(', ')}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -339,21 +485,43 @@ const styles = StyleSheet.create({
   },
   applicationCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     alignSelf: 'center',
     width: '100%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
     shadowRadius: 4,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
+    gap: 16,
+  },
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    flex: 1,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  titleContainer: {
+    flex: 1,
   },
   offerInfo: {
     flex: 1,
@@ -362,32 +530,40 @@ const styles = StyleSheet.create({
   offerTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.textPrimary,
+    color: '#1F2937',
     marginBottom: 4,
   },
   companyName: {
     fontSize: 14,
     color: colors.textSecondary,
   },
-  statusBadge: {
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 999,
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  description: {
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 19.5,
+    marginBottom: 16,
   },
   cardMeta: {
     flexDirection: 'row',
     gap: 16,
     marginBottom: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F2F5',
   },
   metaItem: {
     flexDirection: 'row',
@@ -395,22 +571,47 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   metaText: {
-    fontSize: 13,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: '#64748B',
   },
   cardFooter: {
+    flexDirection: 'column',
+    gap: 16,
+  },
+  badgesRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 16,
     alignItems: 'center',
+  },
+  infoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  infoBadgeText: {
+    fontSize: 12,
+    color: '#475569',
+  },
+  salarySymbol: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#059669',
   },
   dateInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   dateText: {
     fontSize: 12,
-    color: colors.muted,
+    color: '#94A3B8',
   },
   scoreContainer: {
     flexDirection: 'row',
@@ -447,5 +648,119 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
     paddingHorizontal: 32,
+  },
+  // Bottom Sheet Modal Styles
+  bottomSheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheetContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+    overflow: 'hidden',
+  },
+  bottomSheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  bottomSheetTitleRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+    flex: 1,
+  },
+  bottomSheetIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomSheetEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#059669',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  bottomSheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  bottomSheetSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  bottomSheetCloseBtn: {
+    padding: 4,
+  },
+  bottomSheetScroll: {
+    maxHeight: '100%',
+  },
+  bottomSheetBody: {
+    padding: 20,
+    gap: 20,
+  },
+  descriptionBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  descriptionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  descriptionText: {
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 21,
+  },
+  requirementsBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 16,
+  },
+  reqHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  requirementsTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  reqItem: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  reqLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 2,
+  },
+  reqValue: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '500',
   },
 });

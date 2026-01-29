@@ -100,6 +100,17 @@ class OffersService {
     async closeOffer(id: string): Promise<Offer> {
         return this.updateOffer(id, { estado: 'CERRADA' });
     }
+
+    /**
+     * Obtiene ofertas rankeadas para el candidato autenticado
+     */
+    async getMatchedOffers(limit?: number): Promise<Offer[]> {
+        const params = limit ? `?limit=${limit}` : '';
+        const response = await apiService.get<OfferApiResponse<Offer[]>>(
+            `/matching/discover${params}`
+        );
+        return response.data;
+    }
 }
 
 export const offersService = new OffersService();

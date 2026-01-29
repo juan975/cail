@@ -11,6 +11,7 @@ import { CandidateUserData, EmployerUserData, UserRole, UserSession } from '@/ty
 import { colors } from '@/theme/colors';
 import { firebaseAuthService } from '@/services/firebase.service';
 import { apiService } from '@/services/api.service';
+import { NotificationsProvider } from '@/components/ui/Notifications';
 
 function RootApp() {
   const [session, setSession] = useState<UserSession | null>(null);
@@ -172,8 +173,10 @@ function RootApp() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
-      <RootApp />
+      <NotificationsProvider>
+        <StatusBar style="light" />
+        <RootApp />
+      </NotificationsProvider>
     </SafeAreaProvider>
   );
 }

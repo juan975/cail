@@ -5,6 +5,8 @@ import { useNotifications } from '../../components/ui/Notifications';
 import { UserRole } from '../../types';
 import { authService, RoleMismatchError } from '../../services/auth.service';
 import { userService } from '../../services/user.service';
+import { useEffect } from 'react';
+import logo from '../../assets/logo.png';
 
 interface LoginFormProps {
   role: UserRole;
@@ -12,9 +14,10 @@ interface LoginFormProps {
   onBack: () => void;
   onSwitchToRegister: () => void;
   onLoginStart?: () => void;
+  onLoginEnd?: () => void;
 }
 
-export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLoginStart }: LoginFormProps) {
+export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLoginStart, onLoginEnd }: LoginFormProps) {
   const notifications = useNotifications();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,6 +28,10 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLogin
   const [splashError, setSplashError] = useState(false);
   const [splashErrorMessage, setSplashErrorMessage] = useState('');
   const pendingDataRef = useRef<any>(null);
+
+  useEffect(() => {
+    document.title = `CAIL | Iniciar Sesión - ${role === 'candidate' ? 'Candidato' : 'Empleador'}`;
+  }, [role]);
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -96,6 +103,9 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLogin
       pendingDataRef.current = userData;
       setSplashSuccess(true);
     } catch (error: any) {
+      // Si falla, resetear flags inmediatamente para permitir reintento si no es splash
+      setLoading(false); 
+
       if (error instanceof RoleMismatchError) {
         setSplashErrorMessage(error.message);
       } else {
@@ -110,7 +120,11 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLogin
       }
       setSplashError(true);
     } finally {
-      setLoading(false);
+      // No reseteamos loading aquí si hubo éxito, 
+      // porque el handleSplashComplete se encarga de eso al redirigir
+      if (splashError) {
+        setLoading(false);
+      }
     }
   };
 
@@ -163,7 +177,8 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLogin
     setSplashError(false);
     setSplashErrorMessage('');
     setLoading(false);
-  }, []);
+    onLoginEnd?.();
+  }, [onLoginEnd]);
 
   const roleColor = role === 'candidate' ? '#10B981' : '#F59E0B';
   const roleGradient = role === 'candidate'
@@ -173,9 +188,10 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLogin
   return (
     <div style={{ ...screenContainerStyle, background: roleGradient }}>
       <LoadingSplash
-        visible={showSplash || splashError}
-        success={!splashError}
-        message={splashError ? (splashErrorMessage || 'Error al iniciar sesión') : 'Validando credenciales...'}
+        visible={showSplash}
+        success={splashSuccess}
+        error={splashError}
+        message={splashError ? (splashErrorMessage || 'Error al iniciar sesión') : splashSuccess ? 'Autenticación exitosa' : 'Validando credenciales...'}
         onComplete={splashError ? handleSplashErrorComplete : handleSplashComplete}
       />
 
@@ -188,7 +204,10 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLogin
 
       {/* Glass Form Card */}
       <div style={glassCardStyle}>
-        <div style={{ textAlign: 'center', marginBottom: '44px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '44px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={formLogoContainerStyle}>
+            <img src={logo} alt="Logo" style={{ width: '100%', height: 'auto' }} />
+          </div>
           <h2 style={loginTitleStyle}>Bienvenido</h2>
           <p style={loginSubtitleStyle}>
             Portal de {role === 'candidate' ? 'Candidatos' : 'Empleadores'}
@@ -422,3 +441,16 @@ function handleInputBlur(e: React.FocusEvent<HTMLInputElement>) {
   e.target.style.background = '#F1F5F9';
   e.target.style.boxShadow = 'none';
 }
+
+const formLogoContainerStyle: React.CSSProperties = {
+  width: '64px',
+  height: '64px',
+  background: '#FFFFFF',
+  borderRadius: '16px',
+  padding: '12px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: '20px',
+};

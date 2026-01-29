@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+const logo = require('@/assets/logo.png');
 import { Feather } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { InputField } from '@/components/ui/InputField';
 import { LoadingSplash } from '@/components/ui/LoadingSplash';
 import { UserRole } from '@/types';
 import { authService, RoleMismatchError } from '@/services/auth.service';
+import { useNotifications } from '@/components/ui/Notifications';
 
 interface LoginFormProps {
   role: UserRole;
@@ -16,6 +18,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLoginStart }: LoginFormProps) {
+  const notifications = useNotifications();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,7 +31,7 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLogin
 
   const handleSubmit = async () => {
     if (!email || !password) {
-      Alert.alert('Campos incompletos', 'Ingresa tu correo y contraseña.');
+      notifications.alert('Ingresa tu correo y contraseña.', 'Campos incompletos');
       return;
     }
 
@@ -109,10 +112,10 @@ export function LoginForm({ role, onSuccess, onBack, onSwitchToRegister, onLogin
         </View>
       </View>
 
-      {/* Icon Circle */}
-      <View style={[styles.iconCircle, { backgroundColor: accentLight }]}>
-        <View style={[styles.iconInner, { backgroundColor: accentColor }]}>
-          <Feather name={accentIcon} size={28} color="#FFFFFF" />
+      {/* Logo Container replaces generic icon circle */}
+      <View style={styles.logoBadge}>
+        <View style={styles.logoInner}>
+          <Image source={logo} style={styles.logo} resizeMode="contain" />
         </View>
       </View>
 
@@ -287,21 +290,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Icon Circle
-  iconCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+  logoBadge: {
+    width: 96,
+    height: 96,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     marginBottom: 20,
   },
-  iconInner: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  logoInner: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 8,
+  },
+  logo: {
+    width: '100%',
+    height: '100%',
   },
 
   // Title

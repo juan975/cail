@@ -32,6 +32,7 @@ type NotificationsApi = {
   error: (message: string, title?: string) => void;
   alert: (message: string, title?: string) => void;
   confirm: (options: ConfirmOptions) => Promise<boolean>;
+  setTheme: (theme: 'candidate' | 'employer' | 'default') => void;
 };
 
 type Toast = ToastOptions & { id: string; durationMs: number };
@@ -42,29 +43,33 @@ type ModalState = ModalOptions & {
 
 const NotificationsContext = createContext<NotificationsApi | null>(null);
 
-const variantStyles: Record<
+const defaultStyles: Record<
   NotificationVariant,
-  { accent: string; soft: string; icon: JSX.Element }
+  { accent: string; soft: string; icon: JSX.Element; label: string }
 > = {
   success: {
     accent: '#10B981',
     soft: '#ECFDF5',
-    icon: <FiCheckCircle size={20} />,
+    icon: <FiCheckCircle size={32} />,
+    label: '¡Éxito!',
   },
   info: {
     accent: '#3B82F6',
     soft: '#EFF6FF',
-    icon: <FiInfo size={20} />,
+    icon: <FiInfo size={32} />,
+    label: 'Información',
   },
   warning: {
     accent: '#F59E0B',
     soft: '#FFFBEB',
-    icon: <FiAlertTriangle size={20} />,
+    icon: <FiAlertTriangle size={32} />,
+    label: 'Atención',
   },
   danger: {
     accent: '#EF4444',
     soft: '#FEF2F2',
-    icon: <FiXCircle size={20} />,
+    icon: <FiXCircle size={32} />,
+    label: 'Error',
   },
 };
 
@@ -75,7 +80,23 @@ function createId() {
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [modal, setModal] = useState<ModalState | null>(null);
+  const [theme, setThemeState] = useState<'candidate' | 'employer' | 'default'>('default');
   const timersRef = useRef<Map<string, number>>(new Map());
+
+  const getVariantStyles = useCallback((variant: NotificationVariant) => {
+    const styles = { ...defaultStyles[variant] };
+    
+    // Override colors based on theme if it's a success or info context
+    if (theme === 'employer' && (variant === 'success' || variant === 'info')) {
+      styles.accent = '#EA580C'; // Employer Orange
+      styles.soft = '#FFF7ED';
+    } else if (theme === 'candidate' && (variant === 'success' || variant === 'info')) {
+      styles.accent = '#10B981'; // Candidate Green (default, but explicit here)
+      styles.soft = '#ECFDF5';
+    }
+    
+    return styles;
+  }, [theme]);
 
   const clearToastTimer = useCallback((id: string) => {
     const timer = timersRef.current.get(id);
@@ -155,6 +176,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       error: (message, title) => showModal({ variant: 'danger', title: title ?? 'Ocurrió un error', message }),
       alert: (message, title) => showModal({ variant: 'warning', title: title ?? 'Atención', message }),
       confirm,
+      setTheme: (t) => setThemeState(t),
     }),
     [confirm, showModal, toast]
   );
@@ -163,7 +185,109 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     <NotificationsContext.Provider value={api}>
       {children}
 
-      {/* Toasts removed as per user request */}
+      {/* Toasts Container */}
+      <div style={{
+        position: 'fixed',
+        top: 24,
+        right: 24,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+        zIndex: 30000,
+        pointerEvents: 'none'
+      }}>
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            style={{
+              pointerEvents: 'auto',
+              minWidth: 320,
+              maxWidth: 420,
+              background: 'rgba(255, 255, 255, 0.9)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: 20,
+              padding: '16px 20px',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+              border: `1px solid ${getVariantStyles(t.variant).soft}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+              animation: 'toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <style>{`
+              @keyframes toastIn {
+                from { transform: translateX(50px); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+              }
+              .toast-progress {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                height: 3px;
+                background: currentColor;
+                opacity: 0.3;
+                animation: toastProgress linear forwards;
+              }
+              @keyframes toastProgress {
+                from { width: 100%; }
+                to { width: 0%; }
+              }
+            `}</style>
+            
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 12,
+                background: getVariantStyles(t.variant).soft,
+                color: getVariantStyles(t.variant).accent,
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0
+              }}
+            >
+              {getVariantStyles(t.variant).icon}
+            </div>
+            
+            <div style={{ flex: 1 }}>
+              {t.title && (
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 2 }}>
+                  {t.title}
+                </div>
+              )}
+              <div style={{ fontSize: 13, color: '#4B5563', lineHeight: '18px', fontWeight: 500 }}>
+                {t.message}
+              </div>
+            </div>
+
+            <button
+              onClick={() => removeToast(t.id)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#94A3B8',
+                cursor: 'pointer',
+                padding: 4,
+                display: 'grid',
+                placeItems: 'center'
+              }}
+            >
+              <FiX size={16} />
+            </button>
+
+            <div 
+              className="toast-progress" 
+              style={{ 
+                color: getVariantStyles(t.variant).accent,
+                animationDuration: `${t.durationMs}ms`
+              }} 
+            />
+          </div>
+        ))}
+      </div>
 
       {/* Modal */}
       {modal?.open && (
@@ -173,75 +297,162 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(15, 23, 42, 0.45)',
+            background: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(8px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             padding: 20,
             zIndex: 20000,
+            animation: 'fadeIn 0.3s ease-out',
           }}
           onClick={() => {
             modal.onCancel?.();
             closeModal();
           }}
         >
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes scaleIn {
+              from { transform: scale(0.9) translateY(10px); opacity: 0; }
+              to { transform: scale(1) translateY(0); opacity: 1; }
+            }
+            .modal-content {
+              animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+          `}</style>
           <div
+            className="modal-content"
             style={{
-              width: 'min(520px, 100%)',
+              width: 'min(480px, 100%)',
               background: '#FFFFFF',
-              borderRadius: 24,
-              padding: 24,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+              borderRadius: 32,
+              padding: '40px 32px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              position: 'relative',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 14,
-                  background: variantStyles[modal.variant].soft,
-                  color: variantStyles[modal.variant].accent,
-                  display: 'grid',
-                  placeItems: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                {variantStyles[modal.variant].icon}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#111827', marginTop: 2 }}>
-                  {modal.title}
-                </div>
-                <div style={{ fontSize: 14, color: '#6B7280', marginTop: 6, lineHeight: '20px' }}>
-                  {modal.message}
-                </div>
-              </div>
+            {/* Close icon for accessibility */}
+            <button
+              type="button"
+              onClick={() => {
+                modal.onCancel?.();
+                closeModal();
+              }}
+              style={{
+                position: 'absolute',
+                right: 20,
+                top: 20,
+                width: 36,
+                height: 36,
+                borderRadius: 12,
+                border: 'none',
+                background: '#F8FAFC',
+                color: '#94A3B8',
+                cursor: 'pointer',
+                display: 'grid',
+                placeItems: 'center',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#F1F5F9';
+                e.currentTarget.style.color = '#64748B';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#F8FAFC';
+                e.currentTarget.style.color = '#94A3B8';
+              }}
+            >
+              <FiX size={18} />
+            </button>
+
+            {/* Icon Circle */}
+            <div
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 28,
+                background: getVariantStyles(modal.variant).soft,
+                color: getVariantStyles(modal.variant).accent,
+                display: 'grid',
+                placeItems: 'center',
+                marginBottom: 24,
+                boxShadow: `0 10px 20px ${getVariantStyles(modal.variant).accent}15`,
+              }}
+            >
+              {getVariantStyles(modal.variant).icon}
+            </div>
+
+            <h3 style={{ 
+              fontSize: 24, 
+              fontWeight: 800, 
+              color: '#111827', 
+              marginBottom: 12,
+              letterSpacing: '-0.02em',
+              lineHeight: 1.2
+            }}>
+              {modal.title || getVariantStyles(modal.variant).label}
+            </h3>
+
+            <p style={{ 
+              fontSize: 16, 
+              color: '#64748B', 
+              lineHeight: 1.6,
+              marginBottom: 32,
+              fontWeight: 500
+            }}>
+              {modal.message}
+            </p>
+
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              width: '100%',
+              gap: 12 
+            }}>
               <button
                 type="button"
                 onClick={() => {
-                  modal.onCancel?.();
+                  modal.onConfirm?.();
                   closeModal();
                 }}
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 12,
+                  width: '100%',
+                  padding: '16px 24px',
+                  borderRadius: 16,
                   border: 'none',
-                  background: '#F3F4F6',
-                  color: '#6B7280',
+                  background: getVariantStyles(modal.variant).accent,
+                  color: '#FFFFFF',
+                  fontWeight: 800,
                   cursor: 'pointer',
-                  display: 'grid',
-                  placeItems: 'center',
+                  fontSize: 16,
+                  boxShadow: `0 8px 20px -4px ${getVariantStyles(modal.variant).accent}4D`,
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10
                 }}
-                aria-label="Cerrar"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = `0 12px 24px -4px ${getVariantStyles(modal.variant).accent}66`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.boxShadow = `0 8px 20px -4px ${getVariantStyles(modal.variant).accent}4D`;
+                }}
               >
-                <FiX size={18} />
+                {modal.primaryLabel ?? 'Aceptar'}
               </button>
-            </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
               {modal.secondaryLabel && (
                 <button
                   type="button"
@@ -250,39 +461,29 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
                     closeModal();
                   }}
                   style={{
-                    padding: '12px 20px',
-                    borderRadius: 12,
+                    width: '100%',
+                    padding: '14px 24px',
+                    borderRadius: 16,
                     border: '1px solid #E2E8F0',
                     background: '#FFFFFF',
                     color: '#64748B',
                     fontWeight: 700,
                     cursor: 'pointer',
-                    fontSize: 14,
+                    fontSize: 15,
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#F8FAFC';
+                    e.currentTarget.style.borderColor = '#CBD5E1';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#FFFFFF';
+                    e.currentTarget.style.borderColor = '#E2E8F0';
                   }}
                 >
                   {modal.secondaryLabel}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  modal.onConfirm?.();
-                  closeModal();
-                }}
-                style={{
-                  padding: '12px 24px',
-                  borderRadius: 12,
-                  border: 'none',
-                  background: variantStyles[modal.variant].accent,
-                  color: '#FFFFFF',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  boxShadow: `0 4px 12px ${variantStyles[modal.variant].accent}33`,
-                }}
-              >
-                {modal.primaryLabel ?? 'Aceptar'}
-              </button>
             </div>
           </div>
         </div>

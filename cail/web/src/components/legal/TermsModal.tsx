@@ -32,9 +32,9 @@ const sections = (color: string): Section[] => [
     title: '2. Objeto y Ámbito de Aplicación',
     icon: <FiGlobe size={18} color={color} />,
     description:
-      'La plataforma actúa como un marketplace de servicios laborales que conecta candidatos y empresas para facilitar reclutamiento y selección.',
+      'La plataforma actúa como un marketplace de servicios laborales que conecta candidatos y oportunidades para facilitar reclutamiento y selección.',
     bullets: [
-      'Cláusula de limitación geográfica: el servicio se limita a oportunidades y empresas que operan en Loja, Ecuador.',
+      'Cláusula de limitación geográfica: el servicio se limita a oportunidades y reclutadores que operan en Loja, Ecuador.',
       'No existe relación laboral entre el Usuario y CAIL.',
       'CAIL es un intermediario tecnológico; no garantiza la contratación ni la veracidad de las ofertas de terceros.',
     ],
@@ -46,7 +46,7 @@ const sections = (color: string): Section[] => [
     bullets: [
       'CAIL: administrador de la plataforma.',
       'Servicios: funcionalidades de registro de perfil, publicación de ofertas, postulación y gestión de procesos.',
-      'Usuario: persona natural (Candidato) o jurídica (Empleador/Empresa) que navega y usa la plataforma.',
+      'Usuario: persona natural (Candidato) o jurídica (Empleador) que navega y usa la plataforma.',
       'Candidato: usuario que busca empleo y registra su hoja de vida.',
       'Empleador: usuario corporativo que publica ofertas de trabajo.',
     ],
@@ -111,7 +111,7 @@ const sections = (color: string): Section[] => [
     icon: <FiLock size={18} color={color} />,
     bullets: [
       'El tratamiento de datos se rige por la Política de Protección de Datos Personales de CAIL.',
-      'Al usar el servicio, el usuario acepta compartir datos con empresas reclutadoras (candidatos) o postulantes (empleadores) para fines de selección.',
+      'Al usar el servicio, el usuario acepta compartir datos con reclutadores (candidatos) o postulantes (empleadores) para fines de selección.',
     ],
   },
   {

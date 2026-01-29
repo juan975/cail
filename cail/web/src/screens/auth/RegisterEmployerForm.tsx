@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import logo from '../../assets/logo.png';
 import { FiArrowLeft, FiCheck, FiChevronDown, FiEye, FiEyeOff } from 'react-icons/fi';
 import { LoadingSplash } from '../../components/ui/LoadingSplash';
 import { useNotifications } from '../../components/ui/Notifications';
@@ -161,6 +162,10 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
     e.target.style.boxShadow = 'none';
   };
 
+  useEffect(() => {
+    document.title = 'CAIL | Registro de Empleador';
+  }, []);
+
   const handleSubmit = async () => {
     if (!empresaNombre || !cargo || !contacto || !telefono || !correo || !password) {
       notifications.alert('Completa todos los campos del formulario.', 'Campos incompletos');
@@ -247,6 +252,12 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
         </button>
 
         <div style={glassCardStyle}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
+            <div style={formLogoContainerStyle}>
+              <img src={logo} alt="Logo" style={{ width: '100%', height: 'auto' }} />
+            </div>
+          </div>
+          
           {/* Title */}
           <h1 style={{
             fontSize: '32px',
@@ -729,4 +740,16 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
     </>
   );
 }
+
+const formLogoContainerStyle: React.CSSProperties = {
+  width: '64px',
+  height: '64px',
+  background: '#FFFFFF',
+  borderRadius: '16px',
+  padding: '12px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
 

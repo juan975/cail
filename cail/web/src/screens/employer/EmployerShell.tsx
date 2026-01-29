@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNotifications } from '../../components/ui/Notifications';
 import { useResponsiveLayout } from '../../hooks/useResponsive';
 import { EmployerProfileScreen } from './EmployerProfileScreen';
 import { OffersManagementScreen } from './OffersManagementScreen';
@@ -23,6 +24,15 @@ export function EmployerShell({ userData, onLogout }: EmployerShellProps) {
   const [tab, setTab] = useState<EmployerTab>('offers');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const { setTheme } = useNotifications();
+
+  useEffect(() => {
+    setTheme('employer');
+  }, [setTheme]);
+
+  useEffect(() => {
+    document.title = 'CAIL | Panel Empleador';
+  }, []);
 
   const handleTabChange = (newTab: EmployerTab) => {
     setTab(newTab);

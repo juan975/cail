@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, TouchableWithoutFeedback, KeyboardAvoidingView, Platform } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { AutocompleteInput } from '@/components/ui/AutocompleteInput';
@@ -15,7 +15,7 @@ type OfferAction = 'pause' | 'resume' | 'close' | 'delete';
 interface JobOffer {
   id: string;
   title: string;
-  department: string;
+  department?: string;
   description: string;
   location: string;
   salary: string;
@@ -65,7 +65,6 @@ const mapApiOfferToUI = (offer: Offer): JobOffer => {
     id: offer.idOferta,
     apiId: offer.idOferta,
     title: offer.titulo,
-    department: offer.empresa,
     description: offer.descripcion,
     location: offer.ciudad,
     salary: offer.salarioMin && offer.salarioMax
@@ -189,7 +188,7 @@ export function OffersManagementScreen() {
     setSelectedOffer(offer);
     setTitle(offer.title);
     setDescription(offer.description);
-    setDepartment(offer.department);
+    setDepartment(offer.department || '');
     setSalary(offer.salary);
     setSalaryMin(offer.salaryMin?.toString() || '');
     setSalaryMax(offer.salaryMax?.toString() || '');
@@ -474,185 +473,225 @@ export function OffersManagementScreen() {
         </View>
       </ScrollView>
 
-      {/* Modal Crear Oferta */}
+      {/* Modal Crear Oferta - Bottom Sheet Style */}
       {showCreateModal && (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
-          style={[styles.modalOverlay, isDesktop ? styles.modalOverlayDesktop : styles.modalOverlayMobile, { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 50 }]}
+        <Modal
+          visible={showCreateModal}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setShowCreateModal(false)}
         >
-          <View
-            style={[
-              styles.modalContent,
-              isDesktop ? styles.modalContentDesktop : styles.modalContentMobile,
-              { maxWidth: isDesktop ? 980 : contentWidth, flex: isDesktop ? undefined : 1 },
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Ingresar Oferta Laboral</Text>
-              <TouchableOpacity onPress={() => setShowCreateModal(false)}>
-                <Feather name="x" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalSubtitle}>Completa la descripción de la oferta y los perfiles requeridos</Text>
-            <OfferForm
-              title={title}
-              description={description}
-              department={department}
-              salary={salary}
-              salaryMin={salaryMin}
-              salaryMax={salaryMax}
-              modality={modality}
-              location={location}
-              competencies={competencies}
-              education={education}
-              newCompetency={newCompetency}
-              newEducation={newEducation}
-              tipoContrato={tipoContrato}
-              experiencia={experiencia}
-              setTitle={setTitle}
-              setDescription={setDescription}
-              setDepartment={setDepartment}
-              setSalary={setSalary}
-              setSalaryMin={setSalaryMin}
-              setSalaryMax={setSalaryMax}
-              setModality={setModality}
-              setLocation={setLocation}
-              setNewCompetency={setNewCompetency}
-              setNewEducation={setNewEducation}
-              setTipoContrato={setTipoContrato}
-              setExperiencia={setExperiencia}
-              addCompetency={() => {
-                if (newCompetency.trim()) {
-                  setCompetencies([...competencies, newCompetency.trim()]);
-                  setNewCompetency('');
-                }
-              }}
-              addEducation={() => {
-                if (newEducation.trim()) {
-                  setEducation([...education, newEducation.trim()]);
-                  setNewEducation('');
-                }
-              }}
-              removeCompetency={(idx) => setCompetencies(competencies.filter((_, i) => i !== idx))}
-              removeEducation={(idx) => setEducation(education.filter((_, i) => i !== idx))}
-              onOpenSelection={(title, options, onSelect) => {
-                setSelectionTitle(title);
-                setSelectionOptions(options);
-                setOnSelectOption(() => onSelect);
-                setSelectionModalVisible(true);
-              }}
-              setCompetencies={setCompetencies}
-              setEducation={setEducation}
-              hierarchyLevel={hierarchyLevel}
-              setHierarchyLevel={setHierarchyLevel}
-            />
-            <TouchableOpacity
-              style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
-              onPress={handleCreateOffer}
-              disabled={isSubmitting}
+          <View style={styles.bottomSheetOverlay}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.bottomSheetKeyboardView}
             >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.submitText}>Publicar Oferta</Text>
-              )}
-            </TouchableOpacity>
+              <View style={styles.bottomSheetContent}>
+                <View style={styles.bottomSheetHeader}>
+                  <View style={styles.bottomSheetTitleRow}>
+                    <View style={styles.bottomSheetIconBox}>
+                      <Feather name="briefcase" size={24} color="#F59E0B" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.bottomSheetEyebrow}>NUEVA OFERTA</Text>
+                      <Text style={styles.bottomSheetTitle}>Ingresar Oferta Laboral</Text>
+                      <Text style={styles.bottomSheetSubtitle}>Completa la descripción de la oferta y los perfiles requeridos</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity onPress={() => setShowCreateModal(false)} style={styles.bottomSheetCloseBtn}>
+                    <Feather name="x" size={20} color="#64748B" />
+                  </TouchableOpacity>
+                </View>
+                
+                <ScrollView style={styles.bottomSheetScroll} showsVerticalScrollIndicator={false}>
+                  <View style={styles.bottomSheetBody}>
+                    <OfferForm
+                      title={title}
+                      description={description}
+                      department={department}
+                      salary={salary}
+                      salaryMin={salaryMin}
+                      salaryMax={salaryMax}
+                      modality={modality}
+                      location={location}
+                      competencies={competencies}
+                      education={education}
+                      newCompetency={newCompetency}
+                      newEducation={newEducation}
+                      tipoContrato={tipoContrato}
+                      experiencia={experiencia}
+                      setTitle={setTitle}
+                      setDescription={setDescription}
+                      setDepartment={setDepartment}
+                      setSalary={setSalary}
+                      setSalaryMin={setSalaryMin}
+                      setSalaryMax={setSalaryMax}
+                      setModality={setModality}
+                      setLocation={setLocation}
+                      setNewCompetency={setNewCompetency}
+                      setNewEducation={setNewEducation}
+                      setTipoContrato={setTipoContrato}
+                      setExperiencia={setExperiencia}
+                      addCompetency={() => {
+                        if (newCompetency.trim()) {
+                          setCompetencies([...competencies, newCompetency.trim()]);
+                          setNewCompetency('');
+                        }
+                      }}
+                      addEducation={() => {
+                        if (newEducation.trim()) {
+                          setEducation([...education, newEducation.trim()]);
+                          setNewEducation('');
+                        }
+                      }}
+                      removeCompetency={(idx) => setCompetencies(competencies.filter((_, i) => i !== idx))}
+                      removeEducation={(idx) => setEducation(education.filter((_, i) => i !== idx))}
+                      onOpenSelection={(title, options, onSelect) => {
+                        setSelectionTitle(title);
+                        setSelectionOptions(options);
+                        setOnSelectOption(() => onSelect);
+                        setSelectionModalVisible(true);
+                      }}
+                      setCompetencies={setCompetencies}
+                      setEducation={setEducation}
+                      hierarchyLevel={hierarchyLevel}
+                      setHierarchyLevel={setHierarchyLevel}
+                    />
+                  </View>
+                </ScrollView>
+                
+                <View style={styles.bottomSheetFooter}>
+                  <TouchableOpacity
+                    style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
+                    onPress={handleCreateOffer}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.submitText}>Publicar Oferta</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
           </View>
-        </KeyboardAvoidingView>
+        </Modal>
       )}
 
-      {/* Modal Editar Oferta */}
+
+      {/* Modal Editar Oferta - Bottom Sheet Style */}
       {showEditModal && (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
-          style={[styles.modalOverlay, isDesktop ? styles.modalOverlayDesktop : styles.modalOverlayMobile, { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 50 }]}
+        <Modal
+          visible={showEditModal}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setShowEditModal(false)}
         >
-          <View
-            style={[
-              styles.modalContent,
-              isDesktop ? styles.modalContentDesktop : styles.modalContentMobile,
-              { maxWidth: isDesktop ? 980 : contentWidth, flex: isDesktop ? undefined : 1 },
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Actualizar Oferta</Text>
-              <TouchableOpacity onPress={() => setShowEditModal(false)}>
-                <Feather name="x" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalSubtitle}>Edita los detalles de la oferta "{selectedOffer?.title}"</Text>
-            <OfferForm
-              title={title}
-              description={description}
-              department={department}
-              salary={salary}
-              salaryMin={salaryMin}
-              salaryMax={salaryMax}
-              modality={modality}
-              location={location}
-              competencies={competencies}
-              education={education}
-              newCompetency={newCompetency}
-              newEducation={newEducation}
-              tipoContrato={tipoContrato}
-              experiencia={experiencia}
-              setTitle={setTitle}
-              setDescription={setDescription}
-              setDepartment={setDepartment}
-              setSalary={setSalary}
-              setSalaryMin={setSalaryMin}
-              setSalaryMax={setSalaryMax}
-              setModality={setModality}
-              setLocation={setLocation}
-              setNewCompetency={setNewCompetency}
-              setNewEducation={setNewEducation}
-              setTipoContrato={setTipoContrato}
-              setExperiencia={setExperiencia}
-              addCompetency={() => {
-                if (newCompetency.trim()) {
-                  setCompetencies([...competencies, newCompetency.trim()]);
-                  setNewCompetency('');
-                }
-              }}
-              addEducation={() => {
-                if (newEducation.trim()) {
-                  setEducation([...education, newEducation.trim()]);
-                  setNewEducation('');
-                }
-              }}
-              removeCompetency={(idx) => setCompetencies(competencies.filter((_, i) => i !== idx))}
-              removeEducation={(idx) => setEducation(education.filter((_, i) => i !== idx))}
-              onOpenSelection={(title, options, onSelect) => {
-                setSelectionTitle(title);
-                setSelectionOptions(options);
-                setOnSelectOption(() => onSelect);
-                setSelectionModalVisible(true);
-              }}
-              setCompetencies={setCompetencies}
-              setEducation={setEducation}
-              hierarchyLevel={hierarchyLevel}
-              setHierarchyLevel={setHierarchyLevel}
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowEditModal(false)}>
-                <Text style={styles.cancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.saveButton, isSubmitting && styles.buttonDisabled]}
-                onPress={handleUpdateOffer}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.saveText}>Guardar Cambios</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+          <View style={styles.bottomSheetOverlay}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.bottomSheetKeyboardView}
+            >
+              <View style={styles.bottomSheetContent}>
+                <View style={styles.bottomSheetHeader}>
+                  <View style={styles.bottomSheetTitleRow}>
+                    <View style={styles.bottomSheetIconBox}>
+                      <Feather name="edit-2" size={24} color="#F59E0B" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.bottomSheetEyebrow}>EDITAR OFERTA</Text>
+                      <Text style={styles.bottomSheetTitle} numberOfLines={1}>Actualizar Detalles</Text>
+                      <Text style={styles.bottomSheetSubtitle} numberOfLines={1}>Modifica los requisitos o descripción de "{selectedOffer?.title}"</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity onPress={() => setShowEditModal(false)} style={styles.bottomSheetCloseBtn}>
+                    <Feather name="x" size={20} color="#64748B" />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={styles.bottomSheetScroll} showsVerticalScrollIndicator={false}>
+                  <View style={styles.bottomSheetBody}>
+                    <OfferForm
+                      title={title}
+                      description={description}
+                      department={department}
+                      salary={salary}
+                      salaryMin={salaryMin}
+                      salaryMax={salaryMax}
+                      modality={modality}
+                      location={location}
+                      competencies={competencies}
+                      education={education}
+                      newCompetency={newCompetency}
+                      newEducation={newEducation}
+                      tipoContrato={tipoContrato}
+                      experiencia={experiencia}
+                      setTitle={setTitle}
+                      setDescription={setDescription}
+                      setDepartment={setDepartment}
+                      setSalary={setSalary}
+                      setSalaryMin={setSalaryMin}
+                      setSalaryMax={setSalaryMax}
+                      setModality={setModality}
+                      setLocation={setLocation}
+                      setNewCompetency={setNewCompetency}
+                      setNewEducation={setNewEducation}
+                      setTipoContrato={setTipoContrato}
+                      setExperiencia={setExperiencia}
+                      addCompetency={() => {
+                        if (newCompetency.trim()) {
+                          setCompetencies([...competencies, newCompetency.trim()]);
+                          setNewCompetency('');
+                        }
+                      }}
+                      addEducation={() => {
+                        if (newEducation.trim()) {
+                          setEducation([...education, newEducation.trim()]);
+                          setNewEducation('');
+                        }
+                      }}
+                      removeCompetency={(idx) => setCompetencies(competencies.filter((_, i) => i !== idx))}
+                      removeEducation={(idx) => setEducation(education.filter((_, i) => i !== idx))}
+                      onOpenSelection={(title, options, onSelect) => {
+                        setSelectionTitle(title);
+                        setSelectionOptions(options);
+                        setOnSelectOption(() => onSelect);
+                        setSelectionModalVisible(true);
+                      }}
+                      setCompetencies={setCompetencies}
+                      setEducation={setEducation}
+                      hierarchyLevel={hierarchyLevel}
+                      setHierarchyLevel={setHierarchyLevel}
+                    />
+                  </View>
+                </ScrollView>
+
+                <View style={styles.bottomSheetFooter}>
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <TouchableOpacity 
+                      style={[styles.cancelButton, { flex: 1, height: 50, justifyContent: 'center' }]} 
+                      onPress={() => setShowEditModal(false)}
+                    >
+                      <Text style={styles.cancelText}>Cancelar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.submitButton, isSubmitting && styles.buttonDisabled, { flex: 2, height: 50 }]}
+                      onPress={handleUpdateOffer}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.submitText}>Guardar Cambios</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
           </View>
-        </KeyboardAvoidingView>
+        </Modal>
       )}
 
       {/* Modal Confirmar Acción */}
@@ -740,6 +779,9 @@ export function OffersManagementScreen() {
                 renderItem={({ item }) => {
                   const statusInfo = ApplicationStatusColors[item.estado];
                   const candidateName = item.candidato?.nombreCompleto || 'Candidato sin nombre';
+                  const candidateEmail = item.candidato?.email || 'Email no disponible';
+                  const candidateEdu = item.candidato?.nivelEducativo || 'Nivel no especificado';
+                  
                   const rawDate = item.fechaAplicacion;
                   let fechaApp: Date;
                   if (rawDate instanceof Date) {
@@ -755,31 +797,43 @@ export function OffersManagementScreen() {
                     <View style={styles.applicationItem}>
                       <View style={styles.applicationItemHeader}>
                         <View style={styles.applicationItemInfo}>
-                          <Text style={styles.applicationItemId}>
-                            {candidateName}
-                          </Text>
-                          <Text style={styles.applicationItemDate}>
-                            {isValidDate
-                              ? fechaApp.toLocaleDateString('es-EC', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric'
-                              })
-                              : 'Fecha no disponible'}
+                          <Text style={styles.applicationItemId}>{candidateName}</Text>
+                          <Text style={styles.applicationItemDate}>{candidateEmail}</Text>
+                          <Text style={[styles.applicationItemDate, { color: '#F59E0B', fontWeight: '600', marginTop: 2 }]}>
+                            {candidateEdu}
                           </Text>
                         </View>
-                        <View style={[styles.applicationItemBadge, { backgroundColor: statusInfo.bg }]}>
-                          <Text style={[styles.applicationItemBadgeText, { color: statusInfo.text }]}>
-                            {statusInfo.label}
-                          </Text>
+                        <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                          <View style={[styles.applicationItemBadge, { backgroundColor: statusInfo.bg }]}>
+                            <Text style={[styles.applicationItemBadgeText, { color: statusInfo.text }]}>
+                              {statusInfo.label}
+                            </Text>
+                          </View>
+                          {item.matchScore !== undefined && (
+                            <View style={styles.matchScoreBadgeSmall}>
+                              <Text style={styles.matchScoreTextSmall}>{item.matchScore}% Match</Text>
+                            </View>
+                          )}
                         </View>
                       </View>
-                      {item.matchScore !== undefined && (
-                        <View style={styles.applicationItemScore}>
-                          <Text style={styles.applicationItemScoreLabel}>Match Score:</Text>
-                          <Text style={styles.applicationItemScoreValue}>{item.matchScore}%</Text>
-                        </View>
-                      )}
+                      
+                      <View style={styles.applicationItemFooter}>
+                         <View style={{ flex: 1 }}>
+                           <Text style={styles.applicationItemDate}>
+                              Aplicado: {isValidDate ? fechaApp.toLocaleDateString('es-EC') : 'Fecha no disponible'}
+                            </Text>
+                         </View>
+                         
+                         {item.candidato?.cvUrl && (
+                           <TouchableOpacity 
+                             style={styles.cvDownloadBtnInline} 
+                             onPress={() => Linking.openURL(item.candidato!.cvUrl!)}
+                           >
+                             <Feather name="file-text" size={14} color="#F59E0B" />
+                             <Text style={styles.cvDownloadBtnText}>Ver CV</Text>
+                           </TouchableOpacity>
+                         )}
+                      </View>
                     </View>
                   );
                 }}
@@ -856,7 +910,6 @@ function OfferCard({
           <Feather name="edit-2" size={18} color="#10B981" />
         </TouchableOpacity>
       </View>
-      <Text style={styles.offerDepartment}>{offer.department}</Text>
       <Text style={styles.offerDescription} numberOfLines={2}>
         {offer.description}
       </Text>
@@ -1033,7 +1086,7 @@ function OfferForm({
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Título del Puesto *</Text>
+        <Text style={styles.label}>Título</Text>
         <TextInput
           style={styles.input}
           value={title}
@@ -1043,7 +1096,17 @@ function OfferForm({
         />
       </View>
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Descripción de la Oferta *</Text>
+        <Text style={styles.label}>Departamento</Text>
+        <TextInput
+          style={styles.input}
+          value={department}
+          onChangeText={setDepartment}
+          placeholder="Ej: Tecnología, RRHH..."
+          placeholderTextColor="#9CA3AF"
+        />
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Descripción</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={description}
@@ -1051,16 +1114,6 @@ function OfferForm({
           placeholder="Describe las responsabilidades, funciones y requisitos del puesto..."
           multiline
           numberOfLines={4}
-          placeholderTextColor="#9CA3AF"
-        />
-      </View>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Empresa / Departamento</Text>
-        <TextInput
-          style={[styles.input, styles.readonlyInput]}
-          value={department}
-          editable={false}
-          placeholder="Ej: Mi Empresa S.A."
           placeholderTextColor="#9CA3AF"
         />
       </View>
@@ -1100,14 +1153,14 @@ function OfferForm({
           </TouchableOpacity>
         </View>
         <View style={[styles.inputGroup, styles.flex1]}>
-          <Text style={styles.label}>Nivel Jerárquico</Text>
-          <TouchableOpacity
-            style={styles.selectContainer}
-            onPress={() => onOpenSelection('Nivel Jerárquico', HIERARCHY_OPTIONS, (val) => setHierarchyLevel(val as HierarchyLevel))}
-          >
-            <Text style={styles.selectText}>{hierarchyLevel}</Text>
-            <Feather name="chevron-down" size={20} color="#6B7280" />
-          </TouchableOpacity>
+          <Text style={styles.label}>Ubicación</Text>
+          <TextInput
+            style={styles.input}
+            value={location}
+            onChangeText={setLocation}
+            placeholder="Loja"
+            placeholderTextColor="#9CA3AF"
+          />
         </View>
       </View>
       <View style={styles.row}>
@@ -1121,16 +1174,6 @@ function OfferForm({
             <Feather name="chevron-down" size={20} color="#6B7280" />
           </TouchableOpacity>
         </View>
-        <View style={[styles.inputGroup, styles.flex1]}>
-          <Text style={styles.label}>Ubicación</Text>
-          <TextInput
-            style={styles.input}
-            value={location}
-            onChangeText={setLocation}
-            placeholder="Loja"
-            placeholderTextColor="#9CA3AF"
-          />
-        </View>
       </View>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Experiencia Requerida</Text>
@@ -1142,7 +1185,16 @@ function OfferForm({
           placeholderTextColor="#9CA3AF"
         />
       </View>
-
+      <View style={[styles.inputGroup, styles.flex1]}>
+        <Text style={styles.label}>Nivel Jerárquico</Text>
+        <TouchableOpacity
+          style={styles.selectContainer}
+          onPress={() => onOpenSelection('Nivel Jerárquico', HIERARCHY_OPTIONS, (val) => setHierarchyLevel(val as HierarchyLevel))}
+        >
+          <Text style={styles.selectText}>{hierarchyLevel}</Text>
+          <Feather name="chevron-down" size={20} color="#6B7280" />
+        </TouchableOpacity>
+      </View>
       <Text style={styles.sectionTitle}>Perfiles Requeridos</Text>
       <View style={styles.inputGroup}>
         <AutocompleteInput
@@ -1587,7 +1639,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 0,
   },
   submitText: {
     color: '#fff',
@@ -1805,14 +1857,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
-  applicationItemScore: {
+  applicationItemFooter: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     gap: 4,
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
+  },
+  applicationItemScore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   applicationItemScoreLabel: {
     fontSize: 12,
@@ -1822,5 +1880,106 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#10B981',
+  },
+  // Bottom Sheet Modal Styles
+  bottomSheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheetKeyboardView: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  bottomSheetContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '95%',
+    width: '100%',
+    overflow: 'hidden',
+  },
+  bottomSheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  bottomSheetTitleRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+    flex: 1,
+  },
+  bottomSheetIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#FEF3C7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomSheetEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#F59E0B',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  bottomSheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  bottomSheetSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  bottomSheetCloseBtn: {
+    padding: 4,
+  },
+  bottomSheetScroll: {
+    maxHeight: '100%',
+  },
+  bottomSheetFooter: {
+    padding: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+  },
+  bottomSheetBody: {
+    padding: 20,
+    gap: 20,
+  },
+  matchScoreBadgeSmall: {
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  matchScoreTextSmall: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#065F46',
+  },
+  cvDownloadBtnInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+  },
+  cvDownloadBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#F59E0B',
   },
 });

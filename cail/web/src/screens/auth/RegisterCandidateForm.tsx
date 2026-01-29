@@ -1,5 +1,6 @@
-import { useState } from 'react';
 import { FiArrowLeft, FiEye, FiEyeOff, FiArrowRight, FiCheck, FiPlus, FiX } from 'react-icons/fi';
+import { useEffect, useState } from 'react';
+import logo from '../../assets/logo.png';
 import { LoadingSplash } from '../../components/ui/LoadingSplash';
 import { useNotifications } from '../../components/ui/Notifications';
 import { PasswordStrength, validatePassword } from '../../components/ui/PasswordStrength';
@@ -82,6 +83,18 @@ function handleInputBlur(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
   e.target.style.boxShadow = 'none';
 }
 
+const formLogoContainerStyle: React.CSSProperties = {
+  width: '64px',
+  height: '64px',
+  background: '#FFFFFF',
+  borderRadius: '16px',
+  padding: '12px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
 interface RegisterCandidateFormProps {
   onSuccess: (data: any) => void;
   onBack: () => void;
@@ -126,6 +139,10 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
   const [showSplash, setShowSplash] = useState(false);
   const [splashSuccess, setSplashSuccess] = useState(false);
   const [pendingData, setPendingData] = useState<any>(null);
+
+  useEffect(() => {
+    document.title = 'CAIL | Registro de Candidato';
+  }, []);
 
   const handleContinue = () => {
     if (!fullName || !cedula || !email || !password || !confirmPassword) {
@@ -252,6 +269,12 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
         </button>
 
         <div style={glassCardStyle}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
+            <div style={formLogoContainerStyle}>
+              <img src={logo} alt="Logo" style={{ width: '100%', height: 'auto' }} />
+            </div>
+          </div>
+          
           {/* Progress Indicator */}
           <div style={{ marginBottom: '32px' }}>
             <div style={{

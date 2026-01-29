@@ -3,7 +3,7 @@ import { offersService } from '../../services/offers.service';
 import { applicationsService } from '../../services/applications.service';
 import { userService } from '../../services/user.service';
 import { Offer, CreateOfferDTO, OfferStatus as ApiOfferStatus } from '../../types/offers.types';
-import { Application, ApplicationStatusColors } from '../../types/applications.types';
+import { Application, ApplicationStatusColors, ApplicationWithCandidate } from '../../types/applications.types';
 import { colors } from '../../theme/colors';
 import { InputField } from '../../components/ui/InputField';
 import { Button } from '../../components/ui/Button';
@@ -117,7 +117,7 @@ export function OffersManagementScreen({ searchQuery = '' }: OffersManagementScr
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
-  const [selectedOfferApplications, setSelectedOfferApplications] = useState<Application[]>([]);
+  const [selectedOfferApplications, setSelectedOfferApplications] = useState<ApplicationWithCandidate[]>([]);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [applicationsOffer, setApplicationsOffer] = useState<JobOffer | null>(null);
@@ -333,7 +333,7 @@ export function OffersManagementScreen({ searchQuery = '' }: OffersManagementScr
     setLoadingApplications(true);
     setApplicationsOffer(offer);
     try {
-      const data = await applicationsService.getOfferApplications(offer.apiId);
+      const data = await applicationsService.getOfferApplicationsWithCandidates(offer.apiId);
       setSelectedOfferApplications(data);
       setShowApplicationsModal(true);
     } catch (error: any) {
@@ -430,22 +430,6 @@ export function OffersManagementScreen({ searchQuery = '' }: OffersManagementScr
               fontFamily: 'inherit',
             }}
           />
-        </div>
-        {/* Empresa - read-only, derived from recruiter profile */}
-        <div>
-          <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#4C5672', marginBottom: 6 }}>Empresa</label>
-          <div
-            style={{
-              padding: '12px 14px',
-              borderRadius: 10,
-              border: '1px solid #E5E7EB',
-              background: '#F9FAFB',
-              fontSize: 15,
-              color: '#0F172A',
-            }}
-          >
-            {companyName || 'Cargando...'}
-          </div>
         </div>
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr' }}>
           <InputField label="Salario mínimo" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value.replace(/[^0-9]/g, ''))} />
@@ -850,7 +834,6 @@ export function OffersManagementScreen({ searchQuery = '' }: OffersManagementScr
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
               <div>
                 <div style={{ fontWeight: 700 }}>{offer.title}</div>
-                <div style={{ fontSize: 13, color: colors.textSecondary }}>{offer.department}</div>
               </div>
               <div style={{ fontSize: 12, color: colors.textSecondary }}>{offer.publishedDate}</div>
             </div>
@@ -1106,9 +1089,9 @@ export function OffersManagementScreen({ searchQuery = '' }: OffersManagementScr
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 700 }}>{app.idPostulante}</div>
+                        <div style={{ fontWeight: 700 }}>{app.candidato?.nombreCompleto || 'Candidato sin nombre'}</div>
                         <div style={{ fontSize: 12, color: colors.textSecondary }}>
-                          Aplicado: {
+                          ID: {app.idPostulante} • Aplicado: {
                             app.fechaAplicacion
                               ? (typeof app.fechaAplicacion === 'object' && '_seconds' in (app.fechaAplicacion as any)
                                 ? new Date((app.fechaAplicacion as any)._seconds * 1000).toLocaleDateString('es-EC')

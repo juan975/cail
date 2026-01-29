@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Modal } from 'react-native';
+import { Image, StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Modal } from 'react-native';
+const logo = require('@/assets/logo.png');
 import { Feather } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { InputField } from '@/components/ui/InputField';
@@ -7,6 +8,7 @@ import { LoadingSplash } from '@/components/ui/LoadingSplash';
 import { PasswordStrength, validatePassword } from '@/components/ui/PasswordStrength';
 import { AutocompleteInput, COMMON_TECHNICAL_SKILLS, COMMON_SOFT_SKILLS } from '@/components/ui/AutocompleteInput';
 import { authService } from '@/services/auth.service';
+import { useNotifications } from '@/components/ui/Notifications';
 import { TermsScreen } from '../legal/TermsScreen';
 
 interface RegisterCandidateFormProps {
@@ -18,6 +20,7 @@ interface RegisterCandidateFormProps {
 type TabType = 'personal' | 'profesional';
 
 export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: RegisterCandidateFormProps) {
+  const notifications = useNotifications();
   const [activeTab, setActiveTab] = useState<TabType>('personal');
 
   // Información Personal
@@ -56,18 +59,18 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
 
   const validatePersonalStep = () => {
     if (!fullName || !cedula || !email || !password || !confirmPassword) {
-      Alert.alert('Paso 1 incompleto', 'Por favor, completa todos los campos obligatorios (*) antes de continuar al perfil profesional.');
+      notifications.alert('Por favor, completa todos los campos obligatorios (*) antes de continuar al perfil profesional.', 'Paso 1 incompleto');
       return false;
     }
 
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.isValid) {
-      Alert.alert('Contraseña débil', passwordValidation.errors[0]);
+      notifications.alert(passwordValidation.errors[0], 'Contraseña débil');
       return false;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden.');
+      notifications.alert('Las contraseñas no coinciden.', 'Error');
       return false;
     }
 
@@ -94,7 +97,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
 
     // Validate terms acceptance
     if (!acceptTerms) {
-      Alert.alert('Términos requeridos', 'Debes aceptar los términos y condiciones para continuar.');
+      notifications.alert('Debes aceptar los términos y condiciones para continuar.', 'Términos requeridos');
       return;
     }
 
@@ -135,7 +138,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
       setShowSplash(false);
       setSplashSuccess(false);
       setLoading(false);
-      Alert.alert('Error', error.message || 'Error al crear la cuenta');
+      notifications.error(error.message || 'Error al crear la cuenta', 'Error');
     }
   };
 
@@ -202,9 +205,9 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
 
         {/* Card Header */}
         <View style={styles.cardHeader}>
-          <View style={styles.iconCircle}>
-            <View style={styles.iconInner}>
-              <Feather name="user-plus" size={24} color="#FFFFFF" />
+          <View style={styles.logoBadgeSmall}>
+            <View style={styles.logoInner}>
+              <Image source={logo} style={styles.logo} resizeMode="contain" />
             </View>
           </View>
           <View style={styles.headerText}>
@@ -721,21 +724,28 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 16,
   },
-  iconCircle: {
-    width: 56,
-    height: 56,
+  logoBadgeSmall: {
+    width: 64,
+    height: 64,
     borderRadius: 16,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  iconInner: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#0B7A4D',
+  logoInner: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 6,
+  },
+  logo: {
+    width: '100%',
+    height: '100%',
   },
   headerText: {
     flex: 1,

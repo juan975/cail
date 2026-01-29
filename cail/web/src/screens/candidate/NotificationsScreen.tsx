@@ -23,7 +23,7 @@ const NOTIFICATION_ITEMS = [
   {
     id: '3',
     title: 'Postulación vista',
-    description: 'La empresa TechSolutions ha revisado tu postulación para Arquitecto de Software.',
+    description: 'Un reclutador ha revisado tu postulación para Arquitecto de Software.',
     date: 'Ayer',
     unread: false,
     category: 'Proceso',

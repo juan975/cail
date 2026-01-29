@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { FiUser, FiBriefcase, FiArrowRight } from 'react-icons/fi';
+import { useEffect, useState } from 'react';
 import { UserRole } from '../../types';
 import { LoginForm } from './LoginForm';
 import { RegisterCandidateForm } from './RegisterCandidateForm';
@@ -12,9 +12,10 @@ interface AuthScreenProps {
   onAuthSuccess: (role: UserRole, data: any) => void;
   onShowTerms: () => void;
   onLoginStart?: () => void;
+  onLoginEnd?: () => void;
 }
 
-export function AuthScreen({ onAuthSuccess, onShowTerms, onLoginStart }: AuthScreenProps) {
+export function AuthScreen({ onAuthSuccess, onShowTerms, onLoginStart, onLoginEnd }: AuthScreenProps) {
   const [selectedRole, setSelectedRole] = useState<UserRole>('candidate');
   const [mode, setMode] = useState<AuthMode>('select');
 
@@ -22,6 +23,10 @@ export function AuthScreen({ onAuthSuccess, onShowTerms, onLoginStart }: AuthScr
     setSelectedRole(role);
     setMode('login');
   };
+
+  useEffect(() => {
+    document.title = 'CAIL | Iniciar Sesión';
+  }, []);
 
   const handleSuccess = (data: any) => {
     onAuthSuccess(selectedRole, data);
@@ -53,7 +58,7 @@ export function AuthScreen({ onAuthSuccess, onShowTerms, onLoginStart }: AuthScr
               </div>
               <h2 style={cardTitleStyle}>Soy Candidato</h2>
               <p style={cardDescStyle}>
-                Busco oportunidades laborales y quiero conectar con empresas
+                Busco trabajo y quiero conectar con nuevas oportunidades
               </p>
               <button 
                 onClick={() => handleRoleSelect('candidate')}
@@ -118,6 +123,7 @@ export function AuthScreen({ onAuthSuccess, onShowTerms, onLoginStart }: AuthScr
         onBack={() => setMode('select')}
         onSwitchToRegister={() => setMode('register')}
         onLoginStart={onLoginStart}
+        onLoginEnd={onLoginEnd}
       />
     );
   }

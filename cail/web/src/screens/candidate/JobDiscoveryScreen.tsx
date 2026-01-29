@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FiCheck, FiSend, FiAward, FiBriefcase, FiTarget, FiInfo, FiAlertCircle, FiSearch } from 'react-icons/fi';
+import { FiCheck, FiSend, FiAward, FiBriefcase, FiTarget, FiInfo, FiAlertCircle, FiSearch, FiRefreshCw, FiClock } from 'react-icons/fi';
 import { colors } from '../../theme/colors';
 import { useNotifications } from '../../components/ui/Notifications';
 import { useResponsiveLayout } from '../../hooks/useResponsive';
@@ -42,16 +42,17 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
     Hibrido: 'Híbrido',
   };
   const employmentTypeMap: Record<string, JobOffer['employmentType']> = {
-    'Tiempo Completo': 'Tiempo completo',
     'Tiempo completo': 'Tiempo completo',
     'Medio tiempo': 'Medio tiempo',
     Contrato: 'Contrato',
     'Por Horas': 'Contrato',
+    'TIEMPO_COMPLETO': 'Tiempo completo',
+    'MEDIO_TIEMPO': 'Medio tiempo',
   };
   return {
     id: offer.idOferta || (offer as any).id, // Handle both id formats
     title: offer.titulo,
-    company: offer.empresa,
+    company: '',
     description: offer.descripcion,
     location: offer.ciudad,
     modality: modalityMap[offer.modalidad] || 'Presencial',
@@ -62,13 +63,13 @@ const mapApiOfferToJobOffer = (offer: Offer): JobOffer => {
           ? `$${offer.salarioMin}+`
           : 'A convenir',
     employmentType: employmentTypeMap[offer.tipoContrato] || 'Tiempo completo',
-    industry: offer.empresa || 'General',
+    industry: 'General',
     hierarchyLevel: 'Semi-Senior',
     requiredCompetencies: offer.competencias_requeridas || [],
     requiredExperience: offer.experiencia_requerida || 'No especificada',
     requiredEducation: offer.formacion_requerida || 'No especificada',
-    professionalArea: offer.empresa || 'General',
-    economicSector: offer.empresa || 'General',
+    professionalArea: 'General',
+    economicSector: 'General',
     experienceLevel: offer.experiencia_requerida || 'No especificada',
     postedDate: fechaPub.toLocaleDateString('es-EC'),
     matchScore: (offer as any).match_score,
@@ -97,29 +98,62 @@ export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps
   const loadOffers = useCallback(async () => {
     try {
       setIsLoading(true);
-      console.log('🔍 [DEBUG] loadOffers called');
-      // Try to get matched (ranked) offers first
-      try {
-        console.log('🔍 [DEBUG] Calling getMatchedOffers...');
-        const matchedOffers = await offersService.getMatchedOffers(50);
-        console.log('🔍 [DEBUG] getMatchedOffers response:', matchedOffers);
-        if (matchedOffers && matchedOffers.length > 0) {
-          console.log('🔍 [DEBUG] First offer RAW:', JSON.stringify(matchedOffers[0], null, 2));
-          console.log('🔍 [DEBUG] match_score values:', matchedOffers.map(o => (o as any).match_score));
-          console.log('🔍 [DEBUG] Using matched offers, count:', matchedOffers.length);
-          setOffers(matchedOffers.map(mapApiOfferToJobOffer));
-          return;
+      console.log('🔍 [DEBUG] loadOffers called - Merging all active offers with matches');
+      
+      // 1. Fetch all active offers
+      const allActivePromise = offersService.getOffers({ estado: 'ACTIVA' });
+      
+      // 2. Try to get matched (ranked) offers in parallel
+      const matchedPromise = offersService.getMatchedOffers(100).catch(err => {
+        console.log('Matching service unavailable, falling back to regular list:', err);
+        return [];
+      });
+
+      const [allActive, matched] = await Promise.all([allActivePromise, matchedPromise]);
+      console.log(`🔍 [DEBUG] Results: ${allActive.length} active, ${matched.length} matched`);
+
+      // 3. Create a lookup for match scores
+      const scoreMap = new Map<string, number>();
+      matched.forEach((mo: any) => {
+        const id = mo.idOferta || mo.id;
+        if (id && mo.match_score !== undefined) {
+          scoreMap.set(id, mo.match_score);
         }
-        console.log('🔍 [DEBUG] matchedOffers empty, falling back');
-      } catch (matchError) {
-        console.log('🔍 [DEBUG] Matching service error:', matchError);
-        console.log('Matching service unavailable, falling back to regular offers');
-      }
-      // Fallback to regular offers
-      console.log('🔍 [DEBUG] Calling regular getOffers...');
-      const apiOffers = await offersService.getOffers({ estado: 'ACTIVA' });
-      console.log('🔍 [DEBUG] Regular offers count:', apiOffers.length);
-      setOffers(apiOffers.map(mapApiOfferToJobOffer));
+      });
+
+      // 4. Transform and enrich
+      const processed = allActive.map(offer => {
+        const job = mapApiOfferToJobOffer(offer);
+        // Enrich with match score if found in matching service
+        if (scoreMap.has(job.id)) {
+          job.matchScore = scoreMap.get(job.id);
+        } else if ((offer as any).match_score !== undefined) {
+          // Fallback if match_score is already in the main offer object
+          job.matchScore = (offer as any).match_score;
+        }
+        return job;
+      });
+
+      // 5. Sort: Score (desc), then Date (desc)
+      processed.sort((a, b) => {
+        const scoreA = a.matchScore || 0;
+        const scoreB = b.matchScore || 0;
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        
+        // Secondary sort: parse dates for comparison
+        // postedDate is DD/MM/YYYY
+        try {
+          const partsA = a.postedDate.split('/');
+          const partsB = b.postedDate.split('/');
+          const timeA = new Date(`${partsA[2]}-${partsA[1]}-${partsA[0]}`).getTime();
+          const timeB = new Date(`${partsB[2]}-${partsB[1]}-${partsB[0]}`).getTime();
+          return timeB - timeA;
+        } catch (e) {
+          return 0;
+        }
+      });
+
+      setOffers(processed);
     } catch (err) {
       console.error('Error loading offers:', err);
     } finally {
@@ -148,8 +182,7 @@ export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps
 
       const matchesSearch =
         searchQuery.length === 0 ||
-        offer.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        offer.company.toLowerCase().includes(searchQuery.toLowerCase());
+        offer.title.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesModality = filters.modality === 'Todos' || offer.modality === filters.modality;
       return matchesSearch && matchesModality;
     });
@@ -236,6 +269,33 @@ export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps
             <div style={{ fontSize: 13, opacity: 0.9 }}>Explora las mejores oportunidades laborales para ti</div>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            loadOffers();
+            loadAppliedOffers();
+          }}
+          style={{
+            zIndex: 1,
+            background: 'rgba(255,255,255,0.2)',
+            border: 'none',
+            color: '#fff',
+            cursor: 'pointer',
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            display: 'grid',
+            placeItems: 'center',
+            transition: 'all 0.2s',
+            backdropFilter: 'blur(8px)',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+          title="Actualizar listado"
+        >
+          <FiRefreshCw className={isLoading ? 'spin-animation' : ''} size={20} />
+        </button>
       </div>
 
       {/* Filtros */}
@@ -268,24 +328,6 @@ export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps
         <div style={{ fontSize: 13, color: colors.textSecondary, marginTop: 12 }}>
           {filteredOffers.length} ofertas encontradas
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            loadOffers();
-            loadAppliedOffers();
-          }}
-          style={{
-            marginTop: 10,
-            border: 'none',
-            background: 'transparent',
-            color: '#0B7A4D',
-            cursor: 'pointer',
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          Actualizar listado
-        </button>
       </div>
 
       {/* Ofertas */}
@@ -295,7 +337,13 @@ export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps
           <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 4 }}>Vuelve más tarde o ajusta tus filtros</div>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(2, 1fr)', 
+          gridAutoFlow: 'row',
+          alignItems: 'start',
+          gap: 16 
+        }}>
           {filteredOffers.map((offer) => {
             const applied = appliedOffers.has(offer.id);
             const application = appliedOffers.get(offer.id);
@@ -485,7 +533,15 @@ export function JobDiscoveryScreen({ searchQuery = '' }: JobDiscoveryScreenProps
                   <div style={{ marginTop: 2 }}><FiTarget size={14} color="#0B7A4D" /></div>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 800, color: '#64748B' }}>Competencias claves</div>
-                    <div style={{ fontSize: 13, color: '#1F2937' }}>{selectedOffer.requiredCompetencies.slice(0, 3).join(', ')}</div>
+                    <div style={{ fontSize: 13, color: '#1F2937' }}>{selectedOffer.requiredCompetencies.join(', ')}</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ marginTop: 2 }}><FiClock size={14} color="#0B7A4D" /></div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#64748B' }}>Modalidad</div>
+                    <div style={{ fontSize: 13, color: '#1F2937' }}>{selectedOffer.modality} - {selectedOffer.employmentType}</div>
                   </div>
                 </div>
               </div>

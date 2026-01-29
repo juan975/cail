@@ -10,6 +10,8 @@ import { JobDiscoveryScreen } from './JobDiscoveryScreen';
 import { MyApplicationsScreen } from './MyApplicationsScreen';
 import { NotificationsScreen } from './NotificationsScreen';
 import { CandidateUserData } from '@/types';
+import { useNotifications } from '@/components/ui/Notifications';
+import { useEffect } from 'react';
 
 const logo = require('@/assets/logo.png');
 
@@ -23,6 +25,11 @@ interface CandidateShellProps {
 export function CandidateShell({ userData, onLogout }: CandidateShellProps) {
   const [tab, setTab] = useState<CandidateTab>('discovery');
   const { contentWidth, horizontalGutter } = useResponsiveLayout();
+  const { setTheme } = useNotifications();
+
+  useEffect(() => {
+    setTheme('candidate');
+  }, [setTheme]);
 
   const renderScreen = () => {
     switch (tab) {

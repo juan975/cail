@@ -4,6 +4,7 @@ import {
   Alert,
   Linking,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -11,6 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useResponsiveLayout } from "@/hooks/useResponsive";
@@ -439,41 +441,44 @@ export default function ApplicationsScreen() {
         transparent
         onRequestClose={() => setShowEvaluationModal(false)}
       >
-        <View
-          style={[
-            styles.modalOverlay,
-            isDesktop ? styles.modalOverlayDesktop : styles.modalOverlayMobile,
-          ]}
-        >
-          <View
-            style={[
-              styles.modalContent,
-              isDesktop ? styles.modalContentDesktop : styles.modalContentMobile,
-              { maxWidth: isDesktop ? 980 : '100%' },
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Evaluar Postulación</Text>
-              <TouchableOpacity onPress={() => setShowEvaluationModal(false)}>
-                <Feather name="x" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-
-            {selectedApplication && (
-              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-                {/* Profile Header */}
-                <View style={styles.candidateProfileHeader}>
-                  <View style={styles.avatarLarge}>
-                    <Text style={styles.avatarLargeText}>{selectedApplication?.initials}</Text>
+        <View style={styles.bottomSheetOverlay}>
+          <View style={styles.bottomSheetContent}>
+              <View style={styles.bottomSheetHeader}>
+                <View style={styles.bottomSheetTitleRow}>
+                  <View style={styles.bottomSheetIconBox}>
+                    <Feather name="user" size={24} color="#F59E0B" />
                   </View>
-                  <View style={styles.candidateInfo}>
-                    <Text style={styles.candidateName}>{selectedApplication?.candidateName}</Text>
-                    <View style={styles.positionBadge}>
-                      <Feather name="briefcase" size={12} color="#F59E0B" />
-                      <Text style={styles.candidatePositionText}>{selectedApplication?.position}</Text>
-                    </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.bottomSheetEyebrow}>EVALUAR CANDIDATO</Text>
+                    <Text style={styles.bottomSheetTitle} numberOfLines={1}>{selectedApplication?.candidateName}</Text>
+                    <Text style={styles.bottomSheetSubtitle} numberOfLines={1}>{selectedApplication?.position}</Text>
                   </View>
                 </View>
+                <TouchableOpacity onPress={() => setShowEvaluationModal(false)} style={styles.bottomSheetCloseBtn}>
+                  <Feather name="x" size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+
+            {selectedApplication && (
+              <ScrollView 
+                style={styles.bottomSheetScroll} 
+                contentContainerStyle={{ flexGrow: 1 }}
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.bottomSheetBody}>
+                  {/* Profile Header within ScrollView for better context */}
+                  <View style={styles.candidateProfileHeader}>
+                    <View style={styles.avatarLarge}>
+                      <Text style={styles.avatarLargeText}>{selectedApplication?.initials}</Text>
+                    </View>
+                    <View style={styles.candidateInfo}>
+                      <Text style={styles.candidateName}>{selectedApplication?.candidateName}</Text>
+                      <View style={styles.positionBadge}>
+                        <Feather name="briefcase" size={12} color="#F59E0B" />
+                        <Text style={styles.candidatePositionText}>{selectedApplication?.position}</Text>
+                      </View>
+                    </View>
+                  </View>
 
                 {/* Professional Summary */}
                 {selectedApplication.resumenProfesional && (
@@ -598,49 +603,52 @@ export default function ApplicationsScreen() {
                     </TouchableOpacity>
                   </View>
                 )}
+                </View>
               </ScrollView>
             )}
 
-            {/* Terminal State Logic: Hide buttons if already decided */
-             (selectedApplication?.status === 'accepted' || selectedApplication?.status === 'rejected') ? (
-              <View style={[
-                  styles.statusBanner, 
-                  selectedApplication.status === 'accepted' ? styles.statusBannerAccepted : styles.statusBannerRejected
-                ]}>
-                <Feather 
-                  name={selectedApplication.status === 'accepted' ? "check-circle" : "x-circle"} 
-                  size={20} 
-                  color={selectedApplication.status === 'accepted' ? "#059669" : "#DC2626"} 
-                />
-                <Text style={[
-                  styles.statusBannerText,
-                  selectedApplication.status === 'accepted' ? { color: "#059669" } : { color: "#DC2626" }
-                ]}>
-                  {selectedApplication.status === 'accepted' ? "Candidato Aceptado" : "Candidato Rechazado"}
-                </Text>
-              </View>
-            ) : (
-                <View style={styles.modalActions}>
-                  <TouchableOpacity
-                    style={[styles.selectButton, isLoading && { opacity: 0.7 }]}
-                    onPress={handleSelectCandidate}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Text style={styles.selectButtonText}>Aceptar Candidato</Text>
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.rejectButton, isLoading && { opacity: 0.7 }]}
-                    onPress={handleReject}
-                    disabled={isLoading}
-                  >
-                    <Text style={styles.rejectButtonText}>Rechazar</Text>
-                  </TouchableOpacity>
+            <View style={styles.bottomSheetFooter}>
+              {/* Terminal State Logic: Hide buttons if already decided */
+              (selectedApplication?.status === 'accepted' || selectedApplication?.status === 'rejected') ? (
+                <View style={[
+                    styles.statusBanner, 
+                    selectedApplication.status === 'accepted' ? styles.statusBannerAccepted : styles.statusBannerRejected
+                  ]}>
+                  <Feather 
+                    name={selectedApplication.status === 'accepted' ? "check-circle" : "x-circle"} 
+                    size={20} 
+                    color={selectedApplication.status === 'accepted' ? "#059669" : "#DC2626"} 
+                  />
+                  <Text style={[
+                    styles.statusBannerText,
+                    selectedApplication.status === 'accepted' ? { color: "#059669" } : { color: "#DC2626" }
+                  ]}>
+                    {selectedApplication.status === 'accepted' ? "Candidato Aceptado" : "Candidato Rechazado"}
+                  </Text>
                 </View>
-            )}
+              ) : (
+                  <View style={styles.modalActions}>
+                    <TouchableOpacity
+                      style={[styles.selectButton, isLoading && { opacity: 0.7 }]}
+                      onPress={handleSelectCandidate}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.selectButtonText}>Aceptar Candidato</Text>
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.rejectButton, isLoading && { opacity: 0.7 }]}
+                      onPress={handleReject}
+                      disabled={isLoading}
+                    >
+                      <Text style={styles.rejectButtonText}>Rechazar</Text>
+                    </TouchableOpacity>
+                  </View>
+              )}
+            </View>
           </View>
         </View>
       </Modal>
@@ -1537,6 +1545,81 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: '#1D4ED8',
     fontWeight: '700',
+  },
+  // Bottom Sheet Modal Styles
+  bottomSheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheetKeyboardView: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  bottomSheetContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    flex: 1,
+    maxHeight: '95%',
+    width: '100%',
+    overflow: 'hidden',
+  },
+  bottomSheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  bottomSheetTitleRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+    flex: 1,
+  },
+  bottomSheetIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#FEF3C7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomSheetEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#F59E0B',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  bottomSheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  bottomSheetSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  bottomSheetCloseBtn: {
+    padding: 4,
+  },
+  bottomSheetScroll: {
+    flex: 1,
+  },
+  bottomSheetFooter: {
+    padding: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+  },
+  bottomSheetBody: {
+    padding: 20,
+    gap: 20,
   },
 });
 

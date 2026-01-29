@@ -300,43 +300,80 @@ export function CandidateProfileScreen() {
         <div style={{ borderLeft: '1px solid #E2E8F0', paddingLeft: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
           <FiEye size={16} color="#0B7A4D" />
           <p style={{ margin: 0, fontSize: 12, color: '#64748B', maxWidth: '280px' }}>
-            Tu perfil es actualmente visible para todas las empresas verificadas en la plataforma.
+            Tu perfil es actualmente visible para todos los reclutadores verificados en la plataforma.
           </p>
         </div>
       </div>
 
-      {/* Tabs Design */}
-      <div style={{ display: 'flex', gap: 12, background: '#F1F5F9', padding: '8px', borderRadius: '18px', maxWidth: '500px' }}>
-        {[
-          { id: 'personal', label: 'Personal', icon: <FiUser size={16} /> },
-          { id: 'professional', label: 'Profesional', icon: <FiAward size={16} /> },
-          { id: 'experience', label: 'Experiencia', icon: <FiBriefcase size={16} /> }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-              padding: '12px 16px',
-              borderRadius: '14px',
-              border: 'none',
-              background: activeTab === tab.id ? '#fff' : 'transparent',
-              color: activeTab === tab.id ? '#0B7A4D' : '#64748B',
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: 14,
-              transition: 'all 0.2s',
-              boxShadow: activeTab === tab.id ? '0 4px 12px rgba(0,0,0,0.05)' : 'none'
-            }}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+        {/* Tabs Design */}
+        <div style={{ display: 'flex', gap: 12, background: '#F1F5F9', padding: '8px', borderRadius: '18px', maxWidth: '500px', flex: 1 }}>
+          {[
+            { id: 'personal', label: 'Personal', icon: <FiUser size={16} /> },
+            { id: 'professional', label: 'Profesional', icon: <FiAward size={16} /> },
+            { id: 'experience', label: 'Experiencia', icon: <FiBriefcase size={16} /> }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                padding: '12px 16px',
+                borderRadius: '14px',
+                border: 'none',
+                background: activeTab === tab.id ? '#fff' : 'transparent',
+                color: activeTab === tab.id ? '#0B7A4D' : '#64748B',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: 14,
+                transition: 'all 0.2s',
+                boxShadow: activeTab === tab.id ? '0 4px 12px rgba(0,0,0,0.05)' : 'none'
+              }}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            padding: '12px 24px',
+            borderRadius: '16px',
+            border: 'none',
+            background: saving ? '#D1D5DB' : 'linear-gradient(135deg, #1A936F 0%, #0B7A4D 100%)',
+            color: '#fff',
+            cursor: saving ? 'not-allowed' : 'pointer',
+            fontWeight: 800,
+            fontSize: 14,
+            boxShadow: saving ? 'none' : '0 4px 12px -2px rgba(11, 122, 77, 0.3)',
+            transition: 'all 0.3s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            minWidth: '180px'
+          }}
+          onMouseEnter={(e) => { if (!saving) e.currentTarget.style.transform = 'translateY(-2px)'; }}
+          onMouseLeave={(e) => { if (!saving) e.currentTarget.style.transform = 'none'; }}
+        >
+          {saving ? (
+            <>
+              <div className="spin-animation" style={{ width: 14, height: 14, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%' }} />
+              Guardando...
+            </>
+          ) : (
+            <>
+              <FiCheck size={18} /> Aplicar Cambios
+            </>
+          )}
+        </button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 24 }}>
@@ -744,52 +781,6 @@ export function CandidateProfileScreen() {
             />
           </div>
 
-          {/* Action Box */}
-          <div
-            style={{
-              background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
-              borderRadius: 20,
-              padding: '24px',
-              border: '1px solid #A7F3D0',
-              display: 'grid',
-              gap: 16,
-              boxShadow: '0 10px 20px -5px rgba(11, 122, 77, 0.1)'
-            }}
-          >
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <div style={{ background: '#0B7A4D', color: '#fff', padding: 8, borderRadius: 10 }}>
-                <FiCheck size={18} />
-              </div>
-              <p style={{ fontSize: 13, color: '#065F46', fontWeight: 700, margin: 0 }}>
-                Tu perfil está optimizado para postulaciones.
-              </p>
-            </div>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              style={{
-                width: '100%',
-                padding: '16px',
-                borderRadius: '16px',
-                border: 'none',
-                background: saving ? '#D1D5DB' : 'linear-gradient(135deg, #1A936F 0%, #0B7A4D 100%)',
-                color: '#fff',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                fontWeight: 800,
-                fontSize: 16,
-                boxShadow: saving ? 'none' : '0 8px 20px -4px rgba(11, 122, 77, 0.4)',
-                transition: 'all 0.3s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 12
-              }}
-              onMouseEnter={(e) => { if (!saving) e.currentTarget.style.transform = 'translateY(-2px)'; }}
-              onMouseLeave={(e) => { if (!saving) e.currentTarget.style.transform = 'none'; }}
-            >
-              {saving ? 'Guardando...' : 'Aplicar Cambios'}
-            </button>
-          </div>
         </div>
       </div>
 
@@ -802,7 +793,7 @@ export function CandidateProfileScreen() {
               <button onClick={() => setExperienceModalVisible(false)} style={iconButtonStyle}><FiX size={24} /></button>
             </div>
             <div style={{ display: 'grid', gap: 16 }}>
-              <InputField label="Empresa *" value={currentExperience.company || ''} onChange={(e) => setCurrentExperience({ ...currentExperience, company: e.target.value })} tone="candidate" />
+              <InputField label="Institución / Organización *" value={currentExperience.company || ''} onChange={(e) => setCurrentExperience({ ...currentExperience, company: e.target.value })} tone="candidate" />
               <InputField label="Cargo / Posición *" value={currentExperience.position || ''} onChange={(e) => setCurrentExperience({ ...currentExperience, position: e.target.value })} tone="candidate" />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>

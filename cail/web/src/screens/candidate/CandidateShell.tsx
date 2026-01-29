@@ -1,5 +1,6 @@
-import { useState } from 'react';
 import { colors } from '../../theme/colors';
+import { useNotifications } from '../../components/ui/Notifications';
+import { useEffect, useState } from 'react';
 import { CandidateProfileScreen } from './CandidateProfileScreen';
 import { JobDiscoveryScreen } from './JobDiscoveryScreen';
 import { MyApplicationsScreen } from './MyApplicationsScreen';
@@ -25,6 +26,15 @@ export function CandidateShell({ userData, onLogout }: CandidateShellProps) {
   const [tab, setTab] = useState<CandidateTab>('discovery');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const { setTheme } = useNotifications();
+
+  useEffect(() => {
+    setTheme('candidate');
+  }, [setTheme]);
+
+  useEffect(() => {
+    document.title = 'CAIL | Portal Candidato';
+  }, []);
 
   const handleTabChange = (newTab: CandidateTab) => {
     setTab(newTab);
@@ -277,7 +287,7 @@ export function CandidateShell({ userData, onLogout }: CandidateShellProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={
-                  tab === 'discovery' ? "Buscar por título, empresa o ciudad..." : 
+                  tab === 'discovery' ? "Buscar por título o ciudad..." : 
                   tab === 'applications' ? "Filtrar por puesto..." :
                   tab === 'notifications' ? "Buscar en alertas y notificaciones..." :
                   "Buscador no disponible en perfil"

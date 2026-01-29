@@ -105,6 +105,11 @@ export default function App() {
     isLoggingIn.current = true;
   };
 
+  // Función para indicar que el proceso de login terminó (éxito o error)
+  const handleLoginEnd = () => {
+    isLoggingIn.current = false;
+  };
+
   const handleLogout = async () => {
     await authService.logout();
     setSession(null);
@@ -138,6 +143,7 @@ export default function App() {
         onAuthSuccess={handleAuthSuccess}
         onShowTerms={() => setShowTerms(true)}
         onLoginStart={handleLoginStart}
+        onLoginEnd={handleLoginEnd}
       />
     );
   }

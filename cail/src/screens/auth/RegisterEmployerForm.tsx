@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Alert, StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Modal } from 'react-native';
+import { Alert, Image, StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Modal } from 'react-native';
+const logo = require('@/assets/logo.png');
 import { Feather } from '@expo/vector-icons';
 import { authService } from '@/services/auth.service';
 import { PasswordStrength, validatePassword } from '@/components/ui/PasswordStrength';
@@ -159,9 +160,9 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
 
         {/* Card Header */}
         <View style={styles.cardHeader}>
-          <View style={styles.iconCircle}>
-            <View style={styles.iconInner}>
-              <Feather name="briefcase" size={24} color="#FFFFFF" />
+          <View style={styles.logoBadgeSmall}>
+            <View style={styles.logoInner}>
+              <Image source={logo} style={styles.logo} resizeMode="contain" />
             </View>
           </View>
           <View style={styles.headerText}>
@@ -548,21 +549,28 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 16,
   },
-  iconCircle: {
-    width: 56,
-    height: 56,
+  logoBadgeSmall: {
+    width: 64,
+    height: 64,
     borderRadius: 16,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  iconInner: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#F59E0B',
+  logoInner: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 6,
+  },
+  logo: {
+    width: '100%',
+    height: '100%',
   },
   headerText: {
     flex: 1,

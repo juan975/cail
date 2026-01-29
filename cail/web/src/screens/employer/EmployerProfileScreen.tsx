@@ -146,24 +146,72 @@ export function EmployerProfileScreen() {
           </div>
         </div>
 
-        <div 
-          style={{ 
-            background: 'rgba(209, 250, 229, 0.9)', 
-            color: '#065F46', 
-            padding: '6px 12px', 
-            borderRadius: 999, 
-            fontSize: 11, 
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            zIndex: 1
-          }}
-        >
-          <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-          </svg>
-          VERIFICADA
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', zIndex: 1 }}>
+          <div 
+            style={{ 
+              background: 'rgba(209, 250, 229, 0.9)', 
+              color: '#065F46', 
+              padding: '6px 12px', 
+              borderRadius: 999, 
+              fontSize: 11, 
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            VERIFICADA
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              padding: '10px 20px',
+              borderRadius: 12,
+              background: '#fff',
+              color: '#EA580C',
+              border: 'none',
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: saving ? 'not-allowed' : 'pointer',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}
+            onMouseEnter={(e) => {
+              if (!saving) {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.15)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!saving) {
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+              }
+            }}
+          >
+            {saving ? (
+              <>
+                <div style={{ animation: 'spin 1s linear infinite', border: '2px solid rgba(0,0,0,0.1)', borderTopColor: '#EA580C', borderRadius: '50%', width: 14, height: 14 }} />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Guardar Cambios
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -260,60 +308,6 @@ export function EmployerProfileScreen() {
             </div>
           </div>
 
-          {/* Save Card */}
-          <div style={{ background: '#FFF7ED', borderRadius: 20, padding: 24, border: '1px solid #FDE68A', display: 'grid', gap: 16 }}>
-            <div style={{ fontSize: 14, color: '#9A3412', fontWeight: 500, textAlign: 'center' }}>
-              Los cambios se aplicarán de inmediato y serán visibles para los candidatos.
-            </div>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              style={{
-                width: '100%',
-                padding: '16px',
-                borderRadius: 16,
-                border: 'none',
-                background: saving ? '#9CA3AF' : '#F1842D',
-                color: '#fff',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                fontWeight: 700,
-                fontSize: 16,
-                boxShadow: saving ? 'none' : '0 4px 6px -1px rgba(241, 132, 45, 0.4)',
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10
-              }}
-              onMouseEnter={(e) => {
-                if (!saving) {
-                  e.currentTarget.style.background = '#EA580C';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!saving) {
-                  e.currentTarget.style.background = '#F1842D';
-                  e.currentTarget.style.transform = 'none';
-                }
-              }}
-            >
-              {saving ? (
-                <>
-                  <div style={{ animation: 'spin 1s linear infinite', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', width: 18, height: 18 }} />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                  Guardar Perfil
-                </>
-              )}
-            </button>
-          </div>
         </div>
 
       </div>

@@ -14,6 +14,7 @@ export interface UserProfile {
         fechaNacimiento?: string;
         direccion?: string;
         ciudad: string;
+        sectorIndustrial?: string;
         resumenProfesional?: string;
         habilidadesTecnicas?: string[];
         softSkills?: string[];

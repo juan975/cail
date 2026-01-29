@@ -8,6 +8,8 @@ import { EmployerProfileScreen } from './EmployerProfileScreen';
 import { OffersManagementScreen } from './OffersManagementScreen';
 import ReceivedApplicationsScreen from './ReceivedApplicationsScreen';
 import { EmployerUserData } from '@/types';
+import { useNotifications } from '@/components/ui/Notifications';
+import { useEffect } from 'react';
 
 const logo = require('@/assets/logo.png');
 
@@ -21,6 +23,11 @@ interface EmployerShellProps {
 export function EmployerShell({ userData, onLogout }: EmployerShellProps) {
   const [tab, setTab] = useState<EmployerTab>('offers');
   const { contentWidth, horizontalGutter } = useResponsiveLayout();
+  const { setTheme } = useNotifications();
+
+  useEffect(() => {
+    setTheme('employer');
+  }, [setTheme]);
 
   const renderScreen = () => {
     switch (tab) {

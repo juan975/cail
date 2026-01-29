@@ -39,6 +39,12 @@ export interface ApplicationWithOffer extends Application {
         salarioMin?: number;
         salarioMax?: number;
         tipoContrato?: string;
+        experiencia_requerida?: string;
+        formacion_requerida?: string;
+        competencias_requeridas?: string[];
+        habilidades_obligatorias?: { nombre: string; es_obligatorio: boolean; peso: number }[];
+        habilidades_deseables?: { nombre: string; es_obligatorio: boolean; peso: number }[];
+        nivelJerarquico?: string;
     };
 }
 

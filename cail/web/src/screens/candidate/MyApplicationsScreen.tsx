@@ -16,7 +16,7 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
   const [applications, setApplications] = useState<ApplicationWithOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+  const [selectedOffer, setSelectedOffer] = useState<any | null>(null);
 
   const loadApplications = useCallback(async (showRefresh = false) => {
     try {
@@ -60,6 +60,12 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
       app.oferta?.titulo.toLowerCase().includes(term)
     );
   });
+
+  const formatContractType = (type?: string) => {
+    if (!type) return 'No especificado';
+    return type.toLowerCase().replace(/_/g, ' ')
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+  };
 
   const stats = {
     total: filteredApplications.length,
@@ -113,6 +119,34 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
             <div style={{ fontSize: 13, opacity: 0.9 }}>Sigue el estado de tus aplicaciones en tiempo real</div>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            loadApplications(true);
+          }}
+          disabled={isRefreshing}
+          style={{
+            zIndex: 1,
+            background: 'rgba(255,255,255,0.2)',
+            border: 'none',
+            color: '#fff',
+            cursor: 'pointer',
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            display: 'grid',
+            placeItems: 'center',
+            transition: 'all 0.2s',
+            backdropFilter: 'blur(8px)',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+          title="Actualizar listado"
+        >
+          <FiRefreshCw className={isRefreshing ? 'spin-animation' : ''} size={20} />
+        </button>
       </div>
 
       {/* Stats */}
@@ -174,6 +208,7 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
                   display: 'grid',
                   gap: 16
                 }}
+                onClick={() => setSelectedOffer(item.oferta || null)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
                   e.currentTarget.style.borderColor = '#0B7A4D40';
@@ -236,7 +271,7 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: '#F8FAFC', borderRadius: 8, fontSize: 12, color: '#475569', border: '1px solid #F1F5F9' }}>
                     <FiAward size={14} color="#0B7A4D" />
-                    <span>{item.oferta?.tipoContrato || 'Contrato'}</span>
+                    <span>{formatContractType(item.oferta?.tipoContrato)}</span>
                   </div>
                   {(item.oferta?.salarioMin || item.oferta?.salarioMax) && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: '#F8FAFC', borderRadius: 8, fontSize: 12, color: '#475569', border: '1px solid #F1F5F9' }}>
@@ -255,59 +290,12 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
                   </div>
                 </div>
 
-                <div style={{ paddingTop: 12, borderTop: '1px solid #F1F5F9', marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={() => setSelectedOffer(item.oferta)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#0B7A4D',
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '4px 8px',
-                      borderRadius: 6,
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e: any) => e.currentTarget.style.background = '#E1F4EB'}
-                    onMouseLeave={(e: any) => e.currentTarget.style.background = 'none'}
-                  >
-                    Detalles de la oferta <FiExternalLink size={14} />
-                  </button>
-                </div>
               </div>
             );
           })
         )}
       </div>
 
-      <button
-        type="button"
-        onClick={() => loadApplications(true)}
-        style={{
-          border: 'none',
-          background: 'transparent',
-          color: '#0B7A4D',
-          cursor: 'pointer',
-          fontSize: 14,
-          fontWeight: 700,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          margin: '0 auto',
-          padding: '12px 24px',
-          borderRadius: 12,
-          transition: 'all 0.2s'
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.background = '#E1F4EB'}
-        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-      >
-        <FiRefreshCw className={isRefreshing ? 'spin-animation' : ''} />
-        {isRefreshing ? 'Actualizando...' : 'Actualizar listado'}
-      </button>
 
       {/* DETALLES DE OFERTA MODAL */}
       {
@@ -345,7 +333,6 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
                   </div>
                   <div>
                     <div style={{ fontSize: 20, fontWeight: 800, color: '#111827' }}>{selectedOffer.titulo}</div>
-                    <div style={{ color: '#64748B', fontSize: 14 }}>{selectedOffer.empresa || 'Empresa Confidencial'}</div>
                   </div>
                 </div>
                 <button
@@ -372,6 +359,10 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
                     <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{selectedOffer.modalidad}</div>
                   </div>
                   <div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Tipo de Contrato</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{formatContractType(selectedOffer.tipoContrato)}</div>
+                  </div>
+                  <div>
                     <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Ubicación</div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{selectedOffer.ciudad}</div>
                   </div>
@@ -385,23 +376,73 @@ export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenP
                       {selectedOffer.salarioMin ? `$${selectedOffer.salarioMin} - $${selectedOffer.salarioMax}` : 'A convenir'}
                     </div>
                   </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Nivel Jerárquico</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{selectedOffer.nivelJerarquico || 'No especificado'}</div>
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Formación Requerida</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{selectedOffer.formacion_requerida || 'No especificada'}</div>
+                  </div>
                 </div>
 
                 {selectedOffer.habilidades_obligatorias && selectedOffer.habilidades_obligatorias.length > 0 && (
-                  <div style={{ marginTop: 24 }}>
-                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 8 }}>Habilidades Técnicas</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ marginTop: 20 }}>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 8 }}>Habilidades Técnicas Obligatorias</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {selectedOffer.habilidades_obligatorias.map((h: any, i: number) => (
                         <span key={i} style={{
-                          background: '#fff',
-                          border: '1px solid #E5E7EB',
-                          padding: '6px 12px',
+                          background: '#ECFDF5',
+                          border: '1px solid #10B98130',
+                          padding: '4px 10px',
                           borderRadius: 6,
-                          fontSize: 12,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: '#065F46'
+                        }}>
+                          {h.nombre}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedOffer.habilidades_deseables && selectedOffer.habilidades_deseables.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 8 }}>Habilidades Deseables</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {selectedOffer.habilidades_deseables.map((h: any, i: number) => (
+                        <span key={i} style={{
+                          background: '#F8FAFC',
+                          border: '1px solid #E2E8F0',
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          fontSize: 11,
                           fontWeight: 600,
                           color: '#475569'
                         }}>
                           {h.nombre}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedOffer.competencias_requeridas && selectedOffer.competencias_requeridas.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 8 }}>Competencias</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {selectedOffer.competencias_requeridas.map((c: string, i: number) => (
+                        <span key={i} style={{
+                          background: '#FFFBEB',
+                          border: '1px solid #F59E0B30',
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: '#92400E'
+                        }}>
+                          {c}
                         </span>
                       ))}
                     </div>
