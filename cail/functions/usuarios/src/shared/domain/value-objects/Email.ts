@@ -11,6 +11,10 @@ export class Email {
     }
 
     private validate(email: string): void {
+        // Protección contra ReDoS - RFC 5321 limita emails a 254 caracteres
+        if (!email || email.length > 254) {
+            throw new Error('Invalid email format');
+        }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             throw new Error('Invalid email format');

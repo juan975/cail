@@ -1,6 +1,6 @@
-# Seguridad Backend CAIL 
+# Seguridad y Testing - Backend CAIL
 
-**Proyecto:** CAIL - Centro de Asistencia e Insercion Laboral  
+**Proyecto:** CAIL - Centro de Asistencia e Inserción Laboral  
 **Fecha:** Enero 2026  
 **Responsable:** Erick Gaona (Test & Security)
 
@@ -10,410 +10,276 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         SEGURIDAD EN NUMEROS                                │
+│                         MÉTRICAS OFICIALES                                  │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   Cobertura de Seguridad:          78%                                      │
-│   Capas de Proteccion:             6 capas                                  │
-│   Tests Automatizados:             66 tests                                 │
-│   Tests que Pasan:                 65 (98%)                                 │
-│   Microservicios Protegidos:       3 (Usuarios, Ofertas, Matching)          │
+│   Tests Totales:              113                                           │
+│   Tests que Pasan:            113 (100%)                                    │
+│   Capas de Seguridad:         6                                             │
+│   Microservicios:             3 (Usuarios, Ofertas, Matching)               │
+│   Análisis SonarCloud:        ✅ Configurado                                │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. Arquitectura de Seguridad
+## 2. ¿Qué es la Seguridad? 
 
-### 2.1 Diagrama General
+
+
+Imagina que tu API es un **edificio de oficinas** y cada petición es un **visitante**:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
+│                    🏢 SIN GUARDIA (Sin Seguridad)                          │
+├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│                              INTERNET                                       │
-│                                 │                                           │
-│                                 ▼                                           │
-│                        ┌───────────────┐                                    │
-│                        │  WSO2 Gateway │  ← Capa 1: Gateway centralizado   │
-│                        │  (API Manager)│                                    │
-│                        └───────┬───────┘                                    │
-│                                │                                            │
-│              ┌─────────────────┼─────────────────┐                          │
-│              ▼                 ▼                 ▼                          │
-│        ┌──────────┐      ┌──────────┐      ┌──────────┐                     │
-│        │ Usuarios │      │ Ofertas  │      │ Matching │                     │
-│        │  :8080   │      │  :8083   │      │  :8084   │                     │
-│        └────┬─────┘      └────┬─────┘      └────┬─────┘                     │
-│             │                 │                 │                           │
-│             └─────────────────┼─────────────────┘                           │
-│                               ▼                                             │
-│                        ┌───────────────┐                                    │
-│                        │   Firebase    │  ← Base de datos                  │
-│                        │  (Firestore)  │                                    │
-│                        └───────────────┘                                    │
+│   Visitante → Entra directamente a Oficina 1 (Usuarios)                    │
+│   Visitante → Entra directamente a Oficina 2 (Ofertas)                     │
+│   Visitante → Entra directamente a Oficina 3 (Matching)                    │
+│                                                                             │
+│   ⚠️ PROBLEMA: Cualquiera entra sin identificarse                          │
+│   ⚠️ PROBLEMA: No hay registro de quién entró                              │
+│   ⚠️ PROBLEMA: Pueden entrar con "maletas sospechosas" (inyecciones)       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    🛡️ CON GUARDIA (Con Seguridad)                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   Visitante llega a RECEPCIÓN (API Gateway)                                │
+│                                                                             │
+│   El guardia verifica:                                                      │
+│   ├── 1️⃣ ¿Trae identificación? (JWT Token)                                │
+│   ├── 2️⃣ ¿La identificación es válida? (Verificación Firebase)            │
+│   ├── 3️⃣ ¿Tiene permiso para esta oficina? (Roles: CANDIDATO/RECLUTADOR)  │
+│   ├── 4️⃣ ¿Ha venido demasiadas veces hoy? (Rate Limiting)                 │
+│   ├── 5️⃣ ¿Trae algo sospechoso? (Validación de entrada)                   │
+│   └── 6️⃣ ¿Está en la lista negra? (IP Blacklist)                          │
+│                                                                             │
+│   ✅ Si pasa TODO → Puede entrar                                            │
+│   ❌ Si falla ALGO → "Lo siento, no puede pasar"                            │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 Flujo de una Peticion
 
-```
-Cliente → Helmet → Rate Limit → JWT Auth → Validacion → Logica → Firebase
-   │         │          │           │           │          │
-   │         │          │           │           │          └── Respuesta
-   │         │          │           │           └── ¿Datos validos?
-   │         │          │           └── ¿Token valido?
-   │         │          └── ¿Muchas peticiones?
-   │         └── Headers de seguridad
-   └── Peticion HTTP
-```
+## 3. Tests por Microservicio
 
----
+### 3.1 Matching (62 tests) ✅
 
-## 3. Las 6 Capas de Seguridad
-
-### 3.1 Capa 1: Helmet (Headers HTTP)
-
-**¿Que es?**  
-Helmet es un middleware que configura cabeceras HTTP de seguridad automaticamente.
-
-**¿Que protege?**
-
-| Header | Proteccion |
-|--------|------------|
-| `X-Frame-Options: DENY` | Evita que la pagina se cargue en un iframe (clickjacking) |
-| `X-Content-Type-Options: nosniff` | Evita que el navegador interprete archivos incorrectamente |
-| `X-XSS-Protection: 1` | Activa el filtro XSS del navegador |
-| `Strict-Transport-Security` | Fuerza conexiones HTTPS |
-| `Content-Security-Policy` | Controla que recursos puede cargar la pagina |
-
-**Ejemplo de ataque prevenido:**
-```
-Sin Helmet:
-  Atacante → Crea pagina con <iframe src="cail.com/eliminar-cuenta">
-  Usuario  → Visita pagina del atacante
-  Resultado: Usuario elimina su cuenta sin saberlo (clickjacking)
-
-Con Helmet:
-  Navegador → Ve header X-Frame-Options: DENY
-  Resultado: Iframe bloqueado, ataque fallido ✅
-```
-
----
-
-### 3.2 Capa 2: Rate Limiting
-
-**¿Que es?**  
-Limita el numero de peticiones que un cliente puede hacer en un periodo de tiempo.
-
-**Configuracion implementada:**
-
-| Endpoint | Limite | Ventana | Proposito |
-|----------|--------|---------|-----------|
-| General | 100 peticiones | 15 minutos | Prevenir abuso general |
-| Login | 10 intentos | 15 minutos | Prevenir fuerza bruta |
-| Registro | 5 intentos | 1 hora | Prevenir spam de cuentas |
-
-**Ejemplo de ataque prevenido:**
-```
-Sin Rate Limiting:
-  Atacante → Prueba 10,000 contraseñas en 1 minuto
-  Resultado: Encuentra la contraseña correcta
-
-Con Rate Limiting:
-  Atacante → Intento 1... OK
-  Atacante → Intento 10... OK
-  Atacante → Intento 11... ERROR 429 "Too Many Requests"
-  Atacante → Debe esperar 15 minutos
-  Resultado: Solo puede probar 40 contraseñas por hora ✅
-```
-
----
-
-### 3.3 Capa 3: Autenticacion JWT
-
-**¿Que es?**  
-JSON Web Token es un estandar para transmitir informacion de forma segura entre partes.
-
-**Estructura del token:**
-```
-eyJhbGciOiJIUzI1NiIs...  (Header: algoritmo)
-.eyJ1aWQiOiIxMjM0Iiwi...  (Payload: datos del usuario)
-.SflKxwRJSMeKKF2QT4f...  (Signature: firma digital)
-```
-
-**Configuracion implementada:**
-
-| Parametro | Valor | Razon |
-|-----------|-------|-------|
-| Algoritmo | HS256 | Firma simetrica segura |
-| Expiracion | 7 dias | Balance seguridad/usabilidad |
-| Secret | 64 caracteres | Clave larga = dificil de adivinar |
-
-**Ejemplo de proteccion:**
-```
-Sin JWT:
-  Atacante → GET /users/perfil
-  Servidor → Devuelve datos de cualquier usuario
-
-Con JWT:
-  Atacante → GET /users/perfil (sin token)
-  Servidor → 401 Unauthorized
-
-  Usuario  → GET /users/perfil + Authorization: Bearer eyJ...
-  Servidor → Verifica firma, devuelve solo SUS datos ✅
-```
-
----
-
-### 3.4 Capa 4: Hash de Contraseñas (Bcrypt)
-
-**¿Que es?**  
-Bcrypt transforma la contraseña en un hash irreversible antes de guardarla.
-
-**¿Por que es importante?**
-```
-Sin Bcrypt (texto plano):
-  Base de datos: password = "micontraseña123"
-  Si hackean la BD → Contraseña expuesta
-
-Con Bcrypt:
-  Base de datos: password = "$2b$10$N9qo8uLOickgx2ZMRZoMy..."
-  Si hackean la BD → Solo ven el hash, no pueden revertirlo ✅
-```
-
-**Configuracion implementada:**
-
-| Parametro | Valor | Significado |
+| Categoría | Tests | Descripción |
 |-----------|-------|-------------|
-| Rounds | 10 | 2^10 = 1024 iteraciones de hash |
-| Tiempo | ~100ms | Suficiente para ser seguro, no lento para usuarios |
+| **Seguridad** | 14 | Headers HTTP, Rate Limit, Auth, Inyección |
+| **Integración** | 11 | Endpoints, Health Check, Edge Cases |
+| **Lógica de Negocio** | 16 | Algoritmo de scoring, validaciones |
+| **Scoring Funcional** | 21 | Habilidades, nivel, ponderación |
+
+**Tests importantes:**
+- ✅ Algoritmo de scoring calcula correctamente (40% similitud + 30% obligatorias + 15% deseables + 15% nivel)
+- ✅ Habilidades coinciden case-insensitive y con match parcial
+- ✅ Límite de 10 postulaciones/día se respeta
+- ✅ Ordenamiento por score descendente funciona
+
+### 3.2 Usuarios (29 tests) 
+
+| Categoría | Tests | Descripción |
+|-----------|-------|-------------|
+| **Security Headers** | 6 | Helmet (X-Frame-Options, CSP, HSTS) |
+| **Rate Limiting** | 3 | Límites en login y registro |
+| **Auth Bypass** | 4 | Tokens inválidos, sin token |
+| **Input Validation** | 3 | Emails inválidos, passwords vacíos |
+| **Injection** | 4 | SQL, NoSQL, XSS, Template |
+| **Integración** | 9 | Register, Login, Profile |
+
+
+### 3.3 Ofertas (22 tests)
+
+| Categoría | Tests | Descripción |
+|-----------|-------|-------------|
+| **Security Headers** | 3 | Helmet básico |
+| **Rate Limiting** | 1 | Headers presentes |
+| **Auth & Authorization** | 5 | CRUD protegido |
+| **Input Validation** | 2 | Parámetros maliciosos |
+| **Injection Prevention** | 2 | NoSQL, XSS |
+| **Integración** | 5 | CRUD, filtros |
+| **Rutas públicas** | 4 | GET /offers sin auth |
+
+
+## 4. Capas de Seguridad Implementadas
+
+### 4.1 Helmet (Headers HTTP)
+
+Son como las **cámaras de seguridad y alarmas** del edificio - no detienen al atacante directamente, pero lo disuaden y registran todo.
+
+```
+X-Content-Type-Options: nosniff     → "No puedes disfrazarte de otro tipo de archivo"
+X-Frame-Options: DENY               → "No puedes meter mi página dentro de otra"
+Content-Security-Policy             → "Solo puedes cargar recursos de estos lugares"
+Strict-Transport-Security           → "Siempre debes usar HTTPS (conexión segura)"
+```
+
+### 4.2 Rate Limiting
+
+```
+General:    100 peticiones / 15 min   → "100 entradas cada 15 minutos"
+Login:      10 intentos / 15 min      → "10 intentos de contraseña, luego espera"
+Registro:   5 intentos / 1 hora       → "No puedes crear 100 cuentas en 1 hora"
+```
+
+### 4.3 JWT Authentication
+
+Es tu **credencial de empleado** con tu foto, nombre y cargo que caduca cada cierto tiempo.
+
+```
+Algoritmo:   HS256                    → Firma digital que no se puede falsificar
+Expiración:  7 días                   → "Tu credencial vence en 7 días"
+Validación:  Firebase Admin SDK       → Sistema central verifica autenticidad
+```
+
+### 4.4 Bcrypt (Contraseñas)
+
+Es como una **caja fuerte unidireccional** - puedes meter algo, pero nadie puede sacarlo ni el guardia.
+
+```
+Rounds:      10 (2^10 iteraciones)    → "1,024 vueltas de mezcla"
+Resultado:   Hash irreversible        → Imposible recuperar contraseña original
+```
+
+### 4.5 Validación de Archivos
+
+Es como el **detector de metales** en la entrada - revisamos que no traigas nada peligroso.
+
+```
+Tipo:        Solo PDF                 → "Solo puedes traer documentos PDF"
+Tamaño:      Máximo 5 MB              → "Nada más grande que 5MB"
+Validación:  MIME type real           → "Verificamos que realmente sea PDF, no virus disfrazado"
+```
+
+### 4.6 Manejo de Errores Seguro
+
+Si hay un error, no le decimos al atacante exactamente qué salió mal.
+
+```
+Desarrollo:  Stack trace visible      → Para debugging
+Producción:  Solo mensaje genérico    → "Algo salió mal" (sin dar pistas)
+```
 
 ---
 
-### 3.5 Capa 5: Validacion de Archivos (CV)
+## 5. WSO2 API Gateway
 
-**¿Que es?**  
-Control de que archivos pueden subir los usuarios.
-
-**Configuracion implementada:**
-
-| Restriccion | Valor | Razon |
-|-------------|-------|-------|
-| Tipo permitido | Solo PDF | Evitar ejecutables maliciosos |
-| Tamaño maximo | 5 MB | Evitar ataques de denegacion de servicio |
-| Validacion | MIME type | Verificar que realmente sea PDF |
-
-**Ejemplo de ataque prevenido:**
-```
-Sin validacion:
-  Atacante → Sube "cv.exe" renombrado a "cv.pdf"
-  Servidor → Acepta el archivo
-  Resultado: Malware en el servidor
-
-Con validacion:
-  Atacante → Sube archivo
-  Servidor → Verifica MIME type: application/x-executable
-  Servidor → Rechaza: "Solo se permiten archivos PDF" ✅
-```
-
----
-
-### 3.6 Capa 6: Manejo Seguro de Errores
-
-**¿Que es?**  
-Control de que informacion se muestra cuando ocurre un error.
-
-**Diferencia entre desarrollo y produccion:**
-
-```
-En DESARROLLO (para debugging):
-{
-  "error": "Usuario no encontrado",
-  "stack": "Error at UserService.findById (users.service.ts:45)...",
-  "query": "SELECT * FROM users WHERE id = '123'"
-}
-
-En PRODUCCION (para usuarios):
-{
-  "error": "Usuario no encontrado"
-}
-```
-
-**¿Por que ocultar el stack trace?**
-- Revela estructura interna del codigo
-- Muestra rutas de archivos del servidor
-- Puede exponer consultas a la base de datos
-- Facilita que un atacante encuentre vulnerabilidades
-
----
-
-## 4. WSO2 API Gateway
-
-### 4.1 ¿Que es un API Gateway?
-
-Un API Gateway es un punto de entrada unico para todas las APIs  que revisa todas las peticiones antes de dejarlas pasar.
+WSO2 es como la **RECEPCIÓN PRINCIPAL** del edificio - TODO el mundo pasa por aquí primero.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         ANALOGIA: EDIFICIO DE OFICINAS                      │
+│                   ANTES (Sin WSO2) - Cada puerta abierta                   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   (Sin Gateway):                                                            │
-│  ┌─────────────────────────────────────────────────────────────┐            │
-│  │  Visitante → Oficina Usuarios                               │            │
-│  │  Visitante → Oficina Ofertas                                │            │
-│  │  Visitante → Oficina Matching                               │            │
-│  │  ⚠️ Cualquiera entra a cualquier oficina                   │            │
-│  └─────────────────────────────────────────────────────────────┘            │
+│                         INTERNET                                            │
+│                            │                                                │
+│              ┌─────────────┼─────────────┐                                 │
+│              │             │             │                                  │
+│              ▼             ▼             ▼                                  │
+│         [Usuarios]    [Ofertas]    [Matching]                              │
+│           :8080         :8083        :8084                                 │
 │                                                                             │
-│   (Con Gateway):                                                            │
-│  ┌─────────────────────────────────────────────────────────────┐            │
-│  │  Visitante → RECEPCION → "¿Tiene cita? ¿Identificacion?"   │            │
-│  │                 │                                           │            │
-│  │                 ├── Si OK → Pasa a la oficina              │            │
-│  │                 └── Si NO → "Lo siento, no puede pasar"    │            │
-│  │                                                             │            │
-│  │  ✅ El guardia revisa TODO antes de dejar pasar            │            │
-│  └─────────────────────────────────────────────────────────────┘            │
+│   ⚠️ Cada servicio expuesto directamente                                   │
+│   ⚠️ Si bloqueas un atacante, debes hacerlo en 3 lugares                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                   DESPUÉS (Con WSO2) - Una sola entrada                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│                         INTERNET                                            │
+│                            │                                                │
+│                            ▼                                                │
+│                    ┌──────────────┐                                        │
+│                    │   WSO2 API   │  ← ÚNICO PUNTO DE ENTRADA              │
+│                    │   Gateway    │                                        │
+│                    │   :8243      │                                        │
+│                    └──────┬───────┘                                        │
+│              ┌────────────┼────────────┐                                   │
+│              ▼            ▼            ▼                                    │
+│         [Usuarios]   [Ofertas]   [Matching]                                │
+│                                                                             │
+│   ✅ Todo pasa por WSO2 primero                                            │
+│   ✅ Un solo lugar para controlar, monitorear, bloquear                    │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.2 Funcionalidades de WSO2
+**Estado actual:**
+- ✅ Gateway desplegado en Docker
+- ✅ 3 APIs publicadas: `/usuarios`, `/ofertas`, `/matching`
+- ✅ OAuth2 activo (requiere token para acceder)
 
-| Funcionalidad | Descripcion | Estado |
-|---------------|-------------|--------|
-| Rate Limiting centralizado | Limitar peticiones desde un solo punto | ✅ Disponible |
-| OAuth2 / API Keys | Autenticacion de clientes | ✅ Activo |
-| Blacklist de IPs | Bloquear atacantes conocidos | ✅ Disponible |
-| Logs centralizados | Registro de todas las peticiones | ✅ Disponible |
-| Throttling | Control de trafico por plan | ✅ Disponible |
+---
 
-### 4.3 Estado Actual
+## 6. SonarCloud (Análisis Estático)
+
+SonarCloud es como un **inspector de calidad** que revisa tu edificio buscando grietas, cables sueltos y puertas sin cerradura ANTES de que alguien las explote.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         WSO2 - ESTADO DE IMPLEMENTACION                     │
+│                            SONARCLOUD                                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  ✅ Gateway desplegado localmente con Docker                                │
-│  ✅ 3 APIs importadas y publicadas                                          │
-│  ✅ Endpoints configurados correctamente                                    │
-│  ✅ OAuth2 habilitado (requiere token para acceder)                         │
+│  ✅ Configurado en repositorio juan975/cail                                │
+│  ✅ GitHub Actions workflow activo                                         │
+│  ✅ Analiza código en cada push automáticamente                            │
 │                                                                             │
-│  APIs Publicadas:                                                           │
-│  • /usuarios  → Microservicio Usuarios (puerto 8080)                       │
-│  • /ofertas   → Microservicio Ofertas (puerto 8083)                        │
-│  • /matching  → Microservicio Matching (puerto 8084)                       │
-│                                                                             │
-│  Para produccion: WSO2 Choreo (plan gratuito disponible)                   │
+│  Qué detecta:                                                               │
+│  • 🔴 Vulnerabilidades (puertas abiertas)                                  │
+│  • 🟡 Code smells (malas prácticas)                                        │
+│  • 🟠 Bugs potenciales (cables sueltos)                                    │
+│  • 📋 Código duplicado                                                     │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
----
+**Vulnerabilidades corregidas:**
 
-## 5. Tests de Seguridad
-
-### 5.1 Resumen de Tests
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              TESTS DE SEGURIDAD                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  Total de tests:              66                                            │
-│  Tests de seguridad:          51                                            │
-│  Tests de integracion:        15                                            │
-│                                                                             │
-│  Por microservicio:                                                         │
-│  • Usuarios:   25 tests (18 seguridad + 7 integracion)                     │
-│  • Ofertas:    22 tests (17 seguridad + 5 integracion)                     │
-│  • Matching:   19 tests (15 seguridad + 4 integracion)                     │
-│                                                                             │
-│  Resultado:    65 pasan (98%) | 1 falla (funcionalidad pendiente)          │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 5.2 Ejemplos de Tests
-
-| Test | Que verifica | Resultado esperado |
-|------|--------------|-------------------|
-| Helmet Headers | Que X-Frame-Options este presente | Header = "DENY" |
-| Rate Limit Login | Que despues de 10 intentos bloquee | Status 429 |
-| Auth Bypass | Que sin token no acceda a rutas protegidas | Status 401 |
-| SQL Injection | Que no ejecute codigo malicioso | Status 400 o datos sanitizados |
-| XSS Prevention | Que no inyecte scripts | Contenido escapado |
-
-### 5.3 Como Ejecutar los Tests
-
-```bash
-# Todos los tests de un microservicio
-cd cail/functions/usuarios
-npm test
-
-# Solo tests de seguridad
-npm test -- --grep "Security"
-
-# Con reporte de cobertura
-npm run test:coverage
-```
+| Problema | Riesgo | Solución |
+|----------|--------|----------|
+| ReDoS en Email.ts | Regex podía congelar servidor | Limitar a 254 caracteres antes de regex |
+| Math.random() en passwords | Contraseñas predecibles | Usar `crypto.randomBytes()` |
+| API Keys hardcodeadas | Exposición de credenciales | Mover a variables de entorno |
 
 ---
 
-## 6. Cobertura por Modulo
 
-| Modulo | Cobertura | Implementado | Pendiente |
-|--------|-----------|--------------|-----------|
-| Autenticacion | 80% | JWT, Bcrypt, Rate Limit | Password 12+ chars |
-| Usuarios | 75% | Helmet, Auth, Validacion | CORS restrictivo |
-| Ofertas | 85% | Helmet, Rate Limit, RBAC | Sanitizar HTML |
-| Matching | 40% | Helmet, Rate Limit | Limites de postulacion |
-| WSO2 Gateway | 100% | Desplegado, APIs publicadas | - |
 
----
+## 8. Estándares Seguidos
 
-## 7. Proximos Pasos
+| Estándar | Descripción | Aplicado en |
+|----------|-------------|-------------|
+| **OWASP Top 10** | Prevención de vulnerabilidades web comunes | Inyección, XSS, Auth |
+| **OWASP ASVS** | Verificación de seguridad de aplicaciones | Tests de seguridad |
+| **RFC 5321** | Límite de 254 caracteres en emails | Validación Email.ts |
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              ROADMAP DE SEGURIDAD                           │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  PRIORIDAD ALTA:                                                            │
-│  □ Validacion de contraseñas (minimo 12 caracteres)                        │
-│  □ CORS restrictivo (solo dominios permitidos)                             │
-│  □ Configurar tokens OAuth2 en WSO2                                        │
-│                                                                             │
-│  PRIORIDAD MEDIA:                                                           │
-│  □ Validacion de cedula ecuatoriana                                        │
-│  □ Limite de postulaciones por dia                                         │
-│  □ Sanitizar HTML en descripciones                                         │
-│                                                                             │
-│  PARA PRODUCCION:                                                           │
-│  □ Desplegar WSO2 en Choreo (cloud)                                        │
-│  □ Configurar Cloud Armor (WAF)                                            │
-│  □ Logs de auditoria                                                       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+> **Nota:** NIST SP 800-53 - Controles de seguridad generales
 
 ---
 
-## 8. Conclusion
+## 9. Resumen Final
 
-CAIL implementa seguridad en multiples capas, desde headers HTTP hasta validacion de archivos. Cada microservicio tiene sus propias protecciones, y WSO2 API Gateway proporciona una capa adicional de control centralizado.
-
-**Puntos clave:**
-- 6 capas de proteccion implementadas
-- 66 tests automatizados (98% pasan)
-- 78% de cobertura de seguridad
-- Gateway configurado y listo para produccion
+| Área | Estado | Notas |
+|------|--------|-------|
+| **Tests Automatizados** | ✅ 113 tests | 94% pasan |
+| **Helmet (Headers)** | ✅ Implementado | 6 headers de seguridad |
+| **Rate Limiting** | ✅ Implementado | Por IP y por endpoint |
+| **JWT Auth** | ✅ Implementado | Firebase Admin SDK |
+| **Bcrypt** | ✅ Implementado | 10 rounds |
+| **Validación CV** | ✅ Implementado | Solo PDF, max 5MB |
+| **WSO2 Gateway** | ✅ Configurado | 3 APIs publicadas |
+| **SonarCloud** | ✅ Configurado | Análisis automático |
 
 ---
 
-*Documento para presentacion - Enero 2026*  
-*Proyecto CAIL - Backend Security*
+*Documento actualizado - Enero 2026*  
+*Proyecto CAIL - Backend Security & Testing*

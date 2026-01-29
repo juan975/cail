@@ -30,11 +30,11 @@ const parseMultipart = (req: CloudFunctionRequest): Promise<FileUpload | null> =
         const chunks: Buffer[] = [];
         let fileInfo: { filename: string; mimetype: string } | null = null;
 
-        busboy.on('file', (fieldname, file, info) => {
+        busboy.on('file', (fieldname: string, file: Readable, info: { filename: string; mimeType: string }) => {
             console.log('Busboy file event:', fieldname, info);
             fileInfo = { filename: info.filename, mimetype: info.mimeType };
 
-            file.on('data', (data) => {
+            file.on('data', (data: Buffer) => {
                 chunks.push(data);
             });
         });
@@ -51,7 +51,7 @@ const parseMultipart = (req: CloudFunctionRequest): Promise<FileUpload | null> =
             }
         });
 
-        busboy.on('error', (error) => {
+        busboy.on('error', (error: Error) => {
             console.error('Busboy error:', error);
             reject(error);
         });

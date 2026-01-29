@@ -18,6 +18,7 @@
 7. [Resumen de Hallazgos](#7-resumen-de-hallazgos)
 8. [Comandos de Ejecucion](#8-comandos-de-ejecución)
 9. [Despliegue WSO2 API Gateway](#9-despliegue-wso2-api-gateway)
+10. [Analisis SonarCloud](#10-análisis-sonarcloud)
 
 **Documento Relacionado:** [Seguridad Por Modulo](./Seguridad-Por-Modulo.md) - Mapeo detallado de seguridad vs plan de desarrollo
 
@@ -716,5 +717,23 @@ docker-compose restart wso2-apim
 
 ---
 
-*Documento actualizado el 14 de Enero de 2026*  
+## 10. Análisis SonarCloud (15/01/2026)
+
+**URL:** https://sonarcloud.io/project/overview?id=ErickGaona_cail  
+**Líneas analizadas:** 40,000 | **Security Hotspots:** 24
+
+### 10.1 Vulnerabilidades Corregidas
+
+| Problema | Archivo | Solución |
+|----------|---------|----------|
+| ReDoS (regex vulnerable) | `Email.ts` (x2) | Agregado límite de 254 chars antes del regex |
+| Math.random() inseguro | `password-generator.util.ts` | Cambiado a `crypto.randomBytes()` |
+
+### 10.2 Falsos Positivos (archivos de test)
+
+Los hotspots de "hard-coded passwords" en archivos `tests/*.ts` son **Safe** porque son credenciales de prueba necesarias para tests automatizados.
+
+---
+
+*Documento actualizado el 15 de Enero de 2026*  
 *Responsable: Erick Gaona (Test & Security)*
