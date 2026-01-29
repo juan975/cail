@@ -14,10 +14,10 @@
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │   Tests Totales:              113                                           │
-│   Tests que Pasan:            106 (94%)                                     │
+│   Tests que Pasan:            113 (100%)                                    │
 │   Capas de Seguridad:         6                                             │
-│   Microservicios:             3 (Usuarios, Ofertas, Matching)              │
-│   Análisis SonarCloud:        ✅ Configurado                               │
+│   Microservicios:             3 (Usuarios, Ofertas, Matching)               │
+│   Análisis SonarCloud:        ✅ Configurado                                │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
