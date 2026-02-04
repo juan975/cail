@@ -2,6 +2,8 @@ interface ChipProps {
   label: string;
   variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'gray';
   onRemove?: () => void;
+  customBg?: string;
+  customText?: string;
 }
 
 const variantColors: Record<NonNullable<ChipProps['variant']>, { bg: string; text: string }> = {
@@ -13,8 +15,10 @@ const variantColors: Record<NonNullable<ChipProps['variant']>, { bg: string; tex
   gray: { bg: '#F3F4F6', text: '#374151' },
 };
 
-export function Chip({ label, variant = 'gray', onRemove }: ChipProps) {
+export function Chip({ label, variant = 'gray', onRemove, customBg, customText }: ChipProps) {
   const colors = variantColors[variant];
+  const finalBg = customBg || colors.bg;
+  const finalText = customText || colors.text;
 
   return (
     <span
@@ -26,8 +30,8 @@ export function Chip({ label, variant = 'gray', onRemove }: ChipProps) {
         borderRadius: '9999px',
         fontSize: '0.875rem',
         fontWeight: 500,
-        background: colors.bg,
-        color: colors.text,
+        background: finalBg,
+        color: finalText,
       }}
     >
       {label}

@@ -1,24 +1,25 @@
 import { useState } from 'react';
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Image, SafeAreaView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { UserRole } from '@/types';
+import { MotiView, AnimatePresence } from 'moti';
 import { LoginForm } from './LoginForm';
 import { RegisterCandidateForm } from './RegisterCandidateForm';
 import { RegisterEmployerForm } from './RegisterEmployerForm';
-import { TermsScreen } from '../legal/TermsScreen';
 
 const logo = require('@/assets/logo.png');
 
-type AuthMode = 'select' | 'login' | 'register' | 'terms';
+type AuthMode = 'select' | 'login' | 'register';
 
 type AuthScreenProps = {
   onAuthSuccess: (role: UserRole, data: any) => void;
   onShowTerms: () => void;
+  onLoginStart?: () => void;
 };
 
-export function AuthScreen({ onAuthSuccess, onShowTerms }: AuthScreenProps) {
+export function AuthScreen({ onAuthSuccess, onShowTerms, onLoginStart }: AuthScreenProps) {
   const { isTablet, isDesktop, contentWidth, horizontalGutter } = useResponsiveLayout();
   const [selectedRole, setSelectedRole] = useState<UserRole>('candidate');
   const [mode, setMode] = useState<AuthMode>('select');
@@ -32,26 +33,18 @@ export function AuthScreen({ onAuthSuccess, onShowTerms }: AuthScreenProps) {
     onAuthSuccess(selectedRole, data);
   };
 
-  // Show terms before registration
-  const handleShowTermsForRegister = () => {
-    setMode('terms');
-  };
-
-  const handleTermsAccepted = () => {
-    setMode('register');
-  };
-
   const content = (
     <SafeAreaView style={styles.safe}>
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingHorizontal: horizontalGutter }]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={[styles.container, { paddingHorizontal: horizontalGutter }]}>
         <View style={[styles.inner, { maxWidth: contentWidth }]}>
           {/* Hero Section */}
           {mode === 'select' && (
-            <View style={styles.heroSection}>
+            <MotiView 
+              from={{ opacity: 0, translateY: -30 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ delay: 100 }}
+              style={styles.heroSection}
+            >
               {/* Logo Badge */}
               <View style={styles.logoBadge}>
                 <View style={styles.logoInner}>
@@ -68,12 +61,17 @@ export function AuthScreen({ onAuthSuccess, onShowTerms }: AuthScreenProps) {
                 <Text style={styles.headline}>Bolsa de Empleo</Text>
                 <Text style={styles.subtitle}>Cámara de Industrias de Loja</Text>
               </View>
-            </View>
+            </MotiView>
           )}
 
           {/* Selection Mode - Role Cards */}
           {mode === 'select' ? (
-            <View style={[styles.selectionSection, (isTablet || isDesktop) && styles.selectionWide]}>
+            <MotiView 
+              from={{ opacity: 0, translateY: 20 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ delay: 300 }}
+              style={[styles.selectionSection, (isTablet || isDesktop) && styles.selectionWide]}
+            >
               <View style={styles.roleCards}>
                 <RoleCard
                   title="Soy Candidato"
@@ -99,7 +97,7 @@ export function AuthScreen({ onAuthSuccess, onShowTerms }: AuthScreenProps) {
                   Conectando talento con oportunidades en Loja
                 </Text>
               </View>
-            </View>
+            </MotiView>
           ) : (
             /* Login/Register Forms */
             <View style={[styles.formCard, (isTablet || isDesktop) && styles.formCardWide]}>
@@ -108,15 +106,11 @@ export function AuthScreen({ onAuthSuccess, onShowTerms }: AuthScreenProps) {
                   role={selectedRole}
                   onSuccess={handleSuccess}
                   onBack={() => setMode('select')}
-                  onSwitchToRegister={handleShowTermsForRegister}
+                  onSwitchToRegister={() => setMode('register')}
+                  onLoginStart={onLoginStart}
                 />
               )}
-              {mode === 'terms' && (
-                <TermsScreen
-                  onClose={handleTermsAccepted}
-                  onBack={() => setMode('login')}
-                />
-              )}
+
               {mode === 'register' && selectedRole === 'candidate' && (
                 <RegisterCandidateForm
                   onSuccess={handleSuccess}
@@ -134,32 +128,9 @@ export function AuthScreen({ onAuthSuccess, onShowTerms }: AuthScreenProps) {
             </View>
           )}
 
-          <View style={styles.legalContainer}>
-            <TouchableOpacity
-              onPress={onShowTerms}
-              activeOpacity={0.85}
-              style={[
-                styles.legalButton,
-                mode === 'select' ? styles.legalButtonHero : styles.legalButtonForm,
-              ]}
-            >
-              <Feather
-                name="file-text"
-                size={14}
-                color={mode === 'select' ? '#FFFFFF' : '#0F172A'}
-              />
-              <Text
-                style={[
-                  styles.legalText,
-                  mode === 'select' ? styles.legalTextHero : styles.legalTextForm,
-                ]}
-              >
-                Términos y Condiciones
-              </Text>
-            </TouchableOpacity>
-          </View>
+
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 
@@ -219,8 +190,8 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
   },
-  scroll: {
-    flexGrow: 1,
+  container: {
+    flex: 1,
     paddingVertical: 32,
     justifyContent: 'center',
   },

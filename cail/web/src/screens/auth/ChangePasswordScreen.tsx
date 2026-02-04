@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FiEye, FiEyeOff, FiLogOut, FiShield } from 'react-icons/fi';
-import { useResponsiveLayout } from '../../hooks/useResponsive';
 import { LoadingSplash } from '../../components/ui/LoadingSplash';
+import { useNotifications } from '../../components/ui/Notifications';
 import { PasswordStrength, validatePassword } from '../../components/ui/PasswordStrength';
 import { authService } from '../../services/auth.service';
 import { EmployerUserData } from '../../types';
@@ -13,7 +13,7 @@ interface ChangePasswordScreenProps {
 }
 
 export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: ChangePasswordScreenProps) {
-  const { contentWidth, horizontalGutter } = useResponsiveLayout();
+  const notifications = useNotifications();
   const [tempPassword, setTempPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -27,18 +27,18 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
 
   const handleSubmit = async () => {
     if (!tempPassword) {
-      window.alert('Ingresa tu contraseña temporal.');
+      notifications.alert('Ingresa tu contraseña temporal.', 'Campo requerido');
       return;
     }
 
     const validation = validatePassword(newPassword);
     if (!validation.isValid) {
-      window.alert(validation.errors[0]);
+      notifications.alert(validation.errors[0], 'Contraseña inválida');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      window.alert('Las contraseñas no coinciden.');
+      notifications.alert('Las contraseñas no coinciden.', 'Validación');
       return;
     }
 
@@ -51,7 +51,7 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
     } catch (error: any) {
       setShowSplash(false);
       setLoading(false);
-      window.alert(error.message || 'No se pudo cambiar la contraseña');
+      notifications.error(error.message || 'No se pudo cambiar la contraseña');
     }
   };
 
@@ -62,156 +62,351 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
     onPasswordChanged();
   };
 
+  const accentColor = '#F59E0B';
+  const accentGradient = 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)';
+
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(180deg, #F59E0B 0%, #D97706 100%)',
-        padding: `24px ${horizontalGutter}px`,
-      }}
-    >
+    <>
       <LoadingSplash visible={showSplash} success={splashSuccess} onComplete={handleSplashComplete} />
 
-      <div style={{ maxWidth: contentWidth, margin: '0 auto' }}>
+      <div
+        style={{
+          minHeight: '100vh',
+          width: '100%',
+          background: 'linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '40px 20px',
+          position: 'relative',
+        }}
+      >
+        {/* Logout Button */}
+        <button
+          onClick={onLogout}
+          style={{
+            position: 'absolute',
+            top: '32px',
+            left: '32px',
+            width: '48px',
+            height: '48px',
+            borderRadius: '12px',
+            border: 'none',
+            background: '#FFFFFF',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            e.currentTarget.style.transform = 'translateX(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.transform = 'translateX(0)';
+          }}
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+        >
+          <FiLogOut size={22} color="#374151" />
+        </button>
+
+        {/* Main Card */}
         <div
           style={{
-            background: '#fff',
-            borderRadius: 20,
-            padding: 24,
-            boxShadow: '0 18px 30px rgba(15, 23, 42, 0.12)',
-            display: 'grid',
-            gap: 16,
+            width: '100%',
+            maxWidth: '520px',
+            background: '#FFFFFF',
+            borderRadius: '24px',
+            padding: '48px 40px',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.08)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Title */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <div
               style={{
-                width: 50,
-                height: 50,
+                width: 48,
+                height: 48,
                 borderRadius: 14,
                 background: '#FFF7ED',
                 display: 'grid',
                 placeItems: 'center',
               }}
             >
-              <FiShield size={22} color="#F59E0B" />
+              <FiShield size={22} color={accentColor} />
             </div>
-            <div>
-              <div style={{ fontWeight: 700 }}>Cambio de contraseña obligatorio</div>
-              <div style={{ fontSize: 12, color: '#6B7280' }}>{userData.company}</div>
+            <div style={{ flex: 1 }}>
+              <h1
+                style={{
+                  fontSize: '28px',
+                  fontWeight: 800,
+                  color: '#111827',
+                  margin: 0,
+                  letterSpacing: '-0.5px',
+                }}
+              >
+                Actualiza tu contraseña
+              </h1>
+              <p style={{ fontSize: '14px', color: '#6B7280', margin: '6px 0 0 0' }}>
+                {userData.company} • {userData.contactName}
+              </p>
             </div>
           </div>
 
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Contraseña temporal</span>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showTempPassword ? 'text' : 'password'}
-                value={tempPassword}
-                onChange={(e) => setTempPassword(e.target.value)}
+          <p style={{ fontSize: '16px', color: '#6B7280', marginBottom: '28px' }}>
+            Por seguridad, debes cambiar la contraseña temporal para continuar.
+          </p>
+
+          {/* Form */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div>
+              <label
                 style={{
-                  width: '100%',
-                  padding: '12px 42px 12px 14px',
-                  borderRadius: 12,
-                  border: '1px solid #E5E7EB',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#374151',
+                  marginBottom: '8px',
+                  display: 'block',
                 }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowTempPassword(!showTempPassword)}
-                style={{ position: 'absolute', right: 12, top: 10, border: 'none', background: 'transparent', cursor: 'pointer' }}
               >
-                {showTempPassword ? <FiEyeOff /> : <FiEye />}
-              </button>
+                Contraseña temporal
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showTempPassword ? 'text' : 'password'}
+                  value={tempPassword}
+                  onChange={(e) => setTempPassword(e.target.value)}
+                  placeholder="Ingresa la contraseña enviada por correo"
+                  style={{
+                    width: '100%',
+                    padding: '14px 50px 14px 16px',
+                    fontSize: '16px',
+                    color: '#111827',
+                    background: '#F9FAFB',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '12px',
+                    outline: 'none',
+                    transition: 'all 0.2s',
+                    boxSizing: 'border-box',
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = accentColor;
+                    e.target.style.background = '#FFFFFF';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#E5E7EB';
+                    e.target.style.background = '#F9FAFB';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowTempPassword(!showTempPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  aria-label={showTempPassword ? 'Ocultar contraseña temporal' : 'Mostrar contraseña temporal'}
+                >
+                  {showTempPassword ? <FiEyeOff size={20} color="#9CA3AF" /> : <FiEye size={20} color="#9CA3AF" />}
+                </button>
+              </div>
             </div>
-          </label>
 
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Nueva contraseña</span>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showNewPassword ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+            <div>
+              <label
                 style={{
-                  width: '100%',
-                  padding: '12px 42px 12px 14px',
-                  borderRadius: 12,
-                  border: '1px solid #E5E7EB',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#374151',
+                  marginBottom: '8px',
+                  display: 'block',
                 }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowNewPassword(!showNewPassword)}
-                style={{ position: 'absolute', right: 12, top: 10, border: 'none', background: 'transparent', cursor: 'pointer' }}
               >
-                {showNewPassword ? <FiEyeOff /> : <FiEye />}
-              </button>
+                Nueva contraseña
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Mínimo 12 caracteres"
+                  style={{
+                    width: '100%',
+                    padding: '14px 50px 14px 16px',
+                    fontSize: '16px',
+                    color: '#111827',
+                    background: '#F9FAFB',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '12px',
+                    outline: 'none',
+                    transition: 'all 0.2s',
+                    boxSizing: 'border-box',
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = accentColor;
+                    e.target.style.background = '#FFFFFF';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#E5E7EB';
+                    e.target.style.background = '#F9FAFB';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  aria-label={showNewPassword ? 'Ocultar nueva contraseña' : 'Mostrar nueva contraseña'}
+                >
+                  {showNewPassword ? <FiEyeOff size={20} color="#9CA3AF" /> : <FiEye size={20} color="#9CA3AF" />}
+                </button>
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <PasswordStrength password={newPassword} variant="employer" />
+              </div>
             </div>
-          </label>
 
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Confirmar contraseña</span>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+            <div>
+              <label
                 style={{
-                  width: '100%',
-                  padding: '12px 42px 12px 14px',
-                  borderRadius: 12,
-                  border: '1px solid #E5E7EB',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#374151',
+                  marginBottom: '8px',
+                  display: 'block',
                 }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={{ position: 'absolute', right: 12, top: 10, border: 'none', background: 'transparent', cursor: 'pointer' }}
               >
-                {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
-              </button>
+                Confirmar contraseña
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repite tu nueva contraseña"
+                  style={{
+                    width: '100%',
+                    padding: '14px 50px 14px 16px',
+                    fontSize: '16px',
+                    color: '#111827',
+                    background: '#F9FAFB',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '12px',
+                    outline: 'none',
+                    transition: 'all 0.2s',
+                    boxSizing: 'border-box',
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = accentColor;
+                    e.target.style.background = '#FFFFFF';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#E5E7EB';
+                    e.target.style.background = '#F9FAFB';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  aria-label={showConfirmPassword ? 'Ocultar confirmación' : 'Mostrar confirmación'}
+                >
+                  {showConfirmPassword ? <FiEyeOff size={20} color="#9CA3AF" /> : <FiEye size={20} color="#9CA3AF" />}
+                </button>
+              </div>
             </div>
-          </label>
 
-          <PasswordStrength password={newPassword} variant="employer" />
-
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={onLogout}
-              style={{
-                flex: 1,
-                padding: '12px 16px',
-                borderRadius: 12,
-                border: '1px solid #E5E7EB',
-                background: '#FFFFFF',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-            >
-              <FiLogOut /> Cerrar sesión
-            </button>
             <button
               type="button"
               onClick={handleSubmit}
               disabled={loading}
               style={{
-                flex: 1,
-                padding: '12px 16px',
-                borderRadius: 12,
+                width: '100%',
+                padding: '16px',
+                borderRadius: '12px',
                 border: 'none',
-                background: '#F59E0B',
-                color: '#fff',
-                cursor: 'pointer',
+                background: accentGradient,
+                color: '#FFFFFF',
+                fontSize: '16px',
+                fontWeight: 700,
+                cursor: loading ? 'not-allowed' : 'pointer',
                 opacity: loading ? 0.7 : 1,
+                boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
+                transition: 'all 0.3s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                marginTop: '6px',
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(245, 158, 11, 0.45)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(245, 158, 11, 0.35)';
               }}
             >
               {loading ? 'Actualizando...' : 'Actualizar contraseña'}
             </button>
+
+            <div style={{ textAlign: 'center', fontSize: '14px', color: '#6B7280' }}>
+              ¿Necesitas salir?{' '}
+              <button
+                type="button"
+                onClick={onLogout}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#EF4444',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: 0,
+                }}
+              >
+                <FiLogOut /> Cerrar sesión
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -228,16 +423,32 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
             zIndex: 40,
           }}
         >
-          <div style={{ background: '#fff', borderRadius: 20, padding: 24, width: 'min(420px, 90%)' }}>
-            <h3 style={{ marginTop: 0 }}>Bienvenido</h3>
-            <div style={{ fontSize: 13, color: '#6B7280' }}>
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 24,
+              padding: 28,
+              width: 'min(440px, 92%)',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111827' }}>Bienvenido</h3>
+            <div style={{ fontSize: 14, color: '#6B7280', marginTop: 10, lineHeight: '20px' }}>
               Tu cuenta fue creada exitosamente. Cambia la contraseña temporal para continuar.
             </div>
             <div style={{ textAlign: 'right', marginTop: 16 }}>
               <button
                 type="button"
                 onClick={() => setShowWelcomeModal(false)}
-                style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#F59E0B', color: '#fff' }}
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: 12,
+                  border: 'none',
+                  background: accentGradient,
+                  color: '#fff',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
               >
                 Entendido
               </button>
@@ -245,6 +456,6 @@ export function ChangePasswordScreen({ userData, onPasswordChanged, onLogout }: 
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -1,7 +1,12 @@
-import { useState } from 'react';
-import { Alert, StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { useState, useEffect } from 'react';
+import { Alert, Image, StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Modal } from 'react-native';
+const logo = require('@/assets/logo.png');
 import { Feather } from '@expo/vector-icons';
 import { authService } from '@/services/auth.service';
+import { PasswordStrength, validatePassword } from '@/components/ui/PasswordStrength';
+import { useNotifications } from '@/components/ui/Notifications';
+import { MotiView } from 'moti';
+import { TermsScreen } from '../legal/TermsScreen';
 
 interface RegisterEmployerFormProps {
   onSuccess: (data: any) => void;
@@ -10,165 +15,92 @@ interface RegisterEmployerFormProps {
 }
 
 // Base de datos simulada de empresas
-const empresasDB = [
-  {
-    nombre: 'CAFRILOSA',
-    cargo: 'Gerente de Recursos Humanos',
-    contacto: 'María José Espinoza',
-    telefono: '07-2570145',
-    correo: 'rrhh@cafrilosa.com.ec'
-  },
-  {
-    nombre: 'CLIPP',
-    cargo: 'Coordinador de Talento Humano',
-    contacto: 'Carlos Mendoza',
-    telefono: '07-2581234',
-    correo: 'talento@clipp.com.ec'
-  },
-  {
-    nombre: 'CORPORACIÓN DE FERIAS DE LOJA',
-    cargo: 'Jefe de Recursos Humanos',
-    contacto: 'Ana Gabriela Torres',
-    telefono: '07-2573890',
-    correo: 'rrhh@feriasloja.com.ec'
-  },
-  {
-    nombre: 'CREVIGO',
-    cargo: 'Director de Talento',
-    contacto: 'Roberto Sánchez',
-    telefono: '07-2569087',
-    correo: 'direccion@crevigo.com.ec'
-  },
-  {
-    nombre: 'DECORTEJA',
-    cargo: 'Gerente General',
-    contacto: 'Patricia Luna',
-    telefono: '07-2554321',
-    correo: 'gerencia@decorteja.com.ec'
-  },
-  {
-    nombre: 'DELAROMA S.A',
-    cargo: 'Jefe de Personal',
-    contacto: 'Miguel Ángel Ríos',
-    telefono: '07-2567890',
-    correo: 'personal@delaroma.com.ec'
-  },
-  {
-    nombre: 'ECOLAC',
-    cargo: 'Coordinadora de RRHH',
-    contacto: 'Laura Jiménez',
-    telefono: '07-2578901',
-    correo: 'rrhh@ecolac.com.ec'
-  },
-  {
-    nombre: 'EDILOJA',
-    cargo: 'Gerente de Recursos Humanos',
-    contacto: 'Fernando Castillo',
-    telefono: '07-2589012',
-    correo: 'recursos@ediloja.com.ec'
-  },
-  {
-    nombre: 'GOACEN',
-    cargo: 'Jefa de Talento Humano',
-    contacto: 'Sofía Márquez',
-    telefono: '07-2590123',
-    correo: 'talento@goacen.com.ec'
-  },
-  {
-    nombre: 'HOSPITAL Y CLÍNICA SAN AGUSTÍN',
-    cargo: 'Director de Recursos Humanos',
-    contacto: 'Dr. Luis Peña',
-    telefono: '07-2601234',
-    correo: 'rrhh@sanagustin.med.ec'
-  },
-  {
-    nombre: 'ILE',
-    cargo: 'Gerente de Personal',
-    contacto: 'Andrea Vásquez',
-    telefono: '07-2612345',
-    correo: 'personal@ile.com.ec'
-  },
-  {
-    nombre: 'ILELSA',
-    cargo: 'Coordinador de RRHH',
-    contacto: 'Jorge Morales',
-    telefono: '07-2623456',
-    correo: 'rrhh@ilelsa.com.ec'
-  },
-  {
-    nombre: 'IMPORTADORA MINASUR',
-    cargo: 'Jefe de Recursos Humanos',
-    contacto: 'Diana Carrión',
-    telefono: '07-2634567',
-    correo: 'recursos@minasur.com.ec'
-  },
-  {
-    nombre: 'INDERA',
-    cargo: 'Gerente de Talento',
-    contacto: 'Ricardo Ochoa',
-    telefono: '07-2645678',
-    correo: 'talento@indera.com.ec'
-  },
-  {
-    nombre: 'INDULOJA',
-    cargo: 'Directora de RRHH',
-    contacto: 'Gabriela Ontaneda',
-    telefono: '07-2656789',
-    correo: 'rrhh@induloja.com.ec'
-  },
-  {
-    nombre: 'LOJAGAS',
-    cargo: 'Jefe de Personal',
-    contacto: 'Manuel Rodríguez',
-    telefono: '07-2667890',
-    correo: 'personal@lojagas.com.ec'
-  },
-  {
-    nombre: 'MALCA',
-    cargo: 'Gerente de Recursos Humanos',
-    contacto: 'Verónica Salinas',
-    telefono: '07-2678901',
-    correo: 'rrhh@malca.com.ec'
-  },
-  {
-    nombre: 'OXIWEST',
-    cargo: 'Coordinador de Talento Humano',
-    contacto: 'Pablo Herrera',
-    telefono: '07-2689012',
-    correo: 'talento@oxiwest.com.ec'
-  }
-];
+// Empresas cargadas dinámicamente desde el backend
 
 export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: RegisterEmployerFormProps) {
+  const notifications = useNotifications();
   const [empresaNombre, setEmpresaNombre] = useState('');
   const [cargo, setCargo] = useState('');
   const [contacto, setContacto] = useState('');
   const [telefono, setTelefono] = useState('');
   const [correo, setCorreo] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [website, setWebsite] = useState('');
+  const [description, setDescription] = useState('');
+  const [ruc, setRuc] = useState('');
+
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [showDropdown, setShowDropdown] = useState(false);
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState('');
   const [loading, setLoading] = useState(false);
+  const [successData, setSuccessData] = useState<any>(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const data = await authService.getCompanies();
+        setCompanies(data);
+      } catch (error) {
+        console.error('Error fetching companies:', error);
+        notifications.error('No se pudieron cargar las empresas.');
+      }
+    };
+    fetchCompanies();
+  }, []);
 
   // Filtrar empresas según lo que el usuario escribe
-  const empresasFiltradas = empresasDB.filter(empresa =>
-    empresa.nombre.toLowerCase().includes(empresaNombre.toLowerCase())
+  const empresasFiltradas = companies.filter(empresa =>
+    empresa.razonSocial.toLowerCase().includes(empresaNombre.toLowerCase())
   );
   const dropdownActivo = showDropdown && empresasFiltradas.length > 0;
 
-  const seleccionarEmpresa = (empresa: typeof empresasDB[0]) => {
-    setEmpresaNombre(empresa.nombre);
-    setCargo(empresa.cargo);
-    setContacto(empresa.contacto);
-    setTelefono(empresa.telefono);
-    setCorreo(empresa.correo);
+  const seleccionarEmpresa = (empresa: any) => {
+    setEmpresaNombre(empresa.razonSocial);
+    setRuc(empresa.ruc);
+    setAddress(empresa.direccion || '');
+    setCity(empresa.ciudad || '');
+    setWebsite(empresa.website || '');
+    setDescription(empresa.descripcion || '');
+
+    // NO autocompletar contacto/cargo/email, el usuario debe llenarlos
     setShowDropdown(false);
-    setEmpresaSeleccionada(empresa.nombre);
+    setEmpresaSeleccionada(empresa.razonSocial);
   };
 
   const handleSubmit = async () => {
-    if (!empresaNombre || !cargo || !contacto || !telefono || !correo) {
-      Alert.alert('Campos incompletos', 'Completa todos los campos del formulario.');
+    if (!empresaNombre || !cargo || !contacto || !telefono || !correo || !password || !confirmPassword) {
+      notifications.error('Completa todos los campos del formulario.', 'Campos incompletos');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      notifications.error('Las contraseñas no coinciden.');
+      return;
+    }
+
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      notifications.error(passwordValidation.errors[0], 'Contraseña inválida');
+      return;
+    }
+
+    if (password.length < 8) {
+      notifications.error('La contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+
+    // Validate terms acceptance
+    if (!acceptTerms) {
+      notifications.alert('Debes aceptar los términos y condiciones para continuar.', 'Términos requeridos');
       return;
     }
 
@@ -177,7 +109,7 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
     try {
       const response = await authService.register({
         email: correo,
-        password: 'TempPassword123!', // Temporary password
+        password: password,
         nombreCompleto: contacto,
         telefono: telefono,
         tipoUsuario: 'RECLUTADOR',
@@ -185,30 +117,47 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
           nombreEmpresa: empresaNombre,
           cargo: cargo,
           nombreContacto: contacto,
+          direccion: address,
+          ciudad: city,
+          sitioWeb: website,
+          descripcion: description,
+          ruc: ruc,
         },
       });
 
-      // Go directly to password change screen with success info
+      // Store data and show modal
       setLoading(false);
-      onSuccess({
+      setSuccessData({
         id: response.idCuenta,
         company: empresaNombre,
         contactName: contacto,
         email: correo,
-        needsPasswordChange: true,
+        needsPasswordChange: false, // SKIP ChangePassword Screen
         isEmailVerified: false,
-        showWelcomeModal: true, // Flag to show modal on ChangePasswordScreen
       });
+      setShowWelcomeModal(true);
     } catch (error: any) {
       setLoading(false);
-      Alert.alert('Error', error.message || 'Error al crear la cuenta');
+      notifications.error(error.message || 'Error al crear la cuenta', 'Error');
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowWelcomeModal(false);
+    // Do not auto-login (onSuccess). Redirect to Login screen instead.
+    if (onSwitchToLogin) {
+      onSwitchToLogin();
     }
   };
 
   return (
     <View style={styles.container}>
       {/* Main Card */}
-      <View style={styles.card}>
+      <MotiView 
+        from={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        style={styles.card}
+      >
         {/* Header */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -218,9 +167,9 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
 
         {/* Card Header */}
         <View style={styles.cardHeader}>
-          <View style={styles.iconCircle}>
-            <View style={styles.iconInner}>
-              <Feather name="briefcase" size={24} color="#FFFFFF" />
+          <View style={styles.logoBadgeSmall}>
+            <View style={styles.logoInner}>
+              <Image source={logo} style={styles.logo} resizeMode="contain" />
             </View>
           </View>
           <View style={styles.headerText}>
@@ -284,12 +233,59 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
                           onPress={() => seleccionarEmpresa(empresa)}
                         >
                           <Feather name="briefcase" size={14} color="#6B7280" />
-                          <Text style={styles.dropdownItemText}>{empresa.nombre}</Text>
+                          <Text style={styles.dropdownItemText}>{empresa.razonSocial}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
                   </View>
                 )}
+              </View>
+
+              {/* Campos Editables (Auto-completados pero modificables) */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Dirección</Text>
+                <TextInput
+                  style={styles.input}
+                  value={address}
+                  onChangeText={setAddress}
+                  placeholder="Dirección de la empresa"
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Ciudad</Text>
+                <TextInput
+                  style={styles.input}
+                  value={city}
+                  onChangeText={setCity}
+                  placeholder="Ciudad"
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Sitio Web</Text>
+                <TextInput
+                  style={styles.input}
+                  value={website}
+                  onChangeText={setWebsite}
+                  placeholder="Sitio Web"
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Descripción</Text>
+                <TextInput
+                  style={styles.input}
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                  numberOfLines={3}
+                  placeholder="Descripción"
+                  placeholderTextColor="#9CA3AF"
+                />
               </View>
             </View>
 
@@ -354,6 +350,47 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Contraseña *</Text>
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Contraseña segura"
+                    secureTextEntry={!showPassword}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.passwordToggle}
+                  >
+                    <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#6B7280" />
+                  </TouchableOpacity>
+                </View>
+                <PasswordStrength password={password} variant="employer" />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Confirmar Contraseña *</Text>
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Repite la contraseña"
+                    secureTextEntry={!showConfirmPassword}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.passwordToggle}
+                  >
+                    <Feather name={showConfirmPassword ? "eye" : "eye-off"} size={20} color="#6B7280" />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
 
             {/* Info Box */}
@@ -364,6 +401,27 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
                 Tu empresa será verificada por CAIL. Recibirás credenciales por correo una vez aprobada.
               </Text>
             </View>
+
+            {/* Terms Checkbox */}
+            <TouchableOpacity
+              onPress={() => setAcceptTerms(!acceptTerms)}
+              activeOpacity={0.7}
+              style={styles.termsContainer}
+            >
+              <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
+                {acceptTerms && <Feather name="check" size={14} color="#FFFFFF" />}
+              </View>
+              <Text style={styles.termsText}>
+                Acepto los{' '}
+                <Text
+                  style={styles.termsLink}
+                  onPress={() => setShowTermsModal(true)}
+                >
+                  términos y condiciones
+                </Text>
+                {' '}de uso de la plataforma
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
 
@@ -392,7 +450,68 @@ export function RegisterEmployerForm({ onSuccess, onBack, onSwitchToLogin }: Reg
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </MotiView>
+
+      {/* Welcome Modal */}
+      <Modal
+        visible={showWelcomeModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={handleCloseModal}
+            >
+              <Feather name="x" size={20} color="#6B7280" />
+            </TouchableOpacity>
+
+            <View style={styles.successIcon}>
+              <Feather name="check" size={40} color="#fff" />
+            </View>
+
+            <Text style={styles.modalTitle}>¡Registro Exitoso!</Text>
+
+            <View style={styles.successBadge}>
+              <Feather name="check-square" size={16} color="#059669" />
+              <Text style={styles.successText}>Empresa registrada con éxito</Text>
+            </View>
+
+            <Text style={styles.modalEmpresa}>{empresaNombre}</Text>
+
+            <View style={styles.modalInfoBox}>
+              <Feather name="info" size={16} color="#3B82F6" />
+              <Text style={styles.modalInfoText}>
+                El administrador o el encargado autorizado de la empresa ha sido notificado de tu cuenta como reclutador y estás en proceso de validación.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={handleCloseModal}
+            >
+              <Text style={styles.modalButtonText}>Entendido</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Terms Modal */}
+      <Modal
+        visible={showTermsModal}
+        transparent={true}
+        statusBarTranslucent={true}
+        animationType="slide"
+        onRequestClose={() => setShowTermsModal(false)}
+      >
+        <TermsScreen
+          onClose={() => setShowTermsModal(false)}
+          onBack={() => setShowTermsModal(false)}
+          variant="employer"
+        />
+      </Modal>
     </View>
   );
 }
@@ -437,21 +556,28 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 16,
   },
-  iconCircle: {
-    width: 56,
-    height: 56,
+  logoBadgeSmall: {
+    width: 64,
+    height: 64,
     borderRadius: 16,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  iconInner: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#F59E0B',
+  logoInner: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 6,
+  },
+  logo: {
+    width: '100%',
+    height: '100%',
   },
   headerText: {
     flex: 1,
@@ -513,6 +639,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 10,
+    position: 'relative',
   },
   input: {
     flex: 1,
@@ -529,8 +656,36 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   dropdownIcon: {
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  passwordContainer: {
+    position: 'relative',
+  },
+  passwordInput: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    paddingRight: 50,
+    fontSize: 14,
+    color: '#1F2937',
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dropdown: {
     position: 'absolute',
@@ -592,6 +747,45 @@ const styles = StyleSheet.create({
   },
   infoBold: {
     fontWeight: '700',
+  },
+
+  // Terms
+  termsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginTop: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: '#F59E0B',
+    borderColor: '#F59E0B',
+  },
+  termsText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#374151',
+    lineHeight: 18,
+  },
+  termsLink: {
+    color: '#F59E0B',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 
   // Actions
@@ -723,5 +917,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
     fontStyle: 'italic',
+  },
+  modalButton: {
+    backgroundColor: '#F59E0B',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

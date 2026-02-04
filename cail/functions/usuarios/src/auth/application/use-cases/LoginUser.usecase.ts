@@ -58,12 +58,33 @@ export class LoginUserUseCase {
     /**
      * Obtiene el perfil del usuario por UID de Firebase
      * Preferido ya que usa el UID directamente
+     * 
+     * Para RECLUTADORES: verifica que el email haya sido verificado antes de permitir acceso
      */
     async getProfileByUid(uid: string): Promise<GetProfileResponseDto> {
         const account = await this.accountRepository.findById(new UserId(uid));
 
         if (!account) {
             throw new AppError(404, 'User profile not found. Please complete registration.');
+        }
+
+        // Para RECLUTADORES: verificar que emailVerified sea true (autorizado por supervisor)
+        if (account.tipoUsuario === 'RECLUTADOR' && account.employerProfile) {
+            const emailVerified = account.employerProfile.emailVerified;
+
+            console.log('🔐 Checking recruiter authorization. emailVerified:', emailVerified);
+
+            // CRITICAL: Recruiters MUST have emailVerified === true to access the system
+            // This is set to true when the supervisor clicks the authorization link
+            if (emailVerified !== true) {
+                console.warn('⚠️ Recruiter access denied - emailVerified is not true:', account.email.getValue());
+                throw new AppError(403,
+                    'Tu cuenta está pendiente de autorización. Un supervisor de tu empresa debe aprobar tu acceso haciendo clic en el enlace del correo de autorización.',
+                    'EMAIL_NOT_VERIFIED'
+                );
+            }
+
+            console.log('✅ Recruiter authorized - emailVerified is true');
         }
 
         return {

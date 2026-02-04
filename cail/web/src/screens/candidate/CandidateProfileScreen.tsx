@@ -1,21 +1,123 @@
 import { useMemo, useState, useEffect } from 'react';
-import { InputField } from '../../components/ui/InputField';
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import {
+  FiUser,
+  FiTarget,
+  FiEye,
+  FiShield,
+  FiBriefcase,
+  FiAward,
+  FiFileText,
+  FiCode,
+  FiHeart,
+  FiStar,
+  FiPlus,
+  FiX,
+  FiInbox,
+  FiPlusCircle,
+  FiEdit2,
+  FiTrash2,
+  FiCheck,
+  FiMapPin,
+  FiMail,
+  FiPhone,
+  FiMap,
+  FiBookOpen,
+  FiCalendar,
+  FiActivity,
+  FiChevronDown,
+} from 'react-icons/fi';
 import { Button } from '../../components/ui/Button';
-import { useResponsiveLayout } from '../../hooks/useResponsive';
+import { InputField } from '../../components/ui/InputField';
 import { CandidateProfileForm } from '../../types';
-import { initialCandidateProfile } from '../../data/mockData';
 import { colors } from '../../theme/colors';
 import { userService } from '../../services/user.service';
 import { CvUploadDropzone } from '../../components/CvUploadDropzone';
+import { useNotifications } from '../../components/ui/Notifications';
+import { SkillSelector } from '../../components/ui/SkillSelector';
+import { WorkExperience } from '../../types';
+
+// Estado inicial vacío para el formulario
+const emptyCandidateProfile: CandidateProfileForm = {
+  fullName: '',
+  email: '',
+  cedula: '',
+  phone: '',
+  city: '',
+  sectorIndustrial: '',
+  address: '',
+  professionalSummary: '',
+  educationLevel: '',
+  degree: '',
+  yearsExperience: '',
+  experienceSummary: '',
+  technicalSkills: [],
+  softSkills: [],
+  competencies: [],
+  workExperience: [],
+};
 
 export function CandidateProfileScreen() {
-  const { contentWidth } = useResponsiveLayout();
-  const [form, setForm] = useState<CandidateProfileForm>(initialCandidateProfile);
+  const notifications = useNotifications();
+  const [form, setForm] = useState<CandidateProfileForm>(emptyCandidateProfile);
   const [loading, setLoading] = useState(true);
+  const [newSkill, setNewSkill] = useState('');
+  const [newSoftSkill, setNewSoftSkill] = useState('');
+  const [newCompetency, setNewCompetency] = useState('');
   const [activeTab, setActiveTab] = useState<'personal' | 'professional' | 'experience'>('personal');
   const [saving, setSaving] = useState(false);
   const [cvUrl, setCvUrl] = useState<string | null>(null);
   const [uploadingCv, setUploadingCv] = useState(false);
+  const [experienceModalVisible, setExperienceModalVisible] = useState(false);
+  const [currentExperience, setCurrentExperience] = useState<Partial<WorkExperience>>({});
+
+  const handleAddExperience = () => {
+    setCurrentExperience({
+      company: '',
+      position: '',
+      startDate: '',
+      endDate: '',
+      isCurrent: false,
+      description: '',
+    });
+    setExperienceModalVisible(true);
+  };
+
+  const handleEditExperience = (exp: WorkExperience) => {
+    setCurrentExperience({ ...exp });
+    setExperienceModalVisible(true);
+  };
+
+  const handleSaveExperience = () => {
+    if (!currentExperience.company || !currentExperience.position || !currentExperience.startDate) {
+      notifications.alert('Completa los campos obligatorios (*)', 'Información incompleta');
+      return;
+    }
+
+    const newExp = {
+      ...currentExperience,
+      id: currentExperience.id || Date.now().toString(),
+    } as WorkExperience;
+
+    if (currentExperience.id) {
+      updateField(
+        'workExperience',
+        form.workExperience.map((e) => (e.id === newExp.id ? newExp : e))
+      );
+    } else {
+      updateField('workExperience', [...form.workExperience, newExp]);
+    }
+    setExperienceModalVisible(false);
+  };
+
+  const handleDeleteExperience = (id: string) => {
+    if (window.confirm('¿Eliminar esta experiencia?')) {
+      updateField(
+        'workExperience',
+        form.workExperience.filter((e) => e.id !== id)
+      );
+    }
+  };
 
   useEffect(() => {
     loadProfile();
@@ -28,18 +130,25 @@ export function CandidateProfileScreen() {
         setForm({
           fullName: profile.nombreCompleto,
           email: profile.email,
+          cedula: profile.candidateProfile.cedula || '',
           phone: profile.telefono || '',
           city: profile.candidateProfile.ciudad,
+          sectorIndustrial: profile.candidateProfile.sectorIndustrial || '',
           address: profile.candidateProfile.direccion || '',
           professionalSummary: profile.candidateProfile.resumenProfesional || '',
+          educationLevel: profile.candidateProfile.nivelEducacion || '',
+          degree: profile.candidateProfile.titulo || '',
+          yearsExperience: profile.candidateProfile.anosExperiencia || '',
+          experienceSummary: profile.candidateProfile.resumenExperiencia || '',
           technicalSkills: profile.candidateProfile.habilidadesTecnicas || [],
           softSkills: profile.candidateProfile.softSkills || [],
           competencies: profile.candidateProfile.competencias || [],
+          workExperience: (profile.candidateProfile.experienciaLaboral as any[]) || [],
         });
         setCvUrl(profile.candidateProfile.cvUrl || null);
       }
     } catch (error) {
-      window.alert('No se pudo cargar el perfil');
+      notifications.error('No se pudo cargar el perfil');
     } finally {
       setLoading(false);
     }
@@ -64,6 +173,18 @@ export function CandidateProfileScreen() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const addItem = (key: 'technicalSkills' | 'softSkills' | 'competencies', value: string) => {
+    if (!value.trim()) return;
+    updateField(key, [...form[key], value.trim()]);
+  };
+
+  const removeItem = (key: 'technicalSkills' | 'softSkills' | 'competencies', index: number) => {
+    updateField(
+      key,
+      form[key].filter((_, i) => i !== index)
+    );
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -72,191 +193,556 @@ export function CandidateProfileScreen() {
         telefono: form.phone,
         candidateProfile: {
           ciudad: form.city,
+          sectorIndustrial: form.sectorIndustrial,
           direccion: form.address,
+          cedula: form.cedula,
           resumenProfesional: form.professionalSummary,
+          nivelEducacion: form.educationLevel,
+          titulo: form.degree,
+          anosExperiencia: form.yearsExperience,
+          resumenExperiencia: form.experienceSummary,
           habilidadesTecnicas: form.technicalSkills,
           softSkills: form.softSkills,
           competencias: form.competencies,
-          cedula: '',
+          experienciaLaboral: form.workExperience,
         },
       });
-      window.alert('Tus cambios se guardaron correctamente.');
+      notifications.success('Tus cambios se guardaron correctamente.', 'Guardado');
     } catch (error: any) {
-      window.alert(error.message || 'No se pudieron guardar los cambios');
+      notifications.error(error.message || 'No se pudieron guardar los cambios');
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
-        <div style={{ color: colors.textSecondary }}>Cargando perfil...</div>
-      </div>
-    );
+    return <LoadingSpinner message="Cargando perfil..." color="#0B7A4D" />;
   }
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
-      {/* Header */}
       <div
         style={{
-          background: '#0B7A4D',
-          borderRadius: 16,
-          padding: 20,
+          background: 'linear-gradient(135deg, #0B7A4D 0%, #065F46 100%)',
+          borderRadius: 20,
+          padding: '24px',
           color: '#fff',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 16,
+          boxShadow: '0 8px 16px rgba(11, 122, 77, 0.15)',
+          position: 'relative',
+          overflow: 'hidden'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ position: 'absolute', right: '-15px', top: '-15px', opacity: 0.1, color: '#fff' }}>
+          <FiUser size={120} />
+        </div>
+
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', zIndex: 1 }}>
           <div
             style={{
-              width: 48,
-              height: 48,
-              borderRadius: 12,
+              width: 56,
+              height: 56,
+              borderRadius: 14,
               background: 'rgba(255,255,255,0.2)',
+              backdropFilter: 'blur(8px)',
               display: 'grid',
               placeItems: 'center',
             }}
           >
-            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-              />
-            </svg>
+            <FiUser size={26} strokeWidth={2.5} />
           </div>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>Mi perfil profesional</div>
-            <div style={{ fontSize: 13, opacity: 0.9 }}>Administra tus datos personales y profesionales</div>
+            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.01em' }}>{form.fullName || 'Mi Perfil Profesional'}</div>
+            <div style={{ fontSize: 13, opacity: 0.9 }}>
+              {form.degree || 'Candidato'} • {form.city || 'Ubicación'}
+            </div>
           </div>
         </div>
-        <div style={{ marginTop: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={{ fontSize: 13 }}>Progreso del perfil</div>
-            <div style={{ fontWeight: 700 }}>{Math.round(completion * 100)}%</div>
+
+        <div style={{ display: 'flex', gap: 10, zIndex: 1 }}>
+          <div style={statusPillStyle}>
+            <FiEye size={14} /> Perfil Visible
           </div>
-          <div style={{ height: 8, background: 'rgba(255,255,255,0.2)', borderRadius: 999, overflow: 'hidden' }}>
+          <div
+            style={{
+              ...statusPillStyle,
+              background: 'rgba(255,255,255,0.15)',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.2)'
+            }}
+          >
+            <FiShield size={14} /> Verificado
+          </div>
+        </div>
+      </div>
+
+      {/* Profile Metrics Card */}
+      <div style={{ ...cardStyle, padding: '16px 20px', flexDirection: 'row', alignItems: 'center', gap: 20 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>Cualificación del Perfil</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#0B7A4D' }}>{Math.round(completion * 100)}%</span>
+          </div>
+          <div style={{ height: 8, background: '#F1F5F9', borderRadius: 4, overflow: 'hidden' }}>
             <div
               style={{
                 height: '100%',
-                background: '#FFFFFF',
+                background: 'linear-gradient(90deg, #1A936F, #0B7A4D)',
                 width: `${completion * 100}%`,
-                transition: 'width 0.3s',
+                transition: 'width 0.8s'
               }}
             />
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <span
-            style={{
-              padding: '4px 10px',
-              borderRadius: 999,
-              background: '#ECFDF5',
-              color: '#0B7A4D',
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            Perfil visible
-          </span>
-          <span
-            style={{
-              padding: '4px 10px',
-              borderRadius: 999,
-              background: '#F3F4F6',
-              color: colors.textSecondary,
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            ✓ Verificado
-          </span>
+        <div style={{ borderLeft: '1px solid #E2E8F0', paddingLeft: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <FiEye size={16} color="#0B7A4D" />
+          <p style={{ margin: 0, fontSize: 12, color: '#64748B', maxWidth: '280px' }}>
+            Tu perfil es actualmente visible para todos los reclutadores verificados en la plataforma.
+          </p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 8, background: '#F3F4F6', padding: 6, borderRadius: 12 }}>
-        {['personal', 'professional', 'experience'].map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab as typeof activeTab)}
-            style={{
-              flex: 1,
-              padding: '10px 12px',
-              borderRadius: 10,
-              border: 'none',
-              background: activeTab === tab ? '#FFFFFF' : 'transparent',
-              cursor: 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            {tab === 'personal' ? 'Datos personales' : tab === 'professional' ? 'Profesional' : 'Experiencia'}
-          </button>
-        ))}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+        {/* Tabs Design */}
+        <div style={{ display: 'flex', gap: 12, background: '#F1F5F9', padding: '8px', borderRadius: '18px', maxWidth: '500px', flex: 1 }}>
+          {[
+            { id: 'personal', label: 'Personal', icon: <FiUser size={16} /> },
+            { id: 'professional', label: 'Profesional', icon: <FiAward size={16} /> },
+            { id: 'experience', label: 'Experiencia', icon: <FiBriefcase size={16} /> }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                padding: '12px 16px',
+                borderRadius: '14px',
+                border: 'none',
+                background: activeTab === tab.id ? '#fff' : 'transparent',
+                color: activeTab === tab.id ? '#0B7A4D' : '#64748B',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: 14,
+                transition: 'all 0.2s',
+                boxShadow: activeTab === tab.id ? '0 4px 12px rgba(0,0,0,0.05)' : 'none'
+              }}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            padding: '12px 24px',
+            borderRadius: '16px',
+            border: 'none',
+            background: saving ? '#D1D5DB' : 'linear-gradient(135deg, #1A936F 0%, #0B7A4D 100%)',
+            color: '#fff',
+            cursor: saving ? 'not-allowed' : 'pointer',
+            fontWeight: 800,
+            fontSize: 14,
+            boxShadow: saving ? 'none' : '0 4px 12px -2px rgba(11, 122, 77, 0.3)',
+            transition: 'all 0.3s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            minWidth: '180px'
+          }}
+          onMouseEnter={(e) => { if (!saving) e.currentTarget.style.transform = 'translateY(-2px)'; }}
+          onMouseLeave={(e) => { if (!saving) e.currentTarget.style.transform = 'none'; }}
+        >
+          {saving ? (
+            <>
+              <div className="spin-animation" style={{ width: 14, height: 14, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%' }} />
+              Guardando...
+            </>
+          ) : (
+            <>
+              <FiCheck size={18} /> Aplicar Cambios
+            </>
+          )}
+        </button>
       </div>
 
-      {/* Content */}
-      {activeTab === 'personal' && (
-        <div style={{ background: '#fff', borderRadius: 14, padding: 16, border: '1px solid #E5E7EB' }}>
-          <InputField label="Nombre completo" value={form.fullName} onChange={(e) => updateField('fullName', e.target.value)} />
-          <InputField label="Correo" value={form.email} onChange={(e) => updateField('email', e.target.value)} />
-          <InputField label="Teléfono" value={form.phone} onChange={(e) => updateField('phone', e.target.value)} />
-          <InputField label="Ciudad" value={form.city} onChange={(e) => updateField('city', e.target.value)} />
-          <InputField label="Dirección" value={form.address} onChange={(e) => updateField('address', e.target.value)} />
-        </div>
-      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 24 }}>
+        {/* Main Column */}
+        <div style={{ gridColumn: 'span 8', display: 'grid', gap: 24, alignContent: 'start' }}>
 
-      {activeTab === 'professional' && (
-        <div style={{ background: '#fff', borderRadius: 14, padding: 16, border: '1px solid #E5E7EB' }}>
-          <label style={{ fontSize: 14, fontWeight: 600, color: '#4C5672', display: 'block', marginBottom: 6 }}>
-            Resumen profesional
-          </label>
-          <textarea
-            value={form.professionalSummary}
-            onChange={(e) => updateField('professionalSummary', e.target.value)}
-            style={{
-              width: '100%',
-              minHeight: '120px',
-              padding: '12px 14px',
-              borderRadius: '18px',
-              border: '1px solid #DFE7F5',
-              fontSize: '15px',
-              fontFamily: 'inherit',
-              resize: 'vertical',
-            }}
-          />
-        </div>
-      )}
-
-      {activeTab === 'experience' && (
-        <div style={{ display: 'grid', gap: 16 }}>
-          {/* CV Upload Section */}
-          <div style={{ background: '#fff', borderRadius: 14, padding: 16, border: '1px solid #E5E7EB' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14,2 14,8 20,8" />
-              </svg>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: colors.textPrimary }}>Curriculum Vitae</div>
-                <div style={{ fontSize: 12, color: colors.textSecondary }}>Sube tu CV en formato PDF (máximo 5MB)</div>
+          {/* Personal Information Tab */}
+          {activeTab === 'personal' && (
+            <div style={cardStyle}>
+              <div style={cardHeaderStyle}>
+                <div style={{ ...iconBadgeStyle, background: '#ECFDF5', color: '#10B981' }}>
+                  <FiUser size={20} />
+                </div>
+                <h3 style={cardTitleStyle}>Datos de Identidad y Contacto</h3>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <InputField
+                  label="Nombre Completo"
+                  value={form.fullName}
+                  onChange={(e) => updateField('fullName', e.target.value)}
+                  icon={<FiUser size={16} color="#10B981" />}
+                  tone="candidate"
+                />
+                <InputField
+                  label="Cédula / DNI"
+                  value={form.cedula}
+                  onChange={(e) => updateField('cedula', e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="Ej. 11054..."
+                  icon={<FiShield size={16} color="#10B981" />}
+                  tone="candidate"
+                  maxLength={10}
+                />
+                <InputField
+                  label="Correo Electrónico"
+                  value={form.email}
+                  readonly
+                  icon={<FiMail size={16} color="#10B981" />}
+                />
+                <InputField
+                  label="Teléfono Móvil"
+                  value={form.phone}
+                  onChange={(e) => updateField('phone', e.target.value)}
+                  icon={<FiPhone size={16} color="#10B981" />}
+                  tone="candidate"
+                />
+                <InputField
+                  label="Ciudad de Residencia"
+                  value={form.city}
+                  onChange={(e) => updateField('city', e.target.value)}
+                  icon={<FiMap size={16} color="#10B981" />}
+                  tone="candidate"
+                />
+                <InputField
+                  label="Dirección Domiciliaria"
+                  value={form.address}
+                  onChange={(e) => updateField('address', e.target.value)}
+                  icon={<FiMapPin size={16} color="#10B981" />}
+                  tone="candidate"
+                />
               </div>
             </div>
+          )}
+
+          {/* Professional Information Tab */}
+          {activeTab === 'professional' && (
+            <div style={{ display: 'grid', gap: 24 }}>
+              {/* Summary & Education */}
+              <div style={cardStyle}>
+                <div style={cardHeaderStyle}>
+                  <div style={{ ...iconBadgeStyle, background: '#EEF2FF', color: '#6366F1' }}>
+                    <FiBookOpen size={20} />
+                  </div>
+                  <h3 style={cardTitleStyle}>Formación y Resumen</h3>
+                </div>
+                <div style={{ display: 'grid', gap: 20 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                    <InputField
+                      label="Nivel de Educación"
+                      value={form.educationLevel}
+                      onChange={(e) => updateField('educationLevel', e.target.value)}
+                      placeholder="Ej. Universitario / Maestría"
+                      icon={<FiBookOpen size={16} color="#6366F1" />}
+                      tone="candidate"
+                    />
+                    <InputField
+                      label="Título Obtenido"
+                      value={form.degree}
+                      onChange={(e) => updateField('degree', e.target.value)}
+                      placeholder="Ej. Ing. Civil"
+                      icon={<FiAward size={16} color="#6366F1" />}
+                      tone="candidate"
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Resumen Profesional</label>
+                    <textarea
+                      value={form.professionalSummary}
+                      onChange={(e) => updateField('professionalSummary', e.target.value)}
+                      placeholder="Breve descripción de tu perfil, años de experiencia y objetivos..."
+                      style={textAreaStyle}
+                      onFocus={(e) => (e.target.style.borderColor = '#1A936F')}
+                      onBlur={(e) => (e.target.style.borderColor = '#E5E7EB')}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Skills */}
+              <div style={cardStyle}>
+                <div style={cardHeaderStyle}>
+                  <div style={{ ...iconBadgeStyle, background: '#F0FDF4', color: '#16A34A' }}>
+                    <FiCode size={20} />
+                  </div>
+                  <h3 style={cardTitleStyle}>Habilidades y Aptitudes</h3>
+                </div>
+                <div style={{ display: 'grid', gap: 24 }}>
+                  <SkillSelector
+                    selectedSkills={form.technicalSkills}
+                    onChange={(skills) => updateField('technicalSkills', skills)}
+                    label="Tecnologías e Idiomas"
+                    placeholder="Ej. Excel, Python, Inglés B2..."
+                    chipVariant="gray"
+                    customChipBg="#EFF6FF"
+                    customChipText="#1E40AF"
+                  />
+                  <SkillSelector
+                    selectedSkills={form.softSkills}
+                    onChange={(skills) => updateField('softSkills', skills)}
+                    label="Habilidades Blandas"
+                    placeholder="Ej. Liderazgo, Empatía..."
+                    chipVariant="gray"
+                    customChipBg="#F0FDF4"
+                    customChipText="#166534"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Experience Tab */}
+          {activeTab === 'experience' && (
+            <div style={{ display: 'grid', gap: 24 }}>
+              {/* General Experience Metrics */}
+              <div style={cardStyle}>
+                <div style={cardHeaderStyle}>
+                  <div style={{ ...iconBadgeStyle, background: '#FFF7ED', color: '#EA580C' }}>
+                    <FiActivity size={20} />
+                  </div>
+                  <h3 style={cardTitleStyle}>Trayectoria General</h3>
+                </div>
+
+                <div style={{ display: 'grid', gap: 24 }}>
+                  {/* Top Row: Years + Sector */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20, alignItems: 'start' }}>
+
+                    {/* Years in Sector */}
+                    <div>
+                      <label style={labelStyle}>
+                        <FiCalendar style={{ marginRight: 6, verticalAlign: 'text-bottom' }} />
+                        Años en el Sector
+                      </label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="number"
+                          value={form.yearsExperience}
+                          onChange={(e) => updateField('yearsExperience', e.target.value)}
+                          placeholder="Ej. 2"
+                          min="0"
+                          style={{
+                            width: '100%',
+                            padding: '14px 16px',
+                            borderRadius: '12px',
+                            border: '1px solid #E5E7EB',
+                            fontSize: '15px',
+                            color: '#1E293B',
+                            background: '#F9FAFB',
+                            outline: 'none',
+                            fontWeight: 600,
+                            textAlign: 'center',
+                            zIndex: 2,
+                            position: 'relative',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                        <span style={{
+                          position: 'absolute',
+                          right: 16,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          fontSize: 13,
+                          color: '#94A3B8',
+                          fontWeight: 500,
+                          pointerEvents: 'none',
+                          zIndex: 3
+                        }}>años</span>
+                      </div>
+                    </div>
+
+                    {/* Sector (with better visual hierarchy) */}
+                    <div>
+                      <label style={labelStyle}>Sector Industrial Principal *</label>
+                      <div style={{ position: 'relative' }}>
+                        <select
+                          value={form.sectorIndustrial}
+                          onChange={(e) => updateField('sectorIndustrial', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '14px 16px',
+                            borderRadius: '12px',
+                            border: '1px solid #E5E7EB',
+                            fontSize: '15px',
+                            color: form.sectorIndustrial ? '#1E293B' : '#94A3B8',
+                            background: '#F9FAFB',
+                            outline: 'none',
+                            cursor: 'pointer',
+                            appearance: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          <option value="">Selecciona tu sector principal...</option>
+                          <option value="tecnologia">Tecnología y Software</option>
+                          <option value="salud">Salud y Medicina</option>
+                          <option value="educacion">Educación</option>
+                          <option value="finanzas">Finanzas y Contabilidad</option>
+                          <option value="manufactura">Manufactura e Industria</option>
+                          <option value="comercio">Comercio y Ventas</option>
+                          <option value="logistica">Logística y Transporte</option>
+                          <option value="construccion">Construcción e Ingeniería</option>
+                        </select>
+                        <FiChevronDown
+                          size={18}
+                          color="#94A3B8"
+                          style={{
+                            position: 'absolute',
+                            right: 16,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            pointerEvents: 'none'
+                          }}
+                        />
+                      </div>
+                      <p style={{ fontSize: 12, color: '#64748B', marginTop: 8 }}>
+                        Este campo es <strong>obligatorio</strong> para mostrarte ofertas relevantes.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Bottom Row: Summary */}
+                  <div>
+                    <label style={labelStyle}>Resumen de Experiencia</label>
+                    <textarea
+                      value={form.experienceSummary}
+                      onChange={(e) => updateField('experienceSummary', e.target.value)}
+                      placeholder="Resume brevemente tu perfil profesional para los reclutadores. Ej: Desarrollador Full Stack con 3 años de experiencia en React y Node.js..."
+                      style={{
+                        ...textAreaStyle,
+                        minHeight: '100px',
+                        background: '#fff',
+                        border: '1px solid #E2E8F0',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                        transition: 'all 0.2s'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#3B82F6';
+                        e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#E2E8F0';
+                        e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Detailed Experience List */}
+              <div style={cardStyle}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ ...iconBadgeStyle, background: '#F5F3FF', color: '#7C3AED' }}>
+                      <FiBriefcase size={20} />
+                    </div>
+                    <h3 style={cardTitleStyle}>Historial Laboral</h3>
+                  </div>
+                  <button
+                    onClick={handleAddExperience}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '12px',
+                      background: '#F3F4F6',
+                      border: 'none',
+                      color: '#0B7A4D',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#E5E7EB'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = '#F3F4F6'}
+                  >
+                    <FiPlus size={18} /> Agregar
+                  </button>
+                </div>
+
+                {form.workExperience.length === 0 ? (
+                  <div style={emptyStateStyle}>
+                    <FiInbox size={48} color="#94A3B8" />
+                    <p style={{ margin: '12px 0 4px', fontWeight: 700, color: '#475569' }}>Aún no has registrado experiencia</p>
+                    <p style={{ margin: 0, fontSize: 13, color: '#64748B' }}>Agrega tus empleos anteriores para resaltar tu perfil.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: 16 }}>
+                    {form.workExperience.map(exp => (
+                      <div key={exp.id} style={experienceItemStyle}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <div style={{ fontWeight: 800, color: '#1E293B', fontSize: 15 }}>{exp.company}</div>
+                            <div style={{ color: '#0B7A4D', fontWeight: 700, fontSize: 13, marginTop: 2 }}>{exp.position}</div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button onClick={() => handleEditExperience(exp)} style={iconButtonStyle}><FiEdit2 size={14} color="#64748B" /></button>
+                            <button onClick={() => handleDeleteExperience(exp.id)} style={iconButtonStyle}><FiTrash2 size={14} color="#EF4444" /></button>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <FiCalendar size={12} />
+                          {exp.startDate} - {exp.isCurrent ? <span style={{ color: '#10B981', fontWeight: 700 }}>Actualidad</span> : exp.endDate}
+                        </div>
+                        {exp.description && (
+                          <div style={{ fontSize: 13, color: '#475569', marginTop: 10, lineHeight: '1.5' }}>{exp.description}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Sidebar Column */}
+        <div style={{ gridColumn: 'span 4', display: 'grid', gap: 24, alignContent: 'start' }}>
+
+          {/* CV Section */}
+          <div style={cardStyle}>
+            <div style={cardHeaderStyle}>
+              <div style={{ ...iconBadgeStyle, background: '#FEF2F2', color: '#EF4444' }}>
+                <FiFileText size={20} />
+              </div>
+              <h3 style={cardTitleStyle}>Currículum Vitae</h3>
+            </div>
+            <p style={{ fontSize: 13, color: '#64748B', margin: '-8px 0 16px', lineHeight: '1.4' }}>
+              Sube tu hoja de vida para que los reclutadores puedan verla directamente.
+            </p>
             <CvUploadDropzone
               cvUrl={cvUrl}
+              uploading={uploadingCv}
               onUpload={async (file) => {
                 setUploadingCv(true);
                 try {
                   const formData = new FormData();
                   formData.append('cv', file);
-                  const result = await userService.uploadCV(formData);
-                  setCvUrl(result.cvUrl);
-                  window.alert('CV subido correctamente');
+                  const response = await userService.uploadCV(formData);
+                  setCvUrl(response.cvUrl);
+                  notifications.success('CV subido correctamente');
                 } catch (error: any) {
-                  window.alert(error.message || 'Error al subir el CV');
+                  notifications.error(error.message || 'Error al subir CV');
                 } finally {
                   setUploadingCv(false);
                 }
@@ -266,27 +752,211 @@ export function CandidateProfileScreen() {
                 try {
                   await userService.deleteCV();
                   setCvUrl(null);
-                  window.alert('CV eliminado correctamente');
+                  notifications.success('CV eliminado');
                 } catch (error: any) {
-                  window.alert(error.message || 'Error al eliminar el CV');
+                  notifications.error(error.message || 'Error al eliminar CV');
                 } finally {
                   setUploadingCv(false);
                 }
               }}
-              uploading={uploadingCv}
             />
           </div>
 
-          {/* Experience Section Placeholder */}
-          <div style={{ background: '#fff', borderRadius: 14, padding: 16, border: '1px solid #E5E7EB' }}>
-            <div style={{ fontSize: 14, color: colors.textSecondary }}>
-              Sección de experiencia laboral en desarrollo
+          {/* Competencies Widget */}
+          <div style={cardStyle}>
+            <div style={cardHeaderStyle}>
+              <div style={{ ...iconBadgeStyle, background: '#FFFBEB', color: '#D97706' }}>
+                <FiStar size={20} />
+              </div>
+              <h3 style={cardTitleStyle}>Competencias</h3>
+            </div>
+            <SkillSelector
+              selectedSkills={form.competencies}
+              onChange={(skills) => updateField('competencies', skills)}
+              label=""
+              placeholder="Ej. Análisis, Resolución..."
+              chipVariant="gray"
+              customChipBg="#FFFBEB"
+              customChipText="#B45309"
+            />
+          </div>
+
+        </div>
+      </div>
+
+      {/* Experience Modal */}
+      {experienceModalVisible && (
+        <div style={modalOverlayStyle}>
+          <div style={modalContentStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>{currentExperience.id ? 'Editar Experiencia' : 'Nueva Experiencia'}</h3>
+              <button onClick={() => setExperienceModalVisible(false)} style={iconButtonStyle}><FiX size={24} /></button>
+            </div>
+            <div style={{ display: 'grid', gap: 16 }}>
+              <InputField label="Institución / Organización *" value={currentExperience.company || ''} onChange={(e) => setCurrentExperience({ ...currentExperience, company: e.target.value })} tone="candidate" />
+              <InputField label="Cargo / Posición *" value={currentExperience.position || ''} onChange={(e) => setCurrentExperience({ ...currentExperience, position: e.target.value })} tone="candidate" />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <label style={labelStyle}>Fecha Inicio *</label>
+                  <input type="date" value={currentExperience.startDate || ''} onChange={(e) => setCurrentExperience({ ...currentExperience, startDate: e.target.value })} style={inputDateStyle} />
+                </div>
+                {!currentExperience.isCurrent && (
+                  <div>
+                    <label style={labelStyle}>Fecha Fin</label>
+                    <input type="date" value={currentExperience.endDate || ''} onChange={(e) => setCurrentExperience({ ...currentExperience, endDate: e.target.value })} style={inputDateStyle} />
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={labelStyle}>Actualmente trabajo aquí</span>
+                <input type="checkbox" checked={currentExperience.isCurrent} onChange={(e) => setCurrentExperience({ ...currentExperience, isCurrent: e.target.checked })} style={{ width: 20, height: 20 }} />
+              </div>
+              <div>
+                <label style={labelStyle}>Descripción de Funciones</label>
+                <textarea
+                  value={currentExperience.description || ''}
+                  onChange={(e) => setCurrentExperience({ ...currentExperience, description: e.target.value })}
+                  placeholder="Describe tus principales responsabilidades..."
+                  style={textAreaStyle}
+                />
+              </div>
+              <Button label="Registrar Experiencia" onPress={handleSaveExperience} fullWidth />
             </div>
           </div>
         </div>
       )}
-
-      <Button label={saving ? 'Guardando...' : 'Guardar cambios'} onPress={handleSave} disabled={saving} fullWidth />
     </div>
   );
 }
+
+// Internal Styles
+const statusPillStyle: React.CSSProperties = {
+  padding: '6px 12px',
+  borderRadius: 999,
+  background: '#fff',
+  color: '#0B7A4D',
+  fontSize: 12,
+  fontWeight: 700,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6
+};
+
+const cardStyle: React.CSSProperties = {
+  background: '#fff',
+  borderRadius: 14,
+  padding: '20px',
+  border: '1px solid #E5E7EB',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 16
+};
+
+const cardHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 16,
+  marginBottom: 8
+};
+
+const cardTitleStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: '18px',
+  fontWeight: 800,
+  color: '#1E293B'
+};
+
+const iconBadgeStyle: React.CSSProperties = {
+  width: 44,
+  height: 44,
+  borderRadius: 14,
+  display: 'grid',
+  placeItems: 'center',
+  flexShrink: 0
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 14,
+  fontWeight: 700,
+  color: '#475569',
+  marginBottom: 8,
+  display: 'block'
+};
+
+const textAreaStyle: React.CSSProperties = {
+  width: '100%',
+  minHeight: '120px',
+  padding: '16px',
+  borderRadius: '16px',
+  border: '1px solid #E5E7EB',
+  fontSize: '15px',
+  fontFamily: 'inherit',
+  resize: 'vertical',
+  lineHeight: '1.6',
+  background: '#F8FAFC',
+  outline: 'none',
+  boxSizing: 'border-box'
+};
+
+const emptyStateStyle: React.CSSProperties = {
+  textAlign: 'center',
+  padding: '40px 20px',
+  background: '#F8FAFC',
+  borderRadius: 20,
+  border: '2px dashed #E2E8F0',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center'
+};
+
+const experienceItemStyle: React.CSSProperties = {
+  padding: '20px',
+  background: '#F8FAFC',
+  borderRadius: 20,
+  border: '1px solid #F1F5F9'
+};
+
+const iconButtonStyle: React.CSSProperties = {
+  padding: 8,
+  borderRadius: 10,
+  border: 'none',
+  background: 'transparent',
+  cursor: 'pointer',
+  display: 'flex',
+  transition: 'background 0.2s'
+};
+
+const modalOverlayStyle: React.CSSProperties = {
+  position: 'fixed',
+  top: 0, left: 0, right: 0, bottom: 0,
+  background: 'rgba(15, 23, 42, 0.45)',
+  backdropFilter: 'blur(4px)',
+  display: 'grid',
+  placeItems: 'center',
+  zIndex: 1000,
+  padding: 24
+};
+
+const modalContentStyle: React.CSSProperties = {
+  background: '#fff',
+  borderRadius: 20,
+  padding: 24,
+  width: '100%',
+  maxWidth: '560px',
+  maxHeight: '90vh',
+  overflowY: 'auto',
+  boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+};
+
+const inputDateStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '12px 14px',
+  borderRadius: '14px',
+  border: '1px solid #E2E8F0',
+  fontSize: '14px',
+  fontFamily: 'inherit',
+  color: '#1E293B',
+  background: '#fff',
+  boxSizing: 'border-box'
+};

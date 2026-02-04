@@ -1,5 +1,6 @@
 import { apiService } from './api.service';
 import { API_CONFIG } from './config';
+import { WorkExperience } from '../types';
 
 export interface UserProfile {
     idCuenta: string;
@@ -13,6 +14,7 @@ export interface UserProfile {
         fechaNacimiento?: string;
         direccion?: string;
         ciudad: string;
+        sectorIndustrial?: string; // [NEW] Added for matching
         resumenProfesional?: string;
         habilidadesTecnicas?: string[];
         softSkills?: string[];
@@ -21,17 +23,24 @@ export interface UserProfile {
         competencias?: string[];
         anosExperiencia?: string;
         resumenExperiencia?: string;
+        experienciaLaboral?: WorkExperience[];
         cvUrl?: string;
     };
     employerProfile?: {
         nombreEmpresa: string;
+        nombreComercial?: string;
+        razonSocial?: string;
+        ruc?: string;
         cargo: string;
         nombreContacto: string;
         industry?: string;
+        tipoEmpresa?: string;
         numberOfEmployees?: string;
         description?: string;
         website?: string;
         address?: string;
+        city?: string;
+        validationStatus?: 'PENDIENTE' | 'VERIFICADA' | 'RECHAZADA';
     };
 }
 

@@ -36,11 +36,19 @@ export interface EmployerProfile {
     nombreEmpresa: string;
     cargo: string;
     nombreContacto: string;
+    ruc?: string;
     industry?: string;
     numberOfEmployees?: string;
     description?: string;
     website?: string;
     address?: string;
+    companyValidationStatus?: 'PENDIENTE' | 'VERIFICADA' | 'RECHAZADA';
+    // Estado de autorización del usuario reclutador (Supervisor Validation)
+    status?: 'ACTIVO' | 'PENDIENTE' | 'NO_AUTORIZADO';
+    // Campos para verificación de email (Magic Link)
+    emailVerified?: boolean;
+    emailVerificationToken?: string;
+    emailVerificationExpiry?: Date;
 }
 
 /**

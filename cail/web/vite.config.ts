@@ -18,10 +18,12 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api\/ofertas/, '/ofertas'),
       },
       '/api/matching': {
-        target: 'https://us-central1-cail-backend-prod.cloudfunctions.net',
+        target: 'https://us-central1-cail-backend-prod.cloudfunctions.net/matching',
         changeOrigin: true,
         secure: true,
-        rewrite: (path) => path.replace(/^\/api\/matching/, '/matching'),
+        // Rewrite /api/matching/X to /matching/X - this gets appended to target /matching
+        // Final URL: .../matching/matching/X
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },

@@ -1,5 +1,6 @@
 import { apiService } from './api.service';
 import { API_CONFIG } from './config';
+import { WorkExperience } from '@/types';
 
 export interface UserProfile {
     idCuenta: string;
@@ -13,6 +14,7 @@ export interface UserProfile {
         fechaNacimiento?: string;
         direccion?: string;
         ciudad: string;
+        sectorIndustrial?: string;
         resumenProfesional?: string;
         habilidadesTecnicas?: string[];
         softSkills?: string[];
@@ -21,6 +23,7 @@ export interface UserProfile {
         competencias?: string[];
         anosExperiencia?: string;
         resumenExperiencia?: string;
+        experienciaLaboral?: WorkExperience[];
         cvUrl?: string;
     };
     employerProfile?: {
@@ -32,6 +35,9 @@ export interface UserProfile {
         description?: string;
         website?: string;
         address?: string;
+        ruc?: string;
+        tipoEmpresa?: string;
+        ciudad?: string;
     };
 }
 

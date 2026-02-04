@@ -1,11 +1,16 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { Image, StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Modal } from 'react-native';
+const logo = require('@/assets/logo.png');
 import { Feather } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { InputField } from '@/components/ui/InputField';
 import { LoadingSplash } from '@/components/ui/LoadingSplash';
 import { PasswordStrength, validatePassword } from '@/components/ui/PasswordStrength';
+import { AutocompleteInput, COMMON_TECHNICAL_SKILLS, COMMON_SOFT_SKILLS } from '@/components/ui/AutocompleteInput';
 import { authService } from '@/services/auth.service';
+import { useNotifications } from '@/components/ui/Notifications';
+import { MotiView } from 'moti';
+import { TermsScreen } from '../legal/TermsScreen';
 
 interface RegisterCandidateFormProps {
   onSuccess: (data: any) => void;
@@ -16,6 +21,7 @@ interface RegisterCandidateFormProps {
 type TabType = 'personal' | 'profesional';
 
 export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: RegisterCandidateFormProps) {
+  const notifications = useNotifications();
   const [activeTab, setActiveTab] = useState<TabType>('personal');
 
   // Información Personal
@@ -37,7 +43,8 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
   const [newSkill, setNewSkill] = useState('');
   const [educationLevel, setEducationLevel] = useState('');
   const [degree, setDegree] = useState('');
-  const [softSkills, setSoftSkills] = useState('');
+  const [softSkills, setSoftSkills] = useState<string[]>([]);
+  const [newSoftSkill, setNewSoftSkill] = useState('');
   const [competencies, setCompetencies] = useState<string[]>([]);
   const [newCompetency, setNewCompetency] = useState('');
   const [yearsExperience, setYearsExperience] = useState('');
@@ -48,26 +55,50 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
   const [showSplash, setShowSplash] = useState(false);
   const [splashSuccess, setSplashSuccess] = useState(false);
   const [pendingData, setPendingData] = useState<any>(null);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+
+  const validatePersonalStep = () => {
+    if (!fullName || !cedula || !email || !password || !confirmPassword) {
+      notifications.alert('Por favor, completa todos los campos obligatorios (*) antes de continuar al perfil profesional.', 'Paso 1 incompleto');
+      return false;
+    }
+
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      notifications.alert(passwordValidation.errors[0], 'Contraseña débil');
+      return false;
+    }
+
+    if (password !== confirmPassword) {
+      notifications.alert('Las contraseñas no coinciden.', 'Error');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleTabChange = (tab: TabType) => {
+    if (tab === 'profesional' && activeTab === 'personal') {
+      if (validatePersonalStep()) {
+        setActiveTab('profesional');
+      }
+    } else {
+      setActiveTab(tab);
+    }
+  };
 
   const handleSubmit = async () => {
     if (activeTab === 'personal') {
-      if (!fullName || !cedula || !email || !password || !confirmPassword) {
-        Alert.alert('Campos incompletos', 'Completa todos los campos requeridos.');
-        return;
+      if (validatePersonalStep()) {
+        setActiveTab('profesional');
       }
+      return;
+    }
 
-      // Validate password strength
-      const passwordValidation = validatePassword(password);
-      if (!passwordValidation.isValid) {
-        Alert.alert('Contraseña inválida', passwordValidation.errors[0]);
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        Alert.alert('Error', 'Las contraseñas no coinciden.');
-        return;
-      }
-      setActiveTab('profesional');
+    // Validate terms acceptance
+    if (!acceptTerms) {
+      notifications.alert('Debes aceptar los términos y condiciones para continuar.', 'Términos requeridos');
       return;
     }
 
@@ -88,6 +119,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
           ciudad: city,
           resumenProfesional: professionalSummary,
           habilidadesTecnicas: technicalSkills,
+          softSkills,
           nivelEducacion: educationLevel,
           titulo: degree,
           competencias: competencies,
@@ -107,7 +139,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
       setShowSplash(false);
       setSplashSuccess(false);
       setLoading(false);
-      Alert.alert('Error', error.message || 'Error al crear la cuenta');
+      notifications.error(error.message || 'Error al crear la cuenta', 'Error');
     }
   };
 
@@ -131,6 +163,17 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
     setTechnicalSkills(technicalSkills.filter((_, i) => i !== index));
   };
 
+  const addSoftSkill = () => {
+    if (newSoftSkill.trim()) {
+      setSoftSkills([...softSkills, newSoftSkill.trim()]);
+      setNewSoftSkill('');
+    }
+  };
+
+  const removeSoftSkill = (index: number) => {
+    setSoftSkills(softSkills.filter((_, i) => i !== index));
+  };
+
   const addCompetency = () => {
     if (newCompetency.trim()) {
       setCompetencies([...competencies, newCompetency.trim()]);
@@ -145,7 +188,11 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
   return (
     <View style={styles.container}>
       {/* Main Card */}
-      <View style={styles.card}>
+      <MotiView 
+        from={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        style={styles.card}
+      >
         {/* Header + Progress */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -163,9 +210,9 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
 
         {/* Card Header */}
         <View style={styles.cardHeader}>
-          <View style={styles.iconCircle}>
-            <View style={styles.iconInner}>
-              <Feather name="user-plus" size={24} color="#FFFFFF" />
+          <View style={styles.logoBadgeSmall}>
+            <View style={styles.logoInner}>
+              <Image source={logo} style={styles.logo} resizeMode="contain" />
             </View>
           </View>
           <View style={styles.headerText}>
@@ -180,7 +227,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
         <View style={styles.tabs}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'personal' && styles.tabActive]}
-            onPress={() => setActiveTab('personal')}
+            onPress={() => handleTabChange('personal')}
           >
             <Feather
               name="user"
@@ -193,7 +240,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'profesional' && styles.tabActive]}
-            onPress={() => setActiveTab('profesional')}
+            onPress={() => handleTabChange('profesional')}
           >
             <Feather
               name="briefcase"
@@ -394,7 +441,7 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
               </View>
 
               {/* Habilidades Técnicas */}
-              <View style={styles.section}>
+              <View style={[styles.section, { zIndex: 20 }]}>
                 <View style={styles.sectionHeader}>
                   <Feather name="code" size={16} color="#3B82F6" />
                   <Text style={styles.sectionTitle}>Habilidades técnicas</Text>
@@ -403,31 +450,38 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
                   Tecnologías, herramientas y software que dominas
                 </Text>
 
-                <View style={styles.skillInput}>
-                  <TextInput
-                    style={[styles.input, styles.flex1]}
-                    value={newSkill}
-                    onChangeText={setNewSkill}
-                    placeholder="Ej: Excel, Python, AutoCAD..."
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  <TouchableOpacity style={styles.addButton} onPress={addSkill}>
-                    <Feather name="plus" size={20} color="#fff" />
-                  </TouchableOpacity>
-                </View>
+                <AutocompleteInput
+                  selectedItems={technicalSkills}
+                  onChange={setTechnicalSkills}
+                  suggestions={COMMON_TECHNICAL_SKILLS}
+                  label=""
+                  placeholder="Buscar o agregar habilidad técnica..."
+                  chipColor="#3B82F6"
+                  addButtonColor="#3B82F6"
+                  maxItems={15}
+                />
+              </View>
 
-                {technicalSkills.length > 0 && (
-                  <View style={styles.chipContainer}>
-                    {technicalSkills.map((skill, index) => (
-                      <View key={index} style={styles.chipBlue}>
-                        <Text style={styles.chipTextBlue}>{skill}</Text>
-                        <TouchableOpacity onPress={() => removeSkill(index)}>
-                          <Feather name="x" size={14} color="#3B82F6" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
+              {/* Soft Skills */}
+              <View style={[styles.section, { zIndex: 10 }]}>
+                <View style={styles.sectionHeader}>
+                  <Feather name="heart" size={16} color="#10B981" />
+                  <Text style={styles.sectionTitle}>Soft skills</Text>
+                </View>
+                <Text style={styles.sectionHint}>
+                  Habilidades blandas y fortalezas personales
+                </Text>
+
+                <AutocompleteInput
+                  selectedItems={softSkills}
+                  onChange={setSoftSkills}
+                  suggestions={COMMON_SOFT_SKILLS}
+                  label=""
+                  placeholder="Buscar o agregar soft skill..."
+                  chipColor="#10B981"
+                  addButtonColor="#10B981"
+                  maxItems={10}
+                />
               </View>
 
               {/* Formación */}
@@ -536,6 +590,29 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
               Tu perfil será revisado por CAIL. Podrás postular a ofertas una vez validado.
             </Text>
           </View>
+
+          {/* Terms Checkbox - Only show in professional tab */}
+          {activeTab === 'profesional' && (
+            <TouchableOpacity
+              onPress={() => setAcceptTerms(!acceptTerms)}
+              activeOpacity={0.7}
+              style={styles.termsContainer}
+            >
+              <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
+                {acceptTerms && <Feather name="check" size={14} color="#FFFFFF" />}
+              </View>
+              <Text style={styles.termsText}>
+                Acepto los{' '}
+                <Text
+                  style={styles.termsLink}
+                  onPress={() => setShowTermsModal(true)}
+                >
+                  términos y condiciones
+                </Text>
+                {' '}de uso de la plataforma
+              </Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
 
         {/* Action Buttons */}
@@ -563,16 +640,30 @@ export function RegisterCandidateForm({ onSuccess, onBack, onSwitchToLogin }: Re
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </MotiView>
 
-      {/* Loading Splash */}
-      <LoadingSplash
+        <LoadingSplash
         visible={showSplash}
         message="Registrando cuenta..."
         variant="candidate"
         showSuccess={splashSuccess}
         onSuccessComplete={handleSplashComplete}
       />
+
+      {/* Terms Modal */}
+      <Modal
+        visible={showTermsModal}
+        transparent={true}
+        statusBarTranslucent={true}
+        animationType="slide"
+        onRequestClose={() => setShowTermsModal(false)}
+      >
+        <TermsScreen
+          onClose={() => setShowTermsModal(false)}
+          onBack={() => setShowTermsModal(false)}
+          variant="candidate"
+        />
+      </Modal>
     </View>
   );
 }
@@ -638,21 +729,28 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 16,
   },
-  iconCircle: {
-    width: 56,
-    height: 56,
+  logoBadgeSmall: {
+    width: 64,
+    height: 64,
     borderRadius: 16,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  iconInner: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#0B7A4D',
+  logoInner: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 6,
+  },
+  logo: {
+    width: '100%',
+    height: '100%',
   },
   headerText: {
     flex: 1,
@@ -779,9 +877,12 @@ const styles = StyleSheet.create({
   },
   passwordToggle: {
     position: 'absolute',
-    right: 12,
-    top: 12,
-    padding: 8,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // Skills
@@ -800,6 +901,9 @@ const styles = StyleSheet.create({
   },
   addButtonYellow: {
     backgroundColor: '#F59E0B',
+  },
+  addButtonGreen: {
+    backgroundColor: '#10B981',
   },
   chipContainer: {
     flexDirection: 'row',
@@ -838,6 +942,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#F59E0B',
   },
+  chipGreen: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  chipTextGreen: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#10B981',
+  },
 
   // Info Box
   infoBox: {
@@ -859,6 +979,45 @@ const styles = StyleSheet.create({
   },
   infoBold: {
     fontWeight: '700',
+  },
+
+  // Terms
+  termsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginTop: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: '#0B7A4D',
+    borderColor: '#0B7A4D',
+  },
+  termsText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#374151',
+    lineHeight: 18,
+  },
+  termsLink: {
+    color: '#0B7A4D',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 
   // Actions

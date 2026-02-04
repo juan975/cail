@@ -35,19 +35,42 @@ export interface ApplicationWithOffer extends Application {
         empresa: string;
         ciudad: string;
         modalidad: string;
+        descripcion?: string;
+        salarioMin?: number;
+        salarioMax?: number;
+        tipoContrato?: string;
+        experiencia_requerida?: string;
+        formacion_requerida?: string;
+        competencias_requeridas?: string[];
+        habilidades_obligatorias?: { nombre: string; es_obligatorio: boolean; peso: number }[];
+        habilidades_deseables?: { nombre: string; es_obligatorio: boolean; peso: number }[];
+        nivelJerarquico?: string;
     };
 }
 
 /**
+ * Perfil de candidato para postulaciones enriquecidas
+ * Sincronizado con CandidatoPerfil del backend matching
+ */
+export interface CandidatoPerfil {
+    nombreCompleto: string;
+    email: string;
+    telefono?: string;
+    ciudad?: string;
+    nivelEducativo?: string;
+    resumenProfesional?: string;
+    habilidadesTecnicas?: string[];
+    habilidadesBlandas?: string[];
+    experienciaAnios?: number;
+    cvUrl?: string;
+}
+
+/**
  * Aplicación con información del postulante incluida
- * Útil para mostrar en la vista del reclutador
+ * Útil para mostrar en la vista del reclutador (ReceivedApplicationsScreen)
  */
 export interface ApplicationWithCandidate extends Application {
-    postulante?: {
-        nombreCompleto: string;
-        email: string;
-        telefono?: string;
-    };
+    candidato?: CandidatoPerfil;
 }
 
 /**

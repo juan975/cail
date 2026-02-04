@@ -6,8 +6,8 @@
  * Flujos:
  *   - Login: Firebase Auth -> Obtener perfil del backend -> Validar rol
  *   - Registro POSTULANTE: Firebase Auth (frontend) -> Crear perfil en backend
- *   - Registro RECLUTADOR: Backend crea en Firebase Auth + envía email con temp password
- *   - Cambio de contraseña: Backend (usa Firebase Admin para actualizar)
+ *   - Registro RECLUTADOR: Backend crea en Firebase Auth + envía email con link de reset
+ *   - Cambio de contraseña: Firebase Auth -> Confirmar en backend
  */
 
 import { apiService } from './api.service';
@@ -19,73 +19,58 @@ import {
     RegisterResponse,
 } from '@/types/auth.types';
 
-// Tipos de rol para la UI
-export type UIUserRole = 'candidate' | 'employer';
-
-// Error específico para rol incorrecto
+/**
+ * Error para cuando el rol seleccionado no coincide con el tipo de cuenta
+ */
 export class RoleMismatchError extends Error {
-    public readonly expectedRole: UIUserRole;
-    public readonly actualRole: UIUserRole;
-
-    constructor(expectedRole: UIUserRole, actualRole: UIUserRole) {
-        const message = expectedRole === 'candidate'
-            ? 'Esta cuenta es de Empleador. Por favor selecciona "Soy Empleador".'
-            : 'Esta cuenta es de Candidato. Por favor selecciona "Busco Empleo".';
+    constructor(message: string) {
         super(message);
         this.name = 'RoleMismatchError';
-        this.expectedRole = expectedRole;
-        this.actualRole = actualRole;
     }
 }
 
 class AuthService {
     /**
-     * Login de usuario con validación de rol
-     * 
-     * @param email Email del usuario
+     * Login de usuario
+     * Valida que el rol del usuario coincida con el módulo seleccionado
+     * @param email Correo electrónico
      * @param password Contraseña
-     * @param expectedRole Rol que el usuario seleccionó en la UI (candidate o employer)
-     * @throws RoleMismatchError si el rol del usuario no coincide con el esperado
+     * @param expectedRole Rol esperado ('candidate' o 'employer')
      */
-    async login(email: string, password: string, expectedRole?: UIUserRole): Promise<LoginResponse> {
+    async login(email: string, password: string, expectedRole?: 'candidate' | 'employer'): Promise<LoginResponse> {
         // 1. Autenticar con Firebase Auth
         const { user, idToken } = await firebaseAuthService.login(email, password);
 
-        try {
-            // 2. Obtener perfil del backend
-            const profileResponse = await apiService.get<{ status: string; data: any }>('/users/profile');
+        // 2. Obtener perfil del backend
+        const profileResponse = await apiService.get<{ status: string; data: any }>('/users/profile');
+        const actualRole = profileResponse.data.tipoUsuario;
 
-            const tipoUsuario = profileResponse.data.tipoUsuario;
-            const actualRole: UIUserRole = tipoUsuario === 'POSTULANTE' ? 'candidate' : 'employer';
-
-            // 3. Validar que el rol coincida (si se especificó un rol esperado)
-            if (expectedRole && actualRole !== expectedRole) {
-                // Cerrar sesión de Firebase ANTES de lanzar el error
-                console.log('❌ Role mismatch: expected', expectedRole, 'got', actualRole);
-                await firebaseAuthService.logout();
-                throw new RoleMismatchError(expectedRole, actualRole);
-            }
-
-            return {
-                idCuenta: user.uid,
-                email: user.email || email,
-                nombreCompleto: profileResponse.data.nombreCompleto,
-                tipoUsuario: tipoUsuario,
-                token: idToken,
-                needsPasswordChange: profileResponse.data.needsPasswordChange,
+        // 3. Validar que el rol coincida con el módulo seleccionado
+        if (expectedRole) {
+            const roleMap: Record<string, 'candidate' | 'employer'> = {
+                'POSTULANTE': 'candidate',
+                'RECLUTADOR': 'employer'
             };
-        } catch (error) {
-            // Si hay cualquier error después del login de Firebase, cerrar sesión
-            if (!(error instanceof RoleMismatchError)) {
-                // Solo hacer logout si no es un RoleMismatchError (ya hicimos logout en ese caso)
-                try {
-                    await firebaseAuthService.logout();
-                } catch (logoutError) {
-                    console.error('Error during cleanup logout:', logoutError);
-                }
+
+            if (roleMap[actualRole] !== expectedRole) {
+                // Cerrar sesión antes de lanzar error
+                await firebaseAuthService.logout();
+
+                const roleName = actualRole === 'RECLUTADOR' ? 'Empleador' : 'Postulante';
+                throw new RoleMismatchError(
+                    `Estas credenciales pertenecen a un ${roleName}. Por favor selecciona el módulo correcto.`
+                );
             }
-            throw error;
         }
+
+        return {
+            idCuenta: user.uid,
+            email: user.email || email,
+            nombreCompleto: profileResponse.data.nombreCompleto,
+            tipoUsuario: actualRole,
+            token: idToken,
+            needsPasswordChange: profileResponse.data.needsPasswordChange,
+        };
     }
 
     /**
@@ -137,7 +122,6 @@ class AuthService {
                 API_CONFIG.ENDPOINTS.REGISTER,
                 {
                     ...data,
-                    password: undefined, // No enviar contraseña
                 }
             );
 
@@ -145,6 +129,14 @@ class AuthService {
         } else {
             throw new Error(`Invalid user type: ${data.tipoUsuario}`);
         }
+    }
+
+    /**
+     * Obtener lista de empresas validadas
+     */
+    async getCompanies(): Promise<any[]> {
+        const response = await apiService.get<{ status: string; data: any[] }>('/auth/companies');
+        return response.data;
     }
 
     /**

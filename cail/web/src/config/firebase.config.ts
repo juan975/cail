@@ -1,21 +1,21 @@
 /**
  * Configuración de Firebase para la versión Web
  * 
- * Las credenciales se obtienen de variables de entorno para seguridad.
- * Ver env.example para las variables necesarias.
+ * Credenciales de Firebase Console - cail-backend-prod
  */
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 
+// Configuración de Firebase - cail-backend-prod (misma que móvil)
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID,
-    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+    apiKey: "AIzaSyA2nDXPnQeCmePp3-6xDmurhUBeSRuNW_g",
+    authDomain: "cail-backend-prod.firebaseapp.com",
+    projectId: "cail-backend-prod",
+    storageBucket: "cail-backend-prod.firebasestorage.app",
+    messagingSenderId: "346693146426",
+    appId: "1:346693146426:web:0f8dde0713d71fe8b92203",
+    measurementId: "G-7QFNGV9J2K"
 };
 
 // Inicializar Firebase solo si no está inicializado

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNotifications } from '../../components/ui/Notifications';
 import { useResponsiveLayout } from '../../hooks/useResponsive';
 import { EmployerProfileScreen } from './EmployerProfileScreen';
 import { OffersManagementScreen } from './OffersManagementScreen';
@@ -22,15 +23,30 @@ interface EmployerShellProps {
 export function EmployerShell({ userData, onLogout }: EmployerShellProps) {
   const [tab, setTab] = useState<EmployerTab>('offers');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const { setTheme } = useNotifications();
+
+  useEffect(() => {
+    setTheme('employer');
+  }, [setTheme]);
+
+  useEffect(() => {
+    document.title = 'CAIL | Panel Empleador';
+  }, []);
+
+  const handleTabChange = (newTab: EmployerTab) => {
+    setTab(newTab);
+    setSearchQuery(''); // Reset search when changing tabs
+  };
 
   const renderScreen = () => {
     switch (tab) {
       case 'profile':
         return <EmployerProfileScreen />;
       case 'applications':
-        return <ReceivedApplicationsScreen />;
+        return <ReceivedApplicationsScreen searchQuery={searchQuery} />;
       default:
-        return <OffersManagementScreen />;
+        return <OffersManagementScreen searchQuery={searchQuery} />;
     }
   };
 
@@ -111,12 +127,14 @@ export function EmployerShell({ userData, onLogout }: EmployerShellProps) {
         {/* Logo */}
         <div
           style={{
-            padding: '20px',
+            padding: '12px 20px',
             borderBottom: '1px solid #E5E7EB',
             display: 'flex',
             alignItems: 'center',
             justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
             gap: '12px',
+            height: '72px',
+            boxSizing: 'border-box',
           }}
         >
           {!sidebarCollapsed ? (
@@ -140,7 +158,7 @@ export function EmployerShell({ userData, onLogout }: EmployerShellProps) {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setTab(item.id)}
+                onClick={() => handleTabChange(item.id)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -220,10 +238,12 @@ export function EmployerShell({ userData, onLogout }: EmployerShellProps) {
           style={{
             background: '#FFFFFF',
             borderBottom: '1px solid #E5E7EB',
-            padding: '16px 24px',
+            padding: '12px 24px',
             position: 'sticky',
             top: 0,
             zIndex: 999,
+            height: '72px',
+            boxSizing: 'border-box',
           }}
         >
           <div
@@ -249,24 +269,38 @@ export function EmployerShell({ userData, onLogout }: EmployerShellProps) {
               </div>
               <input
                 type="text"
-                placeholder="Buscar candidatos, ofertas..."
+                placeholder={
+                  tab === 'offers'
+                    ? 'Buscar por título o descripción de oferta...'
+                    : tab === 'applications'
+                    ? 'Buscar por nombre de candidato o puesto...'
+                    : 'Buscador no habilitado en esta sección'
+                }
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                disabled={tab === 'profile'}
                 style={{
                   width: '100%',
                   padding: '12px 16px 12px 48px',
                   borderRadius: '12px',
                   border: '1px solid #E5E7EB',
-                  background: '#F9FAFB',
+                  background: tab === 'profile' ? '#F3F4F6' : '#F9FAFB',
                   fontSize: '14px',
                   outline: 'none',
                   transition: 'all 0.2s',
+                  cursor: tab === 'profile' ? 'not-allowed' : 'text',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#F1842D';
-                  e.currentTarget.style.background = '#FFFFFF';
+                  if (tab !== 'profile') {
+                    e.currentTarget.style.borderColor = '#F1842D';
+                    e.currentTarget.style.background = '#FFFFFF';
+                  }
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#E5E7EB';
-                  e.currentTarget.style.background = '#F9FAFB';
+                  if (tab !== 'profile') {
+                    e.currentTarget.style.borderColor = '#E5E7EB';
+                    e.currentTarget.style.background = '#F9FAFB';
+                  }
                 }}
               />
             </div>

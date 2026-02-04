@@ -1,19 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { MotiView } from 'moti';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
+import { useNotifications } from '@/components/ui/Notifications';
+import { AutocompleteInput } from '@/components/ui/AutocompleteInput';
 import { offersService } from '@/services/offers.service';
+import { userService } from '@/services/user.service';
 import { applicationsService } from '@/services/applications.service';
-import { Offer, CreateOfferDTO, OfferStatus as ApiOfferStatus } from '@/types/offers.types';
-import { Application, ApplicationStatusColors } from '@/types/applications.types';
+import { Offer, CreateOfferDTO, OfferStatus as ApiOfferStatus, HierarchyLevel } from '@/types/offers.types';
+import { Application, ApplicationWithCandidate, ApplicationStatusColors } from '@/types/applications.types';
 
-type OfferStatus = 'active' | 'archived' | 'deleted';
-type OfferAction = 'archive' | 'restore' | 'delete';
+type OfferStatus = 'active' | 'paused' | 'closed';
+type OfferAction = 'pause' | 'resume' | 'close' | 'delete';
 
 interface JobOffer {
   id: string;
   title: string;
-  department: string;
+  department?: string;
   description: string;
   location: string;
   salary: string;
@@ -26,6 +30,8 @@ interface JobOffer {
   requiredCompetencies: string[];
   requiredEducation: string[];
   requiredExperience: string;
+  salaryMin?: number;
+  salaryMax?: number;
   // Campos adicionales para sincronización con API
   apiId?: string;
   apiEstado?: ApiOfferStatus;
@@ -35,8 +41,8 @@ interface JobOffer {
 const mapApiStatusToUI = (estado: ApiOfferStatus): OfferStatus => {
   switch (estado) {
     case 'ACTIVA': return 'active';
-    case 'PAUSADA':
-    case 'CERRADA': return 'archived';
+    case 'PAUSADA': return 'paused';
+    case 'CERRADA': return 'closed';
     default: return 'active';
   }
 };
@@ -45,8 +51,8 @@ const mapApiStatusToUI = (estado: ApiOfferStatus): OfferStatus => {
 const mapUIStatusToApi = (status: OfferStatus): ApiOfferStatus => {
   switch (status) {
     case 'active': return 'ACTIVA';
-    case 'archived': return 'PAUSADA';
-    case 'deleted': return 'CERRADA';
+    case 'paused': return 'PAUSADA';
+    case 'closed': return 'CERRADA';
     default: return 'ACTIVA';
   }
 };
@@ -61,7 +67,6 @@ const mapApiOfferToUI = (offer: Offer): JobOffer => {
     id: offer.idOferta,
     apiId: offer.idOferta,
     title: offer.titulo,
-    department: offer.empresa,
     description: offer.descripcion,
     location: offer.ciudad,
     salary: offer.salarioMin && offer.salarioMax
@@ -69,7 +74,14 @@ const mapApiOfferToUI = (offer: Offer): JobOffer => {
       : offer.salarioMin
         ? `$${offer.salarioMin}+`
         : 'A convenir',
-    modality: offer.modalidad,
+    modality: (() => {
+      if (!offer.modalidad) return 'Presencial';
+      const m = offer.modalidad.toUpperCase();
+      if (m === 'PRESENCIAL') return 'Presencial';
+      if (m === 'REMOTO') return 'Remoto';
+      if (m === 'HIBRIDO' || m === 'HÍBRIDO') return 'Híbrido';
+      return offer.modalidad;
+    })(),
     priority: 'Media',
     publishedDate: fechaPub.toLocaleDateString('es-EC'),
     status: mapApiStatusToUI(offer.estado),
@@ -78,12 +90,15 @@ const mapApiOfferToUI = (offer: Offer): JobOffer => {
     requiredCompetencies: offer.competencias_requeridas || [],
     requiredEducation: offer.formacion_requerida ? [offer.formacion_requerida] : [],
     requiredExperience: offer.experiencia_requerida || '',
+    salaryMin: offer.salarioMin,
+    salaryMax: offer.salarioMax,
     apiEstado: offer.estado,
   };
 };
 
 export function OffersManagementScreen() {
   const { isDesktop, contentWidth, horizontalGutter } = useResponsiveLayout();
+  const notifications = useNotifications();
   const [selectedTab, setSelectedTab] = useState<OfferStatus>('active');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -98,9 +113,18 @@ export function OffersManagementScreen() {
 
   // Estado para modal de aplicaciones
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
-  const [selectedOfferApplications, setSelectedOfferApplications] = useState<Application[]>([]);
+  const [selectedOfferApplications, setSelectedOfferApplications] = useState<ApplicationWithCandidate[]>([]);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [applicationsOffer, setApplicationsOffer] = useState<JobOffer | null>(null);
+
+  // Profile State
+  const [userCompany, setUserCompany] = useState('');
+
+  // Selection Modal State
+  const [selectionModalVisible, setSelectionModalVisible] = useState(false);
+  const [selectionTitle, setSelectionTitle] = useState('');
+  const [selectionOptions, setSelectionOptions] = useState<string[]>([]);
+  const [onSelectOption, setOnSelectOption] = useState<((option: string) => void) | null>(null);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -118,6 +142,7 @@ export function OffersManagementScreen() {
   const [newEducation, setNewEducation] = useState('');
   const [tipoContrato, setTipoContrato] = useState('Tiempo Completo');
   const [experiencia, setExperiencia] = useState('');
+  const [hierarchyLevel, setHierarchyLevel] = useState<HierarchyLevel>('Junior');
 
   // Cargar ofertas del API
   const loadOffers = useCallback(async () => {
@@ -137,20 +162,35 @@ export function OffersManagementScreen() {
 
   useEffect(() => {
     loadOffers();
+    loadUserProfile();
   }, [loadOffers]);
+
+  const loadUserProfile = async () => {
+    try {
+      const profile = await userService.getProfile();
+      if (profile.employerProfile?.nombreEmpresa) {
+        setUserCompany(profile.employerProfile.nombreEmpresa);
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
 
   const filteredOffers = offers.filter((offer) => offer.status === selectedTab);
   const activeCount = offers.filter((o) => o.status === 'active').length;
-  const archivedCount = offers.filter((o) => o.status === 'archived').length;
-  const deletedCount = offers.filter((o) => o.status === 'deleted').length;
+  const pausedCount = offers.filter((o) => o.status === 'paused').length;
+  const closedCount = offers.filter((o) => o.status === 'closed').length;
   const sectionTitles: Record<OfferStatus, string> = {
     active: 'Publicadas y Vigentes',
-    archived: 'Historial de Ofertas Archivadas',
-    deleted: 'Historial de Ofertas Retiradas',
+    paused: 'Ofertas en Pausa',
+    closed: 'Ofertas Cerradas',
   };
 
   const openCreateModal = () => {
     resetForm();
+    if (userCompany) {
+      setDepartment(userCompany);
+    }
     setShowCreateModal(true);
   };
 
@@ -158,20 +198,23 @@ export function OffersManagementScreen() {
     setSelectedOffer(offer);
     setTitle(offer.title);
     setDescription(offer.description);
-    setDepartment(offer.department);
+    setDepartment(offer.department || '');
     setSalary(offer.salary);
+    setSalaryMin(offer.salaryMin?.toString() || '');
+    setSalaryMax(offer.salaryMax?.toString() || '');
     setModality(offer.modality);
     setLocation(offer.location);
     setCompetencies(offer.requiredCompetencies);
     setEducation(offer.requiredEducation);
     setExperiencia(offer.requiredExperience);
+    setHierarchyLevel((offer as any).hierarchyLevel || 'Junior');
     setShowEditModal(true);
   };
 
   const resetForm = () => {
     setTitle('');
     setDescription('');
-    setDepartment('');
+    setDepartment(userCompany); // Reset to user company
     setPriority('Media');
     setSalary('');
     setSalaryMin('');
@@ -184,11 +227,12 @@ export function OffersManagementScreen() {
     setNewEducation('');
     setTipoContrato('Tiempo Completo');
     setExperiencia('');
+    setHierarchyLevel('Junior');
   };
 
   const handleCreateOffer = async () => {
     if (!title.trim() || !description.trim()) {
-      Alert.alert('Error', 'El título y la descripción son obligatorios');
+      notifications.error('El título y la descripción son obligatorios');
       return;
     }
 
@@ -207,6 +251,7 @@ export function OffersManagementScreen() {
         experiencia_requerida: experiencia,
         formacion_requerida: education.join(', '),
         competencias_requeridas: competencies,
+        nivelJerarquico: hierarchyLevel,
       };
 
       const newOffer = await offersService.createOffer(createData);
@@ -215,10 +260,10 @@ export function OffersManagementScreen() {
       setOffers([uiOffer, ...offers]);
       setShowCreateModal(false);
       resetForm();
-      Alert.alert('Éxito', 'Oferta creada correctamente');
+      notifications.success('Oferta creada correctamente', '¡Éxito!');
     } catch (err: any) {
       console.error('Error creating offer:', err);
-      Alert.alert('Error', err.message || 'No se pudo crear la oferta');
+      notifications.error(err.message || 'No se pudo crear la oferta', 'Error');
     } finally {
       setIsSubmitting(false);
     }
@@ -240,6 +285,9 @@ export function OffersManagementScreen() {
         experiencia_requerida: experiencia,
         formacion_requerida: education.join(', '),
         competencias_requeridas: competencies,
+        salarioMin: salaryMin ? parseInt(salaryMin) : undefined,
+        salarioMax: salaryMax ? parseInt(salaryMax) : undefined,
+        nivelJerarquico: hierarchyLevel,
       };
 
       const updated = await offersService.updateOffer(selectedOffer.apiId, updateData);
@@ -248,10 +296,10 @@ export function OffersManagementScreen() {
       setOffers(offers.map(o => o.id === selectedOffer.id ? uiOffer : o));
       setShowEditModal(false);
       setSelectedOffer(null);
-      Alert.alert('Éxito', 'Oferta actualizada correctamente');
+      notifications.success('Oferta actualizada correctamente');
     } catch (err: any) {
       console.error('Error updating offer:', err);
-      Alert.alert('Error', err.message || 'No se pudo actualizar la oferta');
+      notifications.error(err.message || 'No se pudo actualizar la oferta');
     } finally {
       setIsSubmitting(false);
     }
@@ -269,11 +317,11 @@ export function OffersManagementScreen() {
     setLoadingApplications(true);
 
     try {
-      const apps = await applicationsService.getOfferApplications(offer.apiId);
+      const apps = await applicationsService.getOfferApplicationsWithCandidates(offer.apiId);
       setSelectedOfferApplications(apps);
     } catch (err: any) {
       console.error('Error loading applications:', err);
-      Alert.alert('Error', 'No se pudieron cargar las aplicaciones');
+      notifications.error('No se pudieron cargar las aplicaciones');
       setSelectedOfferApplications([]);
     } finally {
       setLoadingApplications(false);
@@ -294,26 +342,32 @@ export function OffersManagementScreen() {
     try {
       setIsSubmitting(true);
 
-      if (type === 'archive') {
+      if (type === 'pause') {
         await offersService.pauseOffer(offer.apiId!);
         setOffers(prev => prev.map(item =>
-          item.id === offer.id ? { ...item, status: 'archived' as OfferStatus, apiEstado: 'PAUSADA' } : item
+          item.id === offer.id ? { ...item, status: 'paused', apiEstado: 'PAUSADA' } : item
         ));
-      } else if (type === 'restore') {
+      } else if (type === 'resume') {
         await offersService.activateOffer(offer.apiId!);
         setOffers(prev => prev.map(item =>
-          item.id === offer.id ? { ...item, status: 'active' as OfferStatus, apiEstado: 'ACTIVA' } : item
+          item.id === offer.id ? { ...item, status: 'active', apiEstado: 'ACTIVA' } : item
+        ));
+      } else if (type === 'close') {
+        await offersService.updateOffer(offer.apiId!, { estado: 'CERRADA' });
+        setOffers(prev => prev.map(item =>
+          item.id === offer.id ? { ...item, status: 'closed', apiEstado: 'CERRADA' } : item
         ));
       } else if (type === 'delete') {
         await offersService.deleteOffer(offer.apiId!);
         setOffers(prev => prev.filter(item => item.id !== offer.id));
       }
 
-      setSelectedTab(type === 'archive' ? 'archived' : type === 'restore' ? 'active' : selectedTab);
+      setSelectedTab(type === 'pause' ? 'paused' : type === 'resume' ? 'active' : type === 'close' ? 'closed' : selectedTab);
       setPendingAction(null);
+      notifications.success(`Acción "${type}" completada con éxito`);
     } catch (err: any) {
       console.error('Error performing action:', err);
-      Alert.alert('Error', err.message || 'No se pudo completar la acción');
+      notifications.error(err.message || 'No se pudo completar la acción');
     } finally {
       setIsSubmitting(false);
     }
@@ -323,24 +377,31 @@ export function OffersManagementScreen() {
     if (!pendingAction) return null;
     const { offer, type } = pendingAction;
     switch (type) {
-      case 'archive':
+      case 'pause':
         return {
-          title: '¿Archivar esta oferta?',
-          description: `La oferta "${offer.title}" será movida al historial de ofertas archivadas.`,
-          bullets: ['No será visible para los candidatos', 'Podrás restaurarla cuando desees', 'Las postulaciones existentes se conservan'],
+          title: '¿Pausar esta oferta?',
+          description: `La oferta "${offer.title}" dejará de ser visible para los candidatos.`,
+          bullets: ['No recibirá nuevas postulaciones', 'Puedes reactivarla cuando desees', 'Las postulaciones actuales se conservan'],
           confirmColor: '#F59E0B',
         };
-      case 'restore':
+      case 'resume':
         return {
-          title: '¿Restaurar esta oferta?',
-          description: `La oferta "${offer.title}" será restaurada y estará activa nuevamente para recibir postulaciones.`,
+          title: '¿Reactivar esta oferta?',
+          description: `La oferta "${offer.title}" volverá a estar activa y visible para postulaciones.`,
           confirmColor: '#10B981',
+        };
+      case 'close':
+        return {
+          title: '¿Cerrar esta oferta?',
+          description: `La oferta "${offer.title}" se marcará como finalizada.`,
+          bullets: ['No podrá recibir más candidatos', 'Se mantendrá el registro de aplicantes', 'Útil para puestos ya cubiertos'],
+          confirmColor: '#EF4444',
         };
       default:
         return {
-          title: '¿Retirar esta oferta permanentemente?',
-          description: `La oferta "${offer.title}" será eliminada permanentemente del sistema.`,
-          warning: 'Esta acción no se puede deshacer. La oferta y sus estadísticas serán eliminadas.',
+          title: '¿Eliminar esta oferta?',
+          description: `La oferta "${offer.title}" será eliminada permanentemente.`,
+          warning: 'Esta acción no se puede deshacer.',
           confirmColor: '#EF4444',
         };
     }
@@ -371,37 +432,42 @@ export function OffersManagementScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingHorizontal: horizontalGutter }]}>
+    <View style={styles.container}>
       <ScrollView
         style={styles.fullScroll}
         contentContainerStyle={[styles.scrollContent, { maxWidth: contentWidth, alignSelf: 'center' }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.pageStack}>
-          <View style={[styles.surfaceCard, styles.block]}>
-            <View style={styles.headerContent}>
-              <View style={styles.iconBadge}>
-                <Feather name="briefcase" size={20} color="#F59E0B" />
+          <MotiView 
+            from={{ opacity: 0, translateY: -20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            style={[styles.surfaceCard, styles.block, { backgroundColor: '#F59E0B' }]}
+          >
+            <View style={styles.headerRow}>
+              <View style={styles.headerIconContainer}>
+                <Feather name="briefcase" size={24} color="#FFF" />
               </View>
-              <View style={styles.headerText}>
-                <Text style={styles.headerTitle}>Gestión de Ofertas Laborales</Text>
-                <Text style={styles.headerSubtitle}>Define vacantes y administra su ciclo de vida</Text>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={styles.headerTitleMain}>Gestión de Ofertas</Text>
+                <Text style={styles.headerSubtitleMain} numberOfLines={2}>
+                  Define vacantes y administra su ciclo de vida
+                </Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.newOfferButton} onPress={openCreateModal}>
-              <Feather name="plus" size={18} color="#fff" />
-              <Text style={styles.newOfferText}>Nueva Oferta</Text>
+            <TouchableOpacity style={styles.newOfferButtonMain} onPress={openCreateModal}>
+              <Feather name="plus" size={18} color="#F59E0B" />
+              <Text style={styles.newOfferTextMain}>Nueva Oferta de Trabajo</Text>
             </TouchableOpacity>
-          </View>
+          </MotiView>
 
           <View style={[styles.surfaceCard, styles.block, styles.tabsCard]}>
-            <TabButton label={`Activas (${activeCount})`} active={selectedTab === 'active'} onPress={() => setSelectedTab('active')} />
-            <TabButton label={`Archivadas (${archivedCount})`} active={selectedTab === 'archived'} onPress={() => setSelectedTab('archived')} />
-            <TabButton label={`Borradas (${deletedCount})`} active={selectedTab === 'deleted'} onPress={() => setSelectedTab('deleted')} />
+            <TabButton icon="check-circle" label={`Activas (${activeCount})`} active={selectedTab === 'active'} onPress={() => setSelectedTab('active')} />
+            <TabButton icon="pause-circle" label={`Pausadas (${pausedCount})`} active={selectedTab === 'paused'} onPress={() => setSelectedTab('paused')} />
+            <TabButton icon="x-circle" label={`Cerradas (${closedCount})`} active={selectedTab === 'closed'} onPress={() => setSelectedTab('closed')} />
           </View>
 
-          <View style={[styles.surfaceCard, styles.block, styles.listCard]}>
-            <Text style={styles.sectionLabel}>{sectionTitles[selectedTab]}</Text>
+          <View style={styles.listCard}>
             {filteredOffers.length === 0 ? (
               <View style={styles.emptyState}>
                 <Feather name="inbox" size={48} color="#D1D5DB" />
@@ -413,10 +479,8 @@ export function OffersManagementScreen() {
                   key={offer.id}
                   offer={offer}
                   onEdit={() => openEditModal(offer)}
-                  onArchive={() => requestOfferAction('archive', offer)}
-                  onRestore={() => requestOfferAction('restore', offer)}
-                  onDelete={() => requestOfferAction('delete', offer)}
                   onViewApplications={() => handleViewApplications(offer)}
+                  requestOfferAction={requestOfferAction}
                 />
               ))
             )}
@@ -424,158 +488,254 @@ export function OffersManagementScreen() {
         </View>
       </ScrollView>
 
-      {/* Modal Crear Oferta */}
-      <Modal visible={showCreateModal} animationType="slide" transparent onRequestClose={() => setShowCreateModal(false)}>
-        <View style={[styles.modalOverlay, isDesktop ? styles.modalOverlayDesktop : styles.modalOverlayMobile]}>
-          <View
-            style={[
-              styles.modalContent,
-              isDesktop ? styles.modalContentDesktop : styles.modalContentMobile,
-              { maxWidth: isDesktop ? 980 : contentWidth },
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Ingresar Oferta Laboral</Text>
-              <TouchableOpacity onPress={() => setShowCreateModal(false)}>
-                <Feather name="x" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalSubtitle}>Completa la descripción de la oferta y los perfiles requeridos</Text>
-            <OfferForm
-              title={title}
-              description={description}
-              department={department}
-              salary={salary}
-              salaryMin={salaryMin}
-              salaryMax={salaryMax}
-              modality={modality}
-              location={location}
-              competencies={competencies}
-              education={education}
-              newCompetency={newCompetency}
-              newEducation={newEducation}
-              tipoContrato={tipoContrato}
-              experiencia={experiencia}
-              setTitle={setTitle}
-              setDescription={setDescription}
-              setDepartment={setDepartment}
-              setSalary={setSalary}
-              setSalaryMin={setSalaryMin}
-              setSalaryMax={setSalaryMax}
-              setModality={setModality}
-              setLocation={setLocation}
-              setNewCompetency={setNewCompetency}
-              setNewEducation={setNewEducation}
-              setTipoContrato={setTipoContrato}
-              setExperiencia={setExperiencia}
-              addCompetency={() => {
-                if (newCompetency.trim()) {
-                  setCompetencies([...competencies, newCompetency.trim()]);
-                  setNewCompetency('');
-                }
-              }}
-              addEducation={() => {
-                if (newEducation.trim()) {
-                  setEducation([...education, newEducation.trim()]);
-                  setNewEducation('');
-                }
-              }}
-              removeCompetency={(idx) => setCompetencies(competencies.filter((_, i) => i !== idx))}
-              removeEducation={(idx) => setEducation(education.filter((_, i) => i !== idx))}
-            />
-            <TouchableOpacity
-              style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
-              onPress={handleCreateOffer}
-              disabled={isSubmitting}
+      {/* Modal Crear Oferta - Bottom Sheet Style */}
+      {showCreateModal && (
+        <Modal
+          visible={showCreateModal}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setShowCreateModal(false)}
+        >
+          <View style={styles.bottomSheetOverlay}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.bottomSheetKeyboardView}
             >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.submitText}>Publicar Oferta</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+              <View style={styles.bottomSheetContent}>
+                <View style={styles.bottomSheetHeader}>
+                  <View style={styles.bottomSheetTitleRow}>
+                    <View style={styles.bottomSheetIconBox}>
+                      <Feather name="briefcase" size={24} color="#F59E0B" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.bottomSheetEyebrow}>NUEVA OFERTA</Text>
+                      <Text style={styles.bottomSheetTitle}>Ingresar Oferta Laboral</Text>
+                      <Text style={styles.bottomSheetSubtitle}>Completa la descripción de la oferta y los perfiles requeridos</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity onPress={() => setShowCreateModal(false)} style={styles.bottomSheetCloseBtn}>
+                    <Feather name="x" size={20} color="#64748B" />
+                  </TouchableOpacity>
+                </View>
+                
+                <ScrollView style={styles.bottomSheetScroll} showsVerticalScrollIndicator={false}>
+                  <View style={styles.bottomSheetBody}>
+                    <OfferForm
+                      title={title}
+                      description={description}
+                      department={department}
+                      salary={salary}
+                      salaryMin={salaryMin}
+                      salaryMax={salaryMax}
+                      modality={modality}
+                      location={location}
+                      competencies={competencies}
+                      education={education}
+                      newCompetency={newCompetency}
+                      newEducation={newEducation}
+                      tipoContrato={tipoContrato}
+                      experiencia={experiencia}
+                      setTitle={setTitle}
+                      setDescription={setDescription}
+                      setDepartment={setDepartment}
+                      setSalary={setSalary}
+                      setSalaryMin={setSalaryMin}
+                      setSalaryMax={setSalaryMax}
+                      setModality={setModality}
+                      setLocation={setLocation}
+                      setNewCompetency={setNewCompetency}
+                      setNewEducation={setNewEducation}
+                      setTipoContrato={setTipoContrato}
+                      setExperiencia={setExperiencia}
+                      addCompetency={() => {
+                        if (newCompetency.trim()) {
+                          setCompetencies([...competencies, newCompetency.trim()]);
+                          setNewCompetency('');
+                        }
+                      }}
+                      addEducation={() => {
+                        if (newEducation.trim()) {
+                          setEducation([...education, newEducation.trim()]);
+                          setNewEducation('');
+                        }
+                      }}
+                      removeCompetency={(idx) => setCompetencies(competencies.filter((_, i) => i !== idx))}
+                      removeEducation={(idx) => setEducation(education.filter((_, i) => i !== idx))}
+                      onOpenSelection={(title, options, onSelect) => {
+                        setSelectionTitle(title);
+                        setSelectionOptions(options);
+                        setOnSelectOption(() => onSelect);
+                        setSelectionModalVisible(true);
+                      }}
+                      setCompetencies={setCompetencies}
+                      setEducation={setEducation}
+                      hierarchyLevel={hierarchyLevel}
+                      setHierarchyLevel={setHierarchyLevel}
+                    />
+                  </View>
+                </ScrollView>
+                
+                <View style={styles.bottomSheetFooter}>
+                  <TouchableOpacity
+                    style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
+                    onPress={handleCreateOffer}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.submitText}>Publicar Oferta</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
 
-      {/* Modal Editar Oferta */}
-      <Modal visible={showEditModal} animationType="slide" transparent onRequestClose={() => setShowEditModal(false)}>
-        <View style={[styles.modalOverlay, isDesktop ? styles.modalOverlayDesktop : styles.modalOverlayMobile]}>
-          <View
-            style={[
-              styles.modalContent,
-              isDesktop ? styles.modalContentDesktop : styles.modalContentMobile,
-              { maxWidth: isDesktop ? 980 : contentWidth },
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Actualizar Oferta</Text>
-              <TouchableOpacity onPress={() => setShowEditModal(false)}>
-                <Feather name="x" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalSubtitle}>Edita los detalles de la oferta "{selectedOffer?.title}"</Text>
-            <OfferForm
-              title={title}
-              description={description}
-              department={department}
-              salary={salary}
-              salaryMin={salaryMin}
-              salaryMax={salaryMax}
-              modality={modality}
-              location={location}
-              competencies={competencies}
-              education={education}
-              newCompetency={newCompetency}
-              newEducation={newEducation}
-              tipoContrato={tipoContrato}
-              experiencia={experiencia}
-              setTitle={setTitle}
-              setDescription={setDescription}
-              setDepartment={setDepartment}
-              setSalary={setSalary}
-              setSalaryMin={setSalaryMin}
-              setSalaryMax={setSalaryMax}
-              setModality={setModality}
-              setLocation={setLocation}
-              setNewCompetency={setNewCompetency}
-              setNewEducation={setNewEducation}
-              setTipoContrato={setTipoContrato}
-              setExperiencia={setExperiencia}
-              addCompetency={() => {
-                if (newCompetency.trim()) {
-                  setCompetencies([...competencies, newCompetency.trim()]);
-                  setNewCompetency('');
-                }
-              }}
-              addEducation={() => {
-                if (newEducation.trim()) {
-                  setEducation([...education, newEducation.trim()]);
-                  setNewEducation('');
-                }
-              }}
-              removeCompetency={(idx) => setCompetencies(competencies.filter((_, i) => i !== idx))}
-              removeEducation={(idx) => setEducation(education.filter((_, i) => i !== idx))}
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowEditModal(false)}>
-                <Text style={styles.cancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.saveButton, isSubmitting && styles.buttonDisabled]}
-                onPress={handleUpdateOffer}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.saveText}>Guardar Cambios</Text>
+                {/* Selection Overlay inside Create Modal */}
+                {selectionModalVisible && (
+                  <SelectionOverlay
+                    visible={selectionModalVisible}
+                    title={selectionTitle}
+                    options={selectionOptions}
+                    onSelect={(item) => {
+                      if (onSelectOption) onSelectOption(item);
+                      setSelectionModalVisible(false);
+                    }}
+                    onClose={() => setSelectionModalVisible(false)}
+                  />
                 )}
-              </TouchableOpacity>
-            </View>
+              </View>
+            </KeyboardAvoidingView>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
+
+
+      {/* Modal Editar Oferta - Bottom Sheet Style */}
+      {showEditModal && (
+        <Modal
+          visible={showEditModal}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setShowEditModal(false)}
+        >
+          <View style={styles.bottomSheetOverlay}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.bottomSheetKeyboardView}
+            >
+              <View style={styles.bottomSheetContent}>
+                <View style={styles.bottomSheetHeader}>
+                  <View style={styles.bottomSheetTitleRow}>
+                    <View style={styles.bottomSheetIconBox}>
+                      <Feather name="edit-2" size={24} color="#F59E0B" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.bottomSheetEyebrow}>EDITAR OFERTA</Text>
+                      <Text style={styles.bottomSheetTitle} numberOfLines={1}>Actualizar Detalles</Text>
+                      <Text style={styles.bottomSheetSubtitle} numberOfLines={1}>Modifica los requisitos o descripción de "{selectedOffer?.title}"</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity onPress={() => setShowEditModal(false)} style={styles.bottomSheetCloseBtn}>
+                    <Feather name="x" size={20} color="#64748B" />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={styles.bottomSheetScroll} showsVerticalScrollIndicator={false}>
+                  <View style={styles.bottomSheetBody}>
+                    <OfferForm
+                      title={title}
+                      description={description}
+                      department={department}
+                      salary={salary}
+                      salaryMin={salaryMin}
+                      salaryMax={salaryMax}
+                      modality={modality}
+                      location={location}
+                      competencies={competencies}
+                      education={education}
+                      newCompetency={newCompetency}
+                      newEducation={newEducation}
+                      tipoContrato={tipoContrato}
+                      experiencia={experiencia}
+                      setTitle={setTitle}
+                      setDescription={setDescription}
+                      setDepartment={setDepartment}
+                      setSalary={setSalary}
+                      setSalaryMin={setSalaryMin}
+                      setSalaryMax={setSalaryMax}
+                      setModality={setModality}
+                      setLocation={setLocation}
+                      setNewCompetency={setNewCompetency}
+                      setNewEducation={setNewEducation}
+                      setTipoContrato={setTipoContrato}
+                      setExperiencia={setExperiencia}
+                      addCompetency={() => {
+                        if (newCompetency.trim()) {
+                          setCompetencies([...competencies, newCompetency.trim()]);
+                          setNewCompetency('');
+                        }
+                      }}
+                      addEducation={() => {
+                        if (newEducation.trim()) {
+                          setEducation([...education, newEducation.trim()]);
+                          setNewEducation('');
+                        }
+                      }}
+                      removeCompetency={(idx) => setCompetencies(competencies.filter((_, i) => i !== idx))}
+                      removeEducation={(idx) => setEducation(education.filter((_, i) => i !== idx))}
+                      onOpenSelection={(title, options, onSelect) => {
+                        setSelectionTitle(title);
+                        setSelectionOptions(options);
+                        setOnSelectOption(() => onSelect);
+                        setSelectionModalVisible(true);
+                      }}
+                      setCompetencies={setCompetencies}
+                      setEducation={setEducation}
+                      hierarchyLevel={hierarchyLevel}
+                      setHierarchyLevel={setHierarchyLevel}
+                    />
+                  </View>
+                </ScrollView>
+
+                <View style={styles.bottomSheetFooter}>
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <TouchableOpacity 
+                      style={[styles.cancelButton, { flex: 1, height: 50, justifyContent: 'center' }]} 
+                      onPress={() => setShowEditModal(false)}
+                    >
+                      <Text style={styles.cancelText}>Cancelar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.submitButton, isSubmitting && styles.buttonDisabled, { flex: 2, height: 50 }]}
+                      onPress={handleUpdateOffer}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.submitText}>Guardar Cambios</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Selection Overlay inside Edit Modal */}
+                {selectionModalVisible && (
+                  <SelectionOverlay
+                    visible={selectionModalVisible}
+                    title={selectionTitle}
+                    options={selectionOptions}
+                    onSelect={(item) => {
+                      if (onSelectOption) onSelectOption(item);
+                      setSelectionModalVisible(false);
+                    }}
+                    onClose={() => setSelectionModalVisible(false)}
+                  />
+                )}
+              </View>
+            </KeyboardAvoidingView>
+          </View>
+        </Modal>
+      )}
 
       {/* Modal Confirmar Acción */}
       <Modal visible={!!pendingAction} animationType="fade" transparent onRequestClose={closeActionModal}>
@@ -661,37 +821,62 @@ export function OffersManagementScreen() {
                 style={styles.applicationsList}
                 renderItem={({ item }) => {
                   const statusInfo = ApplicationStatusColors[item.estado];
-                  const fechaApp = item.fechaAplicacion instanceof Date
-                    ? item.fechaAplicacion
-                    : new Date(item.fechaAplicacion);
+                  const candidateName = item.candidato?.nombreCompleto || 'Candidato sin nombre';
+                  const candidateEmail = item.candidato?.email || 'Email no disponible';
+                  const candidateEdu = item.candidato?.nivelEducativo || 'Nivel no especificado';
+                  
+                  const rawDate = item.fechaAplicacion;
+                  let fechaApp: Date;
+                  if (rawDate instanceof Date) {
+                    fechaApp = rawDate;
+                  } else if (typeof rawDate === 'string' && rawDate) {
+                    fechaApp = new Date(rawDate);
+                  } else {
+                    fechaApp = new Date();
+                  }
+                  const isValidDate = !isNaN(fechaApp.getTime());
 
                   return (
                     <View style={styles.applicationItem}>
                       <View style={styles.applicationItemHeader}>
                         <View style={styles.applicationItemInfo}>
-                          <Text style={styles.applicationItemId}>
-                            Candidato: {item.idPostulante.slice(0, 8)}...
-                          </Text>
-                          <Text style={styles.applicationItemDate}>
-                            {fechaApp.toLocaleDateString('es-EC', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric'
-                            })}
+                          <Text style={styles.applicationItemId}>{candidateName}</Text>
+                          <Text style={styles.applicationItemDate}>{candidateEmail}</Text>
+                          <Text style={[styles.applicationItemDate, { color: '#F59E0B', fontWeight: '600', marginTop: 2 }]}>
+                            {candidateEdu}
                           </Text>
                         </View>
-                        <View style={[styles.applicationItemBadge, { backgroundColor: statusInfo.bg }]}>
-                          <Text style={[styles.applicationItemBadgeText, { color: statusInfo.text }]}>
-                            {statusInfo.label}
-                          </Text>
+                        <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                          <View style={[styles.applicationItemBadge, { backgroundColor: statusInfo.bg }]}>
+                            <Text style={[styles.applicationItemBadgeText, { color: statusInfo.text }]}>
+                              {statusInfo.label}
+                            </Text>
+                          </View>
+                          {item.matchScore !== undefined && (
+                            <View style={styles.matchScoreBadgeSmall}>
+                              <Text style={styles.matchScoreTextSmall}>{item.matchScore}% Match</Text>
+                            </View>
+                          )}
                         </View>
                       </View>
-                      {item.matchScore !== undefined && (
-                        <View style={styles.applicationItemScore}>
-                          <Text style={styles.applicationItemScoreLabel}>Match Score:</Text>
-                          <Text style={styles.applicationItemScoreValue}>{item.matchScore}%</Text>
-                        </View>
-                      )}
+                      
+                      <View style={styles.applicationItemFooter}>
+                         <View style={{ flex: 1 }}>
+                           <Text style={styles.applicationItemDate}>
+                              Aplicado: {isValidDate ? fechaApp.toLocaleDateString('es-EC') : 'Fecha no disponible'}
+                            </Text>
+                         </View>
+                         
+                         {item.candidato?.cvUrl && (
+                           <TouchableOpacity 
+                             style={styles.cvDownloadBtnInline} 
+                             onPress={() => Linking.openURL(item.candidato!.cvUrl!)}
+                           >
+                             <Feather name="file-text" size={14} color="#F59E0B" />
+                             <Text style={styles.cvDownloadBtnText}>Ver CV</Text>
+                           </TouchableOpacity>
+                         )}
+                      </View>
                     </View>
                   );
                 }}
@@ -700,13 +885,59 @@ export function OffersManagementScreen() {
           </View>
         </View>
       </Modal>
+
     </View>
   );
 }
 
-function TabButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function SelectionOverlay({ 
+  visible, 
+  title, 
+  options, 
+  onSelect, 
+  onClose 
+}: { 
+  visible: boolean; 
+  title: string; 
+  options: string[]; 
+  onSelect: (item: string) => void; 
+  onClose: () => void;
+}) {
+  if (!visible) return null;
+
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      <TouchableOpacity
+        style={styles.selectionModalOverlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <View style={styles.selectionModalContent}>
+          <Text style={styles.selectionModalTitle}>{title}</Text>
+          <FlatList
+            data={options}
+            keyExtractor={(item) => item}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.selectionOption}
+                onPress={() => onSelect(item)}
+              >
+                <Text style={styles.selectionOptionText}>{item}</Text>
+                <Feather name="chevron-right" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function TabButton({ icon, label, active, onPress }: { icon: keyof typeof Feather.glyphMap; label: string; active: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity style={[styles.tab, active && styles.tabActive]} onPress={onPress}>
+      <Feather name={icon} size={16} color={active ? '#4B5BE8' : '#6B7280'} style={{ marginRight: 6 }} />
       <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -715,34 +946,22 @@ function TabButton({ label, active, onPress }: { label: string; active: boolean;
 function OfferCard({
   offer,
   onEdit,
-  onArchive,
-  onRestore,
-  onDelete,
   onViewApplications,
+  requestOfferAction,
 }: {
   offer: JobOffer;
   onEdit: () => void;
-  onArchive: () => void;
-  onRestore: () => void;
-  onDelete: () => void;
   onViewApplications: () => void;
+  requestOfferAction: (action: OfferAction, offer: JobOffer) => void;
 }) {
   return (
     <View style={styles.offerCard}>
       <View style={styles.offerHeader}>
         <Text style={styles.offerTitle}>{offer.title}</Text>
-        <View style={styles.badges}>
-          <View style={styles.statusBadge}>
-            <Text style={[styles.statusBadgeText, offer.status === 'active' ? styles.statusActive : styles.statusMuted]}>
-              {offer.status === 'active' ? 'Activa' : offer.status === 'archived' ? 'Archivada' : 'Borrada'}
-            </Text>
-          </View>
-          <View style={styles.priorityBadge}>
-            <Text style={styles.priorityText}>{offer.priority}</Text>
-          </View>
-        </View>
+        <TouchableOpacity onPress={onEdit} style={styles.headerEditBtn}>
+          <Feather name="edit-2" size={18} color="#10B981" />
+        </TouchableOpacity>
       </View>
-      <Text style={styles.offerDepartment}>{offer.department}</Text>
       <Text style={styles.offerDescription} numberOfLines={2}>
         {offer.description}
       </Text>
@@ -757,34 +976,38 @@ function OfferCard({
           <>
             <TouchableOpacity style={styles.infoGhost} onPress={onViewApplications}>
               <Feather name="users" size={16} color="#3B82F6" />
-              <Text style={[styles.actionText, { color: '#3B82F6' }]}>Aplicaciones</Text>
+              <Text style={[styles.actionText, { color: '#3B82F6' }]}>Candidatos</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.primaryGhost} onPress={onEdit}>
-              <Feather name="edit-2" size={16} color="#10B981" />
-              <Text style={[styles.actionText, { color: '#10B981' }]}>Actualizar</Text>
+            <TouchableOpacity style={styles.warningGhost} onPress={() => requestOfferAction('pause', offer)}>
+              <Feather name="pause" size={16} color="#F59E0B" />
+              <Text style={[styles.actionText, { color: '#F59E0B' }]}>Pausar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.warningGhost} onPress={onArchive}>
-              <Feather name="archive" size={16} color="#F59E0B" />
-              <Text style={[styles.actionText, { color: '#F59E0B' }]}>Archivar</Text>
+            <TouchableOpacity style={styles.dangerGhost} onPress={() => requestOfferAction('close', offer)}>
+              <Feather name="x-circle" size={16} color="#EF4444" />
+              <Text style={[styles.actionText, { color: '#EF4444' }]}>Cerrar</Text>
             </TouchableOpacity>
           </>
         )}
-        {offer.status === 'archived' && (
+        {offer.status === 'paused' && (
           <>
-            <TouchableOpacity style={styles.primaryGhost} onPress={onRestore}>
-              <Feather name="rotate-ccw" size={16} color="#10B981" />
-              <Text style={[styles.actionText, { color: '#10B981' }]}>Restaurar</Text>
+            <TouchableOpacity style={styles.infoGhost} onPress={onViewApplications}>
+              <Feather name="users" size={16} color="#3B82F6" />
+              <Text style={[styles.actionText, { color: '#3B82F6' }]}>Candidatos</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.dangerGhost} onPress={onDelete}>
-              <Feather name="trash-2" size={16} color="#DC2626" />
-              <Text style={[styles.actionText, { color: '#DC2626' }]}>Eliminar</Text>
+            <TouchableOpacity style={styles.primaryGhost} onPress={() => requestOfferAction('resume', offer)}>
+              <Feather name="play" size={16} color="#10B981" />
+              <Text style={[styles.actionText, { color: '#10B981' }]}>Reactivar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.dangerGhost} onPress={() => requestOfferAction('close', offer)}>
+              <Feather name="x-circle" size={16} color="#EF4444" />
+              <Text style={[styles.actionText, { color: '#EF4444' }]}>Cerrar</Text>
             </TouchableOpacity>
           </>
         )}
-        {offer.status === 'deleted' && (
+        {offer.status === 'closed' && (
           <View style={styles.deletedTag}>
-            <Feather name="trash-2" size={16} color="#B91C1C" />
-            <Text style={styles.deletedTagText}>Oferta retirada</Text>
+            <Feather name="lock" size={16} color="#6B7280" />
+            <Text style={[styles.deletedTagText, { color: '#6B7280' }]}>Oferta Cerrada</Text>
           </View>
         )}
       </View>
@@ -832,6 +1055,11 @@ function OfferForm({
   addEducation,
   removeCompetency,
   removeEducation,
+  onOpenSelection,
+  setCompetencies,
+  setEducation,
+  hierarchyLevel,
+  setHierarchyLevel,
 }: {
   title: string;
   description: string;
@@ -863,11 +1091,54 @@ function OfferForm({
   addEducation: () => void;
   removeCompetency: (index: number) => void;
   removeEducation: (index: number) => void;
+  onOpenSelection: (title: string, options: string[], onSelect: (option: string) => void) => void;
+  setCompetencies: (items: string[]) => void;
+  setEducation: (items: string[]) => void;
+  hierarchyLevel: HierarchyLevel;
+  setHierarchyLevel: (v: HierarchyLevel) => void;
 }) {
+  const MODALITY_OPTIONS = ['Presencial', 'Híbrido', 'Remoto'];
+  const CONTRACT_OPTIONS = ['Tiempo Completo', 'Medio Tiempo', 'Por Horas', 'Temporal', 'Freelance', 'Pasantía'];
+  const HIERARCHY_OPTIONS: HierarchyLevel[] = ['Junior', 'Semi-Senior', 'Senior', 'Gerencial'];
+
+  // Reuse Web lists
+  const COMMON_COMPETENCIES = [
+    'JavaScript', 'TypeScript', 'React', 'React Native', 'Angular', 'Vue.js', 'Node.js',
+    'Python', 'Java', 'C#', 'C++', 'PHP', 'Ruby', 'Go', 'Rust', 'Swift', 'Kotlin',
+    'SQL', 'MySQL', 'PostgreSQL', 'MongoDB', 'Firebase', 'Redis', 'GraphQL',
+    'AWS', 'Google Cloud', 'Azure', 'Docker', 'Kubernetes', 'CI/CD', 'DevOps',
+    'Git', 'GitHub', 'GitLab', 'Jira', 'Agile', 'Scrum', 'Kanban',
+    'HTML', 'CSS', 'SASS', 'Tailwind CSS', 'Bootstrap', 'Material UI',
+    'REST API', 'Microservicios', 'Arquitectura de Software',
+    'Machine Learning', 'Inteligencia Artificial', 'Data Science', 'Big Data',
+    'Seguridad Informática', 'Pentesting', 'Ciberseguridad',
+    'Comunicación', 'Trabajo en Equipo', 'Liderazgo', 'Resolución de Problemas',
+    'Gestión de Proyectos', 'Negociación', 'Presentaciones', 'Ventas',
+    'Inglés', 'Español', 'Portugués', 'Francés', 'Alemán',
+    'Excel', 'Power BI', 'Tableau', 'SAP', 'ERP', 'CRM', 'Salesforce',
+    'Marketing Digital', 'SEO', 'SEM', 'Google Analytics', 'Redes Sociales',
+    'Diseño Gráfico', 'UI/UX', 'Figma', 'Adobe Photoshop', 'Adobe Illustrator',
+    'Contabilidad', 'Finanzas', 'Recursos Humanos', 'Administración de Empresas',
+    'Atención al Cliente', 'Soporte Técnico', 'Help Desk',
+  ];
+
+  const COMMON_EDUCATION = [
+    'Ingeniería en Sistemas', 'Ingeniería de Software', 'Ingeniería Informática',
+    'Licenciatura en Ciencias de la Computación', 'Tecnólogo en Desarrollo de Software',
+    'Administración de Empresas', 'Contabilidad y Auditoría', 'Economía',
+    'Ingeniería Comercial', 'Marketing', 'Diseño Gráfico',
+    'Comunicación Social', 'Derecho', 'Psicología',
+    'Ingeniería Industrial', 'Ingeniería Civil', 'Arquitectura',
+    'Medicina', 'Enfermería', 'Educación',
+  ];
   return (
-    <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.modalForm}
+      contentContainerStyle={{ paddingBottom: 100 }}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Título del Puesto *</Text>
+        <Text style={styles.label}>Título</Text>
         <TextInput
           style={styles.input}
           value={title}
@@ -877,7 +1148,16 @@ function OfferForm({
         />
       </View>
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Descripción de la Oferta *</Text>
+        <Text style={styles.label}>Departamento</Text>
+        <TextInput
+          style={styles.input}
+          onChangeText={setDepartment}
+          placeholder="Ej: Tecnología, RRHH..."
+          placeholderTextColor="#9CA3AF"
+        />
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Descripción</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={description}
@@ -885,16 +1165,6 @@ function OfferForm({
           placeholder="Describe las responsabilidades, funciones y requisitos del puesto..."
           multiline
           numberOfLines={4}
-          placeholderTextColor="#9CA3AF"
-        />
-      </View>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Empresa / Departamento</Text>
-        <TextInput
-          style={styles.input}
-          value={department}
-          onChangeText={setDepartment}
-          placeholder="Ej: Mi Empresa S.A."
           placeholderTextColor="#9CA3AF"
         />
       </View>
@@ -925,28 +1195,36 @@ function OfferForm({
       <View style={styles.row}>
         <View style={[styles.inputGroup, styles.flex1]}>
           <Text style={styles.label}>Modalidad</Text>
-          <View style={styles.selectContainer}>
+          <TouchableOpacity
+            style={styles.selectContainer}
+            onPress={() => onOpenSelection('Selecciona Modalidad', MODALITY_OPTIONS, setModality)}
+          >
             <Text style={styles.selectText}>{modality}</Text>
             <Feather name="chevron-down" size={20} color="#6B7280" />
-          </View>
+          </TouchableOpacity>
         </View>
         <View style={[styles.inputGroup, styles.flex1]}>
-          <Text style={styles.label}>Tipo de Contrato</Text>
-          <View style={styles.selectContainer}>
-            <Text style={styles.selectText}>{tipoContrato}</Text>
-            <Feather name="chevron-down" size={20} color="#6B7280" />
-          </View>
+          <Text style={styles.label}>Ubicación</Text>
+          <TextInput
+            style={styles.input}
+            value={location}
+            onChangeText={setLocation}
+            placeholder="Loja"
+            placeholderTextColor="#9CA3AF"
+          />
         </View>
       </View>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Ubicación</Text>
-        <TextInput
-          style={styles.input}
-          value={location}
-          onChangeText={setLocation}
-          placeholder="Loja"
-          placeholderTextColor="#9CA3AF"
-        />
+      <View style={styles.row}>
+        <View style={[styles.inputGroup, styles.flex1]}>
+          <Text style={styles.label}>Tipo de Contrato</Text>
+          <TouchableOpacity
+            style={styles.selectContainer}
+            onPress={() => onOpenSelection('Tipo de Contrato', CONTRACT_OPTIONS, setTipoContrato)}
+          >
+            <Text style={styles.selectText}>{tipoContrato}</Text>
+            <Feather name="chevron-down" size={20} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
       </View>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Experiencia Requerida</Text>
@@ -958,58 +1236,39 @@ function OfferForm({
           placeholderTextColor="#9CA3AF"
         />
       </View>
-
+      <View style={[styles.inputGroup, styles.flex1]}>
+        <Text style={styles.label}>Nivel Jerárquico</Text>
+        <TouchableOpacity
+          style={styles.selectContainer}
+          onPress={() => onOpenSelection('Nivel Jerárquico', HIERARCHY_OPTIONS, (val) => setHierarchyLevel(val as HierarchyLevel))}
+        >
+          <Text style={styles.selectText}>{hierarchyLevel}</Text>
+          <Feather name="chevron-down" size={20} color="#6B7280" />
+        </TouchableOpacity>
+      </View>
       <Text style={styles.sectionTitle}>Perfiles Requeridos</Text>
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Competencias Requeridas</Text>
-        <View style={styles.addInputRow}>
-          <TextInput
-            style={[styles.input, styles.flex1]}
-            value={newCompetency}
-            onChangeText={setNewCompetency}
-            placeholder="Ej: Trabajo en equipo, Liderazgo..."
-            placeholderTextColor="#9CA3AF"
-          />
-          <TouchableOpacity style={styles.addButton} onPress={addCompetency}>
-            <Feather name="plus" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.chipContainer}>
-          {competencies.map((comp, index) => (
-            <View key={comp + index} style={styles.chip}>
-              <Text style={styles.chipText}>{comp}</Text>
-              <TouchableOpacity onPress={() => removeCompetency(index)}>
-                <Feather name="x" size={14} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
+        <AutocompleteInput
+          label="Competencias Requeridas"
+          placeholder="Ej: Trabajo en equipo, Liderazgo..."
+          selectedItems={competencies}
+          suggestions={COMMON_COMPETENCIES}
+          onChange={setCompetencies}
+          maxItems={10}
+          chipColor="#3B82F6"
+        />
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Formación Requerida</Text>
-        <View style={styles.addInputRow}>
-          <TextInput
-            style={[styles.input, styles.flex1]}
-            value={newEducation}
-            onChangeText={setNewEducation}
-            placeholder="Ej: Ingeniería en Sistemas, Licenciatura en Administración..."
-            placeholderTextColor="#9CA3AF"
-          />
-          <TouchableOpacity style={styles.addButton} onPress={addEducation}>
-            <Feather name="plus" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.chipContainer}>
-          {education.map((edu, index) => (
-            <View key={edu + index} style={styles.chip}>
-              <Text style={styles.chipText}>{edu}</Text>
-              <TouchableOpacity onPress={() => removeEducation(index)}>
-                <Feather name="x" size={14} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
+      <View style={[styles.inputGroup, { zIndex: 10 }]}>
+        <AutocompleteInput
+          label="Formación Requerida"
+          placeholder="Ej: Ingeniería en Sistemas..."
+          selectedItems={education}
+          suggestions={COMMON_EDUCATION}
+          onChange={setEducation}
+          maxItems={5}
+          chipColor="#8B5CF6"
+        />
       </View>
     </ScrollView>
   );
@@ -1018,7 +1277,7 @@ function OfferForm({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   centerContent: {
     justifyContent: 'center',
@@ -1058,6 +1317,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    paddingTop: 24,
     paddingBottom: 32,
     width: '100%',
   },
@@ -1080,44 +1340,46 @@ const styles = StyleSheet.create({
   block: {
     width: '100%',
   },
-  headerContent: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
+    gap: 16,
+    marginBottom: 20,
   },
-  iconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FEF3C7',
+  headerIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerText: {
-    flex: 1,
+  headerTitleMain: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFF',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  headerSubtitle: {
+  headerSubtitleMain: {
     fontSize: 13,
-    color: '#6B7280',
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 2,
   },
-  newOfferButton: {
+  newOfferButtonMain: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#F59E0B',
-    paddingVertical: 12,
-    borderRadius: 12,
+    gap: 10,
+    backgroundColor: '#FFF',
+    paddingVertical: 14,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  newOfferText: {
-    color: '#fff',
-    fontWeight: '700',
+  newOfferTextMain: {
+    color: '#F59E0B',
+    fontWeight: '800',
     fontSize: 15,
   },
   tabsCard: {
@@ -1202,36 +1464,10 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     flex: 1,
   },
-  badges: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#F3F4F6',
-  },
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  statusActive: {
-    color: '#10B981',
-  },
-  statusMuted: {
-    color: '#6B7280',
-  },
-  priorityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#FEF3C7',
-  },
-  priorityText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#D97706',
+  headerEditBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#ECFDF5',
   },
   offerDepartment: {
     fontSize: 13,
@@ -1261,44 +1497,51 @@ const styles = StyleSheet.create({
   },
   offerActions: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 10,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   primaryGhost: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     backgroundColor: '#ECFDF5',
   },
   warningGhost: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     backgroundColor: '#FEF3C7',
   },
   dangerGhost: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     backgroundColor: '#FEE2E2',
   },
   infoGhost: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     backgroundColor: '#DBEAFE',
   },
@@ -1322,7 +1565,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)', // Light translucent white instead of gray
   },
   modalOverlayDesktop: {
     justifyContent: 'center',
@@ -1447,7 +1690,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 0,
   },
   submitText: {
     color: '#fff',
@@ -1476,7 +1719,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#10B981',
+    backgroundColor: '#F59E0B',
   },
   saveText: {
     color: '#fff',
@@ -1594,10 +1837,55 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
   },
+  readonlyInput: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
+    color: '#6B7280',
+  },
+  selectionModalContent: {
+    width: '80%',
+    maxHeight: '60%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  selectionModalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    zIndex: 1000,
+  },
+  selectionModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  selectionOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  selectionOptionText: {
+    fontSize: 16,
+    color: '#374151',
+  },
   applicationItemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 8,
   },
   applicationItemInfo: {
     flex: 1,
@@ -1621,14 +1909,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
-  applicationItemScore: {
+  applicationItemFooter: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     gap: 4,
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
+  },
+  applicationItemScore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   applicationItemScoreLabel: {
     fontSize: 12,
@@ -1638,5 +1932,106 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#10B981',
+  },
+  // Bottom Sheet Modal Styles
+  bottomSheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheetKeyboardView: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  bottomSheetContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '95%',
+    width: '100%',
+    overflow: 'hidden',
+  },
+  bottomSheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  bottomSheetTitleRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+    flex: 1,
+  },
+  bottomSheetIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#FEF3C7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomSheetEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#F59E0B',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  bottomSheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  bottomSheetSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  bottomSheetCloseBtn: {
+    padding: 4,
+  },
+  bottomSheetScroll: {
+    maxHeight: '100%',
+  },
+  bottomSheetFooter: {
+    padding: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+  },
+  bottomSheetBody: {
+    padding: 20,
+    gap: 20,
+  },
+  matchScoreBadgeSmall: {
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  matchScoreTextSmall: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#065F46',
+  },
+  cvDownloadBtnInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+  },
+  cvDownloadBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#F59E0B',
   },
 });

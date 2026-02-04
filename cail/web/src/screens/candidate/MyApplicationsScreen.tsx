@@ -2,13 +2,21 @@ import { useCallback, useEffect, useState } from 'react';
 import { colors } from '../../theme/colors';
 import { useResponsiveLayout } from '../../hooks/useResponsive';
 import { applicationsService } from '../../services/applications.service';
+import { FiBriefcase, FiMapPin, FiCalendar, FiClock, FiEye, FiCheckCircle, FiXCircle, FiInbox, FiRefreshCw, FiAward, FiExternalLink } from 'react-icons/fi';
 import { ApplicationWithOffer, ApplicationStatus, ApplicationStatusColors } from '../../types/applications.types';
+import { Offer } from '../../types/offers.types';
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 
-export function MyApplicationsScreen() {
+interface MyApplicationsScreenProps {
+  searchQuery?: string;
+}
+
+export function MyApplicationsScreen({ searchQuery = '' }: MyApplicationsScreenProps) {
   const { contentWidth } = useResponsiveLayout();
   const [applications, setApplications] = useState<ApplicationWithOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedOffer, setSelectedOffer] = useState<any | null>(null);
 
   const loadApplications = useCallback(async (showRefresh = false) => {
     try {
@@ -35,29 +43,48 @@ export function MyApplicationsScreen() {
   const getStatusIcon = (estado: ApplicationStatus) => {
     switch (estado) {
       case 'ACEPTADA':
-        return '●';
+        return <FiCheckCircle size={14} />;
       case 'RECHAZADA':
-        return '●';
+        return <FiXCircle size={14} />;
       case 'EN_REVISION':
-        return '👀';
+        return <FiEye size={14} />;
       default:
-        return '⏳';
+        return <FiClock size={14} />;
     }
   };
 
+  const filteredApplications = applications.filter((app: ApplicationWithOffer) => {
+    if (!searchQuery) return true;
+    const term = searchQuery.toLowerCase();
+    return (
+      app.oferta?.titulo.toLowerCase().includes(term)
+    );
+  });
+
+  const formatContractType = (type?: string) => {
+    if (!type) return 'No especificado';
+    return type.toLowerCase().replace(/_/g, ' ')
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
+  const formatModality = (modality?: string) => {
+    if (!modality) return '-';
+    const m = modality.toUpperCase();
+    if (m === 'PRESENCIAL') return 'Presencial';
+    if (m === 'REMOTO') return 'Remoto';
+    if (m === 'HIBRIDO' || m === 'HÍBRIDO') return 'Híbrido';
+    return modality;
+  };
+
   const stats = {
-    total: applications.length,
-    pending: applications.filter((app) => app.estado === 'PENDIENTE').length,
-    review: applications.filter((app) => app.estado === 'EN_REVISION').length,
-    accepted: applications.filter((app) => app.estado === 'ACEPTADA').length,
+    total: filteredApplications.length,
+    pending: filteredApplications.filter((app: ApplicationWithOffer) => app.estado === 'PENDIENTE').length,
+    review: filteredApplications.filter((app: ApplicationWithOffer) => app.estado === 'EN_REVISION').length,
+    accepted: filteredApplications.filter((app: ApplicationWithOffer) => app.estado === 'ACEPTADA').length,
   };
 
   if (isLoading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
-        <div style={{ color: '#6B7280' }}>Cargando postulaciones...</div>
-      </div>
-    );
+    return <LoadingSpinner message="Cargando postulaciones..." color="#0B7A4D" />;
   }
 
   return (
@@ -65,38 +92,70 @@ export function MyApplicationsScreen() {
       {/* Header */}
       <div
         style={{
-          background: '#0B7A4D',
-          borderRadius: 16,
-          padding: 20,
+          background: 'linear-gradient(135deg, #0B7A4D 0%, #065F46 100%)',
+          borderRadius: 20,
+          padding: '24px',
           color: '#fff',
           display: 'flex',
-          gap: 16,
+          justifyContent: 'space-between',
           alignItems: 'center',
+          gap: 16,
+          boxShadow: '0 8px 16px rgba(11, 122, 77, 0.15)',
+          position: 'relative',
+          overflow: 'hidden'
         }}
       >
-        <div
+        <div style={{ position: 'absolute', right: '-15px', top: '-15px', opacity: 0.1, color: '#fff' }}>
+          <FiBriefcase size={100} />
+        </div>
+
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', zIndex: 1 }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 14,
+              background: 'rgba(255,255,255,0.2)',
+              backdropFilter: 'blur(8px)',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            <FiBriefcase size={26} strokeWidth={2.5} />
+          </div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.01em' }}>Mis Postulaciones</div>
+            <div style={{ fontSize: 13, opacity: 0.9 }}>Sigue el estado de tus aplicaciones en tiempo real</div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            loadApplications(true);
+          }}
+          disabled={isRefreshing}
           style={{
-            width: 48,
-            height: 48,
-            borderRadius: 12,
+            zIndex: 1,
             background: 'rgba(255,255,255,0.2)',
+            border: 'none',
+            color: '#fff',
+            cursor: 'pointer',
+            width: 44,
+            height: 44,
+            borderRadius: 12,
             display: 'grid',
             placeItems: 'center',
+            transition: 'all 0.2s',
+            backdropFilter: 'blur(8px)',
           }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+          title="Actualizar listado"
         >
-          <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-        </div>
-        <div>
-          <div style={{ fontSize: 18, fontWeight: 700 }}>Mis postulaciones</div>
-          <div style={{ fontSize: 13, opacity: 0.9 }}>Historial de ofertas aplicadas</div>
-        </div>
+          <FiRefreshCw className={isRefreshing ? 'spin-animation' : ''} size={20} />
+        </button>
       </div>
 
       {/* Stats */}
@@ -121,71 +180,317 @@ export function MyApplicationsScreen() {
 
       {/* Applications */}
       <div style={{ display: 'grid', gap: 12 }}>
-        {applications.map((item) => {
-          const statusInfo = ApplicationStatusColors[item.estado];
-          return (
-            <div key={item.idAplicacion} style={{ background: '#fff', borderRadius: 14, padding: 14, border: '1px solid #E5E7EB' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-                <div>
-                  <div style={{ fontWeight: 700 }}>{item.oferta?.titulo || 'Oferta'}</div>
-                  <div style={{ fontSize: 13, color: colors.textSecondary }}>{item.oferta?.empresa || '-'}</div>
-                </div>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '4px 8px',
-                    borderRadius: 12,
-                    background: statusInfo.bg,
-                    color: statusInfo.text,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    height: 'fit-content',
-                  }}
-                >
-                  {getStatusIcon(item.estado)} {statusInfo.label}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 12, color: colors.textSecondary, marginBottom: 8 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  {item.oferta?.ciudad || '-'}
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  {item.oferta?.modalidad || '-'}
-                </span>
-              </div>
-
-              <div style={{ fontSize: 12, color: colors.muted }}>
-                📅 Aplicado: {formatDate(item.fechaAplicacion)}
-              </div>
+        {filteredApplications.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            background: '#fff',
+            borderRadius: 16,
+            border: '1px solid #E5E7EB',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 16
+          }}>
+            <div style={{ width: 64, height: 64, borderRadius: 20, background: '#F3F4F6', display: 'grid', placeItems: 'center', color: '#9CA3AF' }}>
+              <FiInbox size={32} />
             </div>
-          );
-        })}
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#1F2937' }}>No se encontraron postulaciones</div>
+              <div style={{ fontSize: 14, color: '#6B7280', marginTop: 4 }}>Intenta con otro término de búsqueda o ajusta tus filtros.</div>
+            </div>
+          </div>
+        ) : (
+          filteredApplications.map((item: ApplicationWithOffer) => {
+            const statusInfo = ApplicationStatusColors[item.estado];
+            return (
+              <div
+                key={item.idAplicacion}
+                style={{
+                  background: '#fff',
+                  borderRadius: 16,
+                  padding: '20px',
+                  border: '1px solid #E5E7EB',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer',
+                  display: 'grid',
+                  gap: 16
+                }}
+                onClick={() => setSelectedOffer(item.oferta || null)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
+                  e.currentTarget.style.borderColor = '#0B7A4D40';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
+                  e.currentTarget.style.borderColor = '#E5E7EB';
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 12, background: '#F8FAFC', border: '1px solid #E2E8F0', display: 'grid', placeItems: 'center', color: '#0B7A4D' }}>
+                      <FiBriefcase size={22} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#1F2937', marginBottom: 2 }}>{item.oferta?.titulo || 'Oferta'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#64748B' }}>
+                          <FiMapPin size={12} /> {item.oferta?.ciudad || '-'}
+                        </div>
+                        <FiClock size={12} /> {formatModality(item.oferta?.modalidad)}
+                      </div>
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '6px 12px',
+                      borderRadius: 999,
+                      background: statusInfo.bg,
+                      color: statusInfo.text,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      boxShadow: `0 2px 4px ${statusInfo.bg}40`,
+                    }}
+                  >
+                    {getStatusIcon(item.estado)} {statusInfo.label}
+                  </span>
+                </div>
+
+                {item.oferta?.descripcion && (
+                  <div style={{
+                    fontSize: 13,
+                    color: '#475569',
+                    lineHeight: '1.5',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {item.oferta.descripcion}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: '#F8FAFC', borderRadius: 8, fontSize: 12, color: '#475569', border: '1px solid #F1F5F9' }}>
+                    <FiAward size={14} color="#0B7A4D" />
+                    <span>{formatContractType(item.oferta?.tipoContrato)}</span>
+                  </div>
+                  {(item.oferta?.salarioMin || item.oferta?.salarioMax || (item.oferta as any)?.salario_min || (item.oferta as any)?.salario_max) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: '#F8FAFC', borderRadius: 8, fontSize: 12, color: '#475569', border: '1px solid #F1F5F9' }}>
+                      <span style={{ color: '#059669', fontWeight: 700 }}>$</span>
+                      <span>
+                        {(() => {
+                          const o = item.oferta as any;
+                          const sMin = o?.salarioMin || o?.salario_min;
+                          const sMax = o?.salarioMax || o?.salario_max;
+                          if (sMin && sMax) return `${sMin} - ${sMax}`;
+                          if (sMin) return `${sMin}+`;
+                          if (sMax) return `${sMax}`;
+                          return '';
+                        })()}
+                      </span>
+                    </div>
+                  )}
+                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#94A3B8' }}>
+                    <FiCalendar size={13} />
+                    <span>Aplicado el {formatDate(item.fechaAplicacion)}</span>
+                  </div>
+                </div>
+
+              </div>
+            );
+          })
+        )}
       </div>
 
-      <button
-        type="button"
-        onClick={() => loadApplications(true)}
-        style={{
-          border: 'none',
-          background: 'transparent',
-          color: '#0B7A4D',
-          cursor: 'pointer',
-          fontSize: 13,
-          fontWeight: 600,
-        }}
-      >
-        {isRefreshing ? 'Actualizando...' : 'Actualizar'}
-      </button>
-    </div>
+
+      {/* DETALLES DE OFERTA MODAL */}
+      {
+        selectedOffer && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 9999,
+            }}
+            onClick={() => setSelectedOffer(null)}
+          >
+            <div
+              style={{
+                background: '#fff',
+                borderRadius: 24,
+                padding: '32px',
+                maxWidth: '600px',
+                width: '95%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                position: 'relative'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 24 }}>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                  <div style={{ width: 56, height: 56, borderRadius: 16, background: '#F8FAFC', border: '1px solid #E2E8F0', display: 'grid', placeItems: 'center', color: '#0B7A4D' }}>
+                    <FiBriefcase size={24} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#111827' }}>{selectedOffer.titulo}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedOffer(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF' }}
+                >
+                  <FiXCircle size={24} />
+                </button>
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#0B7A4D', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Descripción del puesto</div>
+                <div style={{ fontSize: 15, color: '#374151', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                  {selectedOffer.descripcion}
+                </div>
+              </div>
+
+              <div style={{ background: '#F8FAFC', borderRadius: 16, padding: 24, border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#1F2937', marginBottom: 16 }}>Requisitos y Detalles</div>
+
+                <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr' }}>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Modalidad</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{formatModality(selectedOffer.modalidad)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Tipo de Contrato</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{formatContractType(selectedOffer.tipoContrato)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Ubicación</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{selectedOffer.ciudad}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Experiencia Requ.</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{selectedOffer.experiencia_requerida || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Salario</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#059669' }}>
+                      {(() => {
+                        const o = selectedOffer as any;
+                        const sMin = o?.salarioMin || o?.salario_min;
+                        const sMax = o?.salarioMax || o?.salario_max;
+                        if (sMin && sMax) return `$${sMin} - $${sMax}`;
+                        if (sMin) return `$${sMin}+`;
+                        if (sMax) return `$${sMax}`;
+                        return 'A convenir';
+                      })()}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Nivel Jerárquico</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{selectedOffer.nivelJerarquico || 'No especificado'}</div>
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Formación Requerida</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{selectedOffer.formacion_requerida || 'No especificada'}</div>
+                  </div>
+                </div>
+
+                {selectedOffer.habilidades_obligatorias && selectedOffer.habilidades_obligatorias.length > 0 && (
+                  <div style={{ marginTop: 20 }}>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 8 }}>Habilidades Técnicas Obligatorias</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {selectedOffer.habilidades_obligatorias.map((h: any, i: number) => (
+                        <span key={i} style={{
+                          background: '#ECFDF5',
+                          border: '1px solid #10B98130',
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: '#065F46'
+                        }}>
+                          {h.nombre}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedOffer.habilidades_deseables && selectedOffer.habilidades_deseables.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 8 }}>Habilidades Deseables</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {selectedOffer.habilidades_deseables.map((h: any, i: number) => (
+                        <span key={i} style={{
+                          background: '#F8FAFC',
+                          border: '1px solid #E2E8F0',
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: '#475569'
+                        }}>
+                          {h.nombre}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedOffer.competencias_requeridas && selectedOffer.competencias_requeridas.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 8 }}>Competencias</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {selectedOffer.competencias_requeridas.map((c: string, i: number) => (
+                        <span key={i} style={{
+                          background: '#FFFBEB',
+                          border: '1px solid #F59E0B30',
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: '#92400E'
+                        }}>
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid #F1F5F9', textAlign: 'right' }}>
+                <button
+                  onClick={() => setSelectedOffer(null)}
+                  style={{
+                    padding: '12px 24px',
+                    borderRadius: 12,
+                    background: '#0B7A4D',
+                    color: '#fff',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    fontSize: 14
+                  }}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 }
