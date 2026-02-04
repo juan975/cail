@@ -1,14 +1,17 @@
 import { Router } from 'express';
 import { authenticate, AuthRequest } from '../../../../shared/infrastructure/middleware/auth.middleware';
+import { OffersController } from '../controllers/offers.controller';
 
 const router = Router();
+const offersController = new OffersController();
 
-router.get('/', authenticate, (_req: AuthRequest, res) => {
-    res.json({ message: 'List offers - To be implemented' });
-});
+// GET /api/v1/offers
+router.get('/', authenticate, offersController.getOffers);
 
-router.post('/', authenticate, (_req: AuthRequest, res) => {
-    res.json({ message: 'Create offer - To be implemented' });
-});
+// POST /api/v1/offers
+router.post('/', authenticate, offersController.createOffer);
+
+// GET /api/v1/offers/:id
+router.get('/:id', authenticate, offersController.getOfferById);
 
 export default router;
