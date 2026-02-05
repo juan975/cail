@@ -22,9 +22,17 @@ const PROJECT_ID = process.env.GCLOUD_PROJECT || 'cail-backend-prod';
 const REGION = 'us-central1';
 const ETL_SERVICE_URL = `https://${REGION}-${PROJECT_ID}.cloudfunctions.net/etl`;
 
-// Inicializar providers
-const embeddingProvider = createEmbeddingProvider(PROJECT_ID, REGION);
+// Inicializar providers (Lazy Loading)
+let embeddingProviderInstance: any = null;
 const db = getFirestore();
+
+function getEmbeddingProvider() {
+    if (!embeddingProviderInstance) {
+        console.log('[SyncCandidato] Inicializando VertexAI Provider (Lazy)...');
+        embeddingProviderInstance = createEmbeddingProvider(PROJECT_ID, REGION);
+    }
+    return embeddingProviderInstance;
+}
 
 /**
  * Interfaz para los datos del perfil de candidato
@@ -227,7 +235,9 @@ export const syncCandidatoFromUsuario = onDocumentWritten(
 
                 // Paso 2: Generar embedding con Vertex AI
                 console.log(`[SyncCandidato] Generando embedding con Vertex AI...`);
-                const vector = await embeddingProvider.generateEmbedding(processedText);
+                // Obtener provider lazy
+                const provider = getEmbeddingProvider();
+                const vector = await provider.generateEmbedding(processedText);
                 candidatoData.embedding_habilidades = FieldValue.vector(vector);
                 candidatoData.fecha_actualizacion_vector = new Date();
 
@@ -272,7 +282,9 @@ export const regenerateEmbeddings = async (userId?: string): Promise<{ processed
             const processedText = await preprocessCandidateWithETL(profile);
 
             // Generar embedding
-            const vector = await embeddingProvider.generateEmbedding(processedText);
+            // Generar embedding
+            const provider = getEmbeddingProvider();
+            const vector = await provider.generateEmbedding(processedText);
 
             await db.collection('candidatos').doc(doc.id).set({
                 nombre: userData.nombreCompleto || '',

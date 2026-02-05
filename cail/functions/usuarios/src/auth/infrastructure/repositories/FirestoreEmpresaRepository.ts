@@ -60,16 +60,34 @@ export class FirestoreEmpresaRepository implements IEmpresaRepository {
      * Obtiene todas las empresas validadas
      */
     async getAll(): Promise<EmpresaValidada[]> {
-        const db = getFirestore();
+        console.log('🔍 FirestoreEmpresaRepository: fetching all companies from "empresas" collection...');
         try {
-            const snapshot = await db.collection('empresas').get();
+            const db = getFirestore();
+            if (!db) {
+                console.error('❌ Firestore DB instance is undefined in getAll');
+                throw new Error('Firestore not initialized');
+            }
+
+            // Limit to 100 to prevent massive reads/timeouts during debug
+            const snapshot = await db.collection('empresas')
+                .limit(100)
+                .get();
+
+            if (snapshot.empty) {
+                console.warn('⚠️ No companies found in "empresas" collection.');
+                return [];
+            }
+
+            console.log(`✅ Found ${snapshot.size} companies. Mapping to entity...`);
+
             return snapshot.docs.map(doc => {
                 const data = doc.data();
                 const ruc = data.ruc || doc.id;
                 return this.mapToEntity(ruc, data);
             });
         } catch (error) {
-            console.error('Error obteniendo todas las empresas:', error);
+            console.error('❌ Error fetching companies from Firestore:', error);
+            // Return empty array instead of throwing to prevent 503 crash
             return [];
         }
     }
