@@ -270,7 +270,7 @@ SonarCloud es como un **inspector de calidad** que revisa tu edificio buscando g
 
 | Área | Estado | Notas |
 |------|--------|-------|
-| **Tests Automatizados** | ✅ 113 tests | 94% pasan |
+| **Tests Automatizados** | ✅ 113 tests | 100% pasan |
 | **Helmet (Headers)** | ✅ Implementado | 6 headers de seguridad |
 | **Rate Limiting** | ✅ Implementado | Por IP y por endpoint |
 | **JWT Auth** | ✅ Implementado | Firebase Admin SDK |
