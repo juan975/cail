@@ -22,9 +22,17 @@ const PROJECT_ID = process.env.GCLOUD_PROJECT || 'cail-backend-prod';
 const REGION = 'us-central1';
 const ETL_SERVICE_URL = `https://${REGION}-${PROJECT_ID}.cloudfunctions.net/etl`;
 
-// Inicializar providers
-const embeddingProvider = createEmbeddingProvider(PROJECT_ID, REGION);
+// Inicializar providers (Lazy Loading)
+let embeddingProviderInstance: any = null;
 const db = getFirestore();
+
+function getEmbeddingProvider() {
+    if (!embeddingProviderInstance) {
+        console.log('[SyncOferta] Inicializando VertexAI Provider (Lazy)...');
+        embeddingProviderInstance = createEmbeddingProvider(PROJECT_ID, REGION);
+    }
+    return embeddingProviderInstance;
+}
 
 /**
  * Interfaz para los datos de una oferta
@@ -213,7 +221,9 @@ export const syncOfertaEmbedding = onDocumentWritten(
 
             // Paso 2: Generar embedding con Vertex AI
             console.log(`[SyncOferta] Generando embedding con Vertex AI...`);
-            const vector = await embeddingProvider.generateEmbedding(processedText);
+            // Obtener provider lazy
+            const provider = getEmbeddingProvider();
+            const vector = await provider.generateEmbedding(processedText);
 
             // Actualizar el documento con el nuevo embedding
             await db.collection('ofertas').doc(ofertaId).update({
@@ -254,8 +264,10 @@ export const regenerateOfertaEmbeddings = async (ofertaId?: string): Promise<{ p
             const processedText = await preprocessOfferWithETL(ofertaData);
 
             // Generar embedding
+            // Generar embedding
             console.log(`[RegenerateOfertaEmbeddings] Generando embedding para ${doc.id}`);
-            const vector = await embeddingProvider.generateEmbedding(processedText);
+            const provider = getEmbeddingProvider();
+            const vector = await provider.generateEmbedding(processedText);
 
             await db.collection('ofertas').doc(doc.id).update({
                 embedding_oferta: FieldValue.vector(vector),

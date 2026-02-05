@@ -37,8 +37,12 @@ import { FirestoreUsuarioRepository } from './matching/infrastructure/repositori
 import { createEmbeddingProvider } from './matching/infrastructure/providers/VertexAIEmbeddingProvider';
 import { setMatchingService } from './matching/infrastructure/controllers/Matching.controller';
 
-// Inicializar Firebase
-initializeFirebase();
+// Inicializar Firebase de forma segura
+try {
+    initializeFirebase();
+} catch (error) {
+    console.error('❌ CRITICAL: Error inicializando Firebase. El servidor iniciará pero los endpoints fallarán.', error);
+}
 
 // ============================================
 // INICIALIZACIÓN DE DEPENDENCIAS (Clean Architecture)
@@ -78,10 +82,14 @@ const initializeServices = (): void => {
 };
 
 // Inicializar servicios
+// Inicializar servicios de forma segura
 try {
+    console.log('🚀 Inicializando servicios de Matching...');
     initializeServices();
 } catch (error) {
-    console.error('❌ Error inicializando servicios:', error);
+    console.error('❌ CRITICAL: Error inicializando servicios. El servidor iniciará pero los endpoints pueden fallar.', error);
+    // No hacemos throw para permitir que el contenedor inicie y pase el healthcheck
+    // Los endpoints individuales fallarán si dependen de servicios no inicializados
 }
 
 // ============================================
@@ -92,7 +100,19 @@ const app: Application = express();
 
 // Middleware
 app.use(cors({
-    origin: config.cors.allowedOrigins,
+    origin: (requestOrigin: string | undefined, callback: (err: Error | null, allow?: boolean | string) => void) => {
+        // Permitir requests sin origen (curl, mobile apps, etc)
+        if (!requestOrigin) return callback(null, true);
+
+        // Verificar si el origen está permitido
+        // Si la config tiene '*', permitimos todo (reflejando el origen)
+        if (config.cors.allowedOrigins.includes('*') || config.cors.allowedOrigins.includes(requestOrigin)) {
+            callback(null, true);
+        } else {
+            console.warn(`⛔ [CORS] Blocked request from: ${requestOrigin}`);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
 }));
 app.use(express.json());
@@ -153,8 +173,8 @@ export default app;
 // FIRESTORE TRIGGERS (Firebase Functions v2)
 // ============================================
 // Trigger para sincronizar usuarios → candidatos (genera embedding_habilidades)
-export { syncCandidatoFromUsuario } from './matching/triggers/syncCandidato.trigger';
+// export { syncCandidatoFromUsuario } from './matching/triggers/syncCandidato.trigger';
 
 // Trigger para generar embeddings de ofertas (genera embedding_oferta)
-export { syncOfertaEmbedding } from './matching/triggers/syncOferta.trigger';
+// export { syncOfertaEmbedding } from './matching/triggers/syncOferta.trigger';
 
