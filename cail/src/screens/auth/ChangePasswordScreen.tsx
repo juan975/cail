@@ -5,7 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { useNotifications } from '@/components/ui/Notifications';
 import { LoadingSplash } from '@/components/ui/LoadingSplash';
-import { MotiView } from 'moti';
+import { MotiView } from '@/components/MotiView';
 import { PasswordStrength, validatePassword } from '@/components/ui/PasswordStrength';
 import { authService } from '@/services/auth.service';
 

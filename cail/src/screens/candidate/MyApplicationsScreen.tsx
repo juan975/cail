@@ -19,7 +19,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { MotiView } from 'moti';
+import { MotiView } from '@/components/MotiView';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { Card } from '@/components/ui/Card';
 import { applicationsService } from '@/services/applications.service';

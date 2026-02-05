@@ -8,6 +8,7 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { API_CONFIG } from './config';
 import { ApiError } from '@/types/auth.types';
+import { firebaseAuthService } from './firebase.service';
 
 class ApiService {
     private usuariosClient: AxiosInstance;
@@ -33,8 +34,7 @@ class ApiService {
         client.interceptors.request.use(
             async (config) => {
                 try {
-                    // Importar dinámicamente para evitar dependencias circulares
-                    const { firebaseAuthService } = await import('./firebase.service');
+                    // Usar el servicio importado estáticamente
                     const token = await firebaseAuthService.getIdToken();
 
                     if (token) {

@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator, Linking, Modal, Switch } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { MotiView } from 'moti';
+import { MotiView } from '@/components/MotiView';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { InputField } from '@/components/ui/InputField';

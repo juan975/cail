@@ -5,7 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { authService } from '@/services/auth.service';
 import { PasswordStrength, validatePassword } from '@/components/ui/PasswordStrength';
 import { useNotifications } from '@/components/ui/Notifications';
-import { MotiView } from 'moti';
+import { MotiView } from '@/components/MotiView';
 import { TermsScreen } from '../legal/TermsScreen';
 
 interface RegisterEmployerFormProps {

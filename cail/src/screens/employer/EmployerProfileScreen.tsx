@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { MotiView } from 'moti';
+import { MotiView } from '@/components/MotiView';
 import { useNotifications } from '@/components/ui/Notifications';
 import { InputField } from '@/components/ui/InputField';
 import { SectionHeader } from '@/components/ui/SectionHeader';

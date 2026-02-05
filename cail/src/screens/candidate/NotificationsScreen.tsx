@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { MotiView } from 'moti';
+import { MotiView } from '@/components/MotiView';
 import { colors } from '@/theme/colors';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 

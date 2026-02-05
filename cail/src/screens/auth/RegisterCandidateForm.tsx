@@ -9,7 +9,7 @@ import { PasswordStrength, validatePassword } from '@/components/ui/PasswordStre
 import { AutocompleteInput, COMMON_TECHNICAL_SKILLS, COMMON_SOFT_SKILLS } from '@/components/ui/AutocompleteInput';
 import { authService } from '@/services/auth.service';
 import { useNotifications } from '@/components/ui/Notifications';
-import { MotiView } from 'moti';
+import { MotiView } from '@/components/MotiView';
 import { TermsScreen } from '../legal/TermsScreen';
 
 interface RegisterCandidateFormProps {

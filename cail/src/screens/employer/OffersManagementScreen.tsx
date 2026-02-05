@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { MotiView } from 'moti';
+import { MotiView } from '@/components/MotiView';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 import { useNotifications } from '@/components/ui/Notifications';
 import { AutocompleteInput } from '@/components/ui/AutocompleteInput';
