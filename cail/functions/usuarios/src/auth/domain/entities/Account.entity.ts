@@ -65,6 +65,7 @@ export interface AccountProps {
     needsPasswordChange?: boolean;
     candidateProfile?: CandidateProfile;
     employerProfile?: EmployerProfile;
+    pushToken?: string;
 }
 
 /**
@@ -142,6 +143,14 @@ export class Account {
         this.props.employerProfile = value;
     }
 
+    get pushToken(): string | undefined {
+        return this.props.pushToken;
+    }
+
+    set pushToken(value: string | undefined) {
+        this.props.pushToken = value;
+    }
+
     /**
      * Convierte la entidad a un objeto JSON seguro (sin passwordHash)
      */
@@ -155,6 +164,7 @@ export class Account {
             fechaRegistro: this.fechaRegistro,
             candidateProfile: this.candidateProfile,
             employerProfile: this.employerProfile,
+            pushToken: this.pushToken,
         };
     }
 }

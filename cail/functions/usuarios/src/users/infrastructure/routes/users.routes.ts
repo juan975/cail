@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../../../shared/middleware/auth.middleware';
-import { getProfile, updateProfile, getUserById } from '../controllers/Users.controller';
+import { getProfile, updateProfile, getUserById, updatePushToken } from '../controllers/Users.controller';
 import { uploadCV, getCV, deleteCV } from '../controllers/Cv.controller';
 
 const router = Router();
@@ -46,6 +46,13 @@ router.delete('/cv', authenticate, deleteCV);
  * @access  Private
  */
 router.get('/:id', authenticate, getUserById);
+
+/**
+ * @route   PUT /users/push-token
+ * @desc    Actualizar push token para notificaciones
+ * @access  Private
+ */
+router.put('/push-token', authenticate, updatePushToken);
 
 export default router;
 

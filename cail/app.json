@@ -22,6 +22,12 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "googleServicesFile": "./google-services.json"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "34669314-6426-web-0f8dde0713d71fe8b92203"
       }
     },
     "web": {

@@ -219,44 +219,44 @@ export function CandidateProfileScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
-        <MotiView 
-          from={{ opacity: 0, translateY: -10 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          style={[styles.heroCard, { maxWidth: contentWidth }]}
-        >
-          <View style={styles.heroContent}>
-            <View style={styles.heroIcon}>
-              <Feather name="user" size={24} color="#FFFFFF" />
-            </View>
-            <View style={styles.heroText}>
-              <Text style={styles.heroTitle}>Mi perfil profesional</Text>
-              <Text style={styles.heroSubtitle}>
-                Administra tus datos personales y profesionales
-              </Text>
-            </View>
+      <MotiView
+        from={{ opacity: 0, translateY: -10 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        style={[styles.heroCard, { maxWidth: contentWidth }]}
+      >
+        <View style={styles.heroContent}>
+          <View style={styles.heroIcon}>
+            <Feather name="user" size={24} color="#FFFFFF" />
           </View>
+          <View style={styles.heroText}>
+            <Text style={styles.heroTitle}>Mi perfil profesional</Text>
+            <Text style={styles.heroSubtitle}>
+              Administra tus datos personales y profesionales
+            </Text>
+          </View>
+        </View>
 
-          {/* Progress Section */}
-          <View style={styles.progressSection}>
-            <View style={styles.progressHeader}>
-              <View style={styles.progressInfo}>
-                <Feather name="target" size={16} color="#FFFFFF" />
-                <Text style={styles.progressText}>Progreso del perfil</Text>
-              </View>
-              <View style={styles.progressBadge}>
-                <Text style={styles.progressPercentage}>{Math.round(completion * 100)}%</Text>
-              </View>
+        {/* Progress Section */}
+        <View style={styles.progressSection}>
+          <View style={styles.progressHeader}>
+            <View style={styles.progressInfo}>
+              <Feather name="target" size={16} color="#FFFFFF" />
+              <Text style={styles.progressText}>Progreso del perfil</Text>
             </View>
-            <View style={styles.progressBarContainer}>
-              <MotiView 
-                from={{ width: '0%' }}
-                animate={{ width: `${completion * 100}%` }}
-                transition={{ type: 'timing', duration: 1000 }}
-                style={styles.progressBarFill} 
-              />
+            <View style={styles.progressBadge}>
+              <Text style={styles.progressPercentage}>{Math.round(completion * 100)}%</Text>
             </View>
           </View>
-        </MotiView>
+          <View style={styles.progressBarContainer}>
+            <MotiView
+              from={{ width: '0%' }}
+              animate={{ width: `${completion * 100}%` }}
+              transition={{ type: 'timing', duration: 1000 }}
+              style={styles.progressBarFill}
+            />
+          </View>
+        </View>
+      </MotiView>
 
       {/* Quick Action Save */}
       <Button
@@ -292,7 +292,7 @@ export function CandidateProfileScreen() {
 
       {/* Personal Tab */}
       {activeTab === 'personal' && (
-        <MotiView 
+        <MotiView
           from={{ opacity: 0, translateX: 50 }}
           animate={{ opacity: 1, translateX: 0 }}
           style={[styles.sectionCard, { maxWidth: contentWidth }]}

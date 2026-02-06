@@ -41,3 +41,25 @@ export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response
 
     return ApiResponse.success(res, account.toJSON(), 'Profile updated successfully');
 });
+
+export const updatePushToken = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.uid;
+    if (!userId) {
+        throw new AppError(401, 'Unauthorized');
+    }
+
+    const { pushToken } = req.body;
+    if (!pushToken) {
+        throw new AppError(400, 'Push token is required');
+    }
+
+    const account = await accountRepository.findById(new UserId(userId));
+    if (!account) {
+        throw new AppError(404, 'User not found');
+    }
+
+    account.pushToken = pushToken;
+    await accountRepository.save(account);
+
+    return ApiResponse.success(res, null, 'Push token updated successfully');
+});

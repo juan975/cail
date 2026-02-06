@@ -166,6 +166,10 @@ class ApiService {
         return response.data;
     }
 
+    async updatePushToken(token: string): Promise<void> {
+        await this.usuariosClient.put('/users/push-token', { pushToken: token });
+    }
+
     // =========================================
     // DEPRECATED - Ya no se usan con Firebase Auth
     // Mantenidos por compatibilidad temporal

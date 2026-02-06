@@ -5,32 +5,7 @@ import { MotiView } from '@/components/MotiView';
 import { colors } from '@/theme/colors';
 import { useResponsiveLayout } from '@/hooks/useResponsive';
 
-const NOTIFICATION_ITEMS = [
-  {
-    id: '1',
-    title: 'Tu perfil ha sido verificado',
-    description: 'Ahora puedes postular a vacantes con mayor visibilidad para los reclutadores.',
-    date: 'Hace 2 horas',
-    unread: true,
-    category: 'Sistema',
-  },
-  {
-    id: '2',
-    title: 'Nueva vacante en tu área',
-    description: 'Se ha publicado una vacante para Desarrollador React Native que coincide con tu perfil.',
-    date: 'Hace 5 horas',
-    unread: true,
-    category: 'Sugerencia',
-  },
-  {
-    id: '3',
-    title: 'Postulación vista',
-    description: 'Un reclutador ha revisado tu postulación para Arquitecto de Software.',
-    date: 'Ayer',
-    unread: false,
-    category: 'Proceso',
-  },
-];
+const NOTIFICATION_ITEMS: any[] = [];
 
 const NOTIFICATION_PREFERENCES = [
   { id: '1', label: 'Notificaciones push', description: 'Recibe alertas en tu dispositivo móvil', enabled: true },
@@ -52,7 +27,7 @@ export function NotificationsScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={[styles.stack, { maxWidth: contentWidth, alignSelf: 'center', width: '100%' }]}>
         {/* Hero Card */}
-        <MotiView 
+        <MotiView
           from={{ opacity: 0, translateY: -20 }}
           animate={{ opacity: 1, translateY: 0 }}
           style={styles.heroCard}
@@ -93,60 +68,67 @@ export function NotificationsScreen() {
             </View>
 
             {/* Notification Items */}
-            {NOTIFICATION_ITEMS.map((item, index) => (
-              <MotiView 
-                key={item.id} 
-                from={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ type: 'timing', delay: index * 100 }}
-                style={styles.notificationCard}
-              >
-                <View style={styles.notificationContent}>
-                  {/* Icon Badge */}
-                  <View style={[
-                    styles.iconBadge,
-                    { backgroundColor: getCategoryColor(item.category) + '20' }
-                  ]}>
-                    <Feather
-                      name={getCategoryIcon(item.category)}
-                      size={20}
-                      color={getCategoryColor(item.category)}
-                    />
-                  </View>
+            {NOTIFICATION_ITEMS.length > 0 ? (
+              NOTIFICATION_ITEMS.map((item, index) => (
+                <MotiView
+                  key={item.id}
+                  from={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ type: 'timing', delay: index * 100 }}
+                  style={styles.notificationCard}
+                >
+                  <View style={styles.notificationContent}>
+                    {/* Icon Badge */}
+                    <View style={[
+                      styles.iconBadge,
+                      { backgroundColor: getCategoryColor(item.category) + '20' }
+                    ]}>
+                      <Feather
+                        name={getCategoryIcon(item.category)}
+                        size={20}
+                        color={getCategoryColor(item.category)}
+                      />
+                    </View>
 
-                  {/* Content */}
-                  <View style={styles.notificationBody}>
-                    <View style={styles.notificationHeader}>
-                      <Text style={styles.notificationTitle} numberOfLines={2}>
-                        {item.title}
-                      </Text>
-                      {item.category && (
-                        <View style={[
-                          styles.categoryBadge,
-                          { backgroundColor: getCategoryColor(item.category) + '15' }
-                        ]}>
-                          <Text style={[
-                            styles.categoryText,
-                            { color: getCategoryColor(item.category) }
+                    {/* Content */}
+                    <View style={styles.notificationBody}>
+                      <View style={styles.notificationHeader}>
+                        <Text style={styles.notificationTitle} numberOfLines={2}>
+                          {item.title}
+                        </Text>
+                        {item.category && (
+                          <View style={[
+                            styles.categoryBadge,
+                            { backgroundColor: getCategoryColor(item.category) + '15' }
                           ]}>
-                            {item.category}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
+                            <Text style={[
+                              styles.categoryText,
+                              { color: getCategoryColor(item.category) }
+                            ]}>
+                              {item.category}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
 
-                    <Text style={styles.notificationDescription} numberOfLines={2}>
-                      {item.description}
-                    </Text>
+                      <Text style={styles.notificationDescription} numberOfLines={2}>
+                        {item.description}
+                      </Text>
 
-                    <View style={styles.notificationMeta}>
-                      <Feather name="clock" size={12} color={colors.textSecondary} />
-                      <Text style={styles.notificationDate}>{item.date}</Text>
+                      <View style={styles.notificationMeta}>
+                        <Feather name="clock" size={12} color={colors.textSecondary} />
+                        <Text style={styles.notificationDate}>{item.date}</Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-              </MotiView>
-            ))}
+                </MotiView>
+              ))
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Feather name="bell-off" size={48} color={colors.textSecondary} />
+                <Text style={styles.emptyText}>No tienes notificaciones</Text>
+              </View>
+            )}
           </View>
         ) : (
           <View style={styles.settingsSection}>
@@ -523,5 +505,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#1E40AF',
     lineHeight: 18,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 12,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
 });

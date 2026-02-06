@@ -110,3 +110,32 @@ export const getUserById = asyncHandler(async (req: AuthRequest, res: Response) 
 
     return ApiResponse.success(res, account.toJSON());
 });
+
+/**
+ * PUT /users/push-token
+ * Actualiza el pushToken del usuario para notificaciones
+ */
+export const updatePushToken = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.uid;
+    if (!userId) {
+        throw new AppError(401, 'Unauthorized');
+    }
+
+    const { pushToken } = (req as any).body;
+    if (!pushToken) {
+        // Permitir null para desactivar notificaciones
+        // throw new AppError(400, 'Push token is required'); 
+    }
+
+    const account = await accountRepository.findById(new UserId(userId));
+    if (!account) {
+        throw new AppError(404, 'User not found');
+    }
+
+    account.pushToken = pushToken || null;
+    await accountRepository.save(account);
+
+    console.log(`✅ Push token updated for user ${userId}: ${pushToken}`);
+
+    return ApiResponse.success(res, { success: true }, 'Push token updated successfully');
+});

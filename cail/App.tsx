@@ -13,6 +13,7 @@ import { colors } from '@/theme/colors';
 import { firebaseAuthService } from '@/services/firebase.service';
 import { apiService } from '@/services/api.service';
 import { NotificationsProvider } from '@/components/ui/Notifications';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 function RootApp() {
   const [session, setSession] = useState<UserSession | null>(null);
@@ -96,6 +97,20 @@ function RootApp() {
     // Cleanup al desmontar
     return () => unsubscribe();
   }, []);
+
+  const { expoPushToken } = usePushNotifications();
+
+  useEffect(() => {
+    if (session && expoPushToken) {
+      console.log("📲 Syncing push token with backend...", expoPushToken);
+      apiService.updatePushToken(expoPushToken)
+        .then(() => alert('Push Token synced with Backend! ✅'))
+        .catch(err => {
+          console.error("❌ Failed to sync push token", err);
+          alert(`Failed to sync token: ${err.message || err}`);
+        });
+    }
+  }, [session, expoPushToken]);
 
   // Función para indicar que comenzó el proceso de login
   const handleLoginStart = () => {

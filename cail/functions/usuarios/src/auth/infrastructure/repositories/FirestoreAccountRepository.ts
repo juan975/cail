@@ -25,6 +25,7 @@ export class FirestoreAccountRepository implements IAccountRepository {
             needsPasswordChange: account.needsPasswordChange || false,
             candidateProfile: account.candidateProfile || null,
             employerProfile: account.employerProfile || null,
+            pushToken: account.pushToken || null,
             // Metadata
             updatedAt: new Date(),
         };
@@ -106,6 +107,7 @@ export class FirestoreAccountRepository implements IAccountRepository {
             needsPasswordChange: data.needsPasswordChange,
             candidateProfile: data.candidateProfile || undefined,
             employerProfile: data.employerProfile || undefined,
+            pushToken: data.pushToken || undefined,
         });
     }
 }

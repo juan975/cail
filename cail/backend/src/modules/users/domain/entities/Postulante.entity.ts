@@ -6,6 +6,7 @@ export interface PostulanteProps {
     fechaNacimiento: Date;
     direccion: string;
     ciudad: string;
+    pushToken?: string;
 }
 
 export class Postulante {
@@ -35,6 +36,10 @@ export class Postulante {
         return this.props.ciudad;
     }
 
+    get pushToken(): string | undefined {
+        return this.props.pushToken;
+    }
+
     toJSON() {
         return {
             idPostulante: this.idPostulante.getValue(),
@@ -42,6 +47,7 @@ export class Postulante {
             fechaNacimiento: this.fechaNacimiento,
             direccion: this.direccion,
             ciudad: this.ciudad,
+            pushToken: this.props.pushToken,
         };
     }
 }

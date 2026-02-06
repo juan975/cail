@@ -46,8 +46,10 @@ export interface AccountProps {
     fechaRegistro: Date;
     needsPasswordChange?: boolean;
     // Perfiles adicionales según tipo de usuario
+    // Perfiles adicionales según tipo de usuario
     candidateProfile?: CandidateProfile;
     employerProfile?: EmployerProfile;
+    pushToken?: string;
 }
 
 export class Account {
@@ -121,6 +123,14 @@ export class Account {
         this.props.employerProfile = value;
     }
 
+    get pushToken(): string | undefined {
+        return this.props.pushToken;
+    }
+
+    set pushToken(value: string | undefined) {
+        this.props.pushToken = value;
+    }
+
     toJSON() {
         return {
             idCuenta: this.idCuenta.getValue(),
@@ -131,6 +141,7 @@ export class Account {
             fechaRegistro: this.fechaRegistro,
             candidateProfile: this.candidateProfile,
             employerProfile: this.employerProfile,
+            pushToken: this.pushToken,
         };
     }
 }

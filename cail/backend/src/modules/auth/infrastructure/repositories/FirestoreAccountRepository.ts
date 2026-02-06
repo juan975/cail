@@ -5,7 +5,7 @@ import { Email } from '../../../../shared/domain/value-objects/Email';
 import { UserId } from '../../../../shared/domain/value-objects/UserId';
 
 export class FirestoreAccountRepository implements IAccountRepository {
-    private collection = db.collection('cuentas');
+    private collection = db.collection('usuarios');
 
     async save(account: Account): Promise<Account> {
         const data = {
@@ -19,6 +19,7 @@ export class FirestoreAccountRepository implements IAccountRepository {
             // Guardar perfiles adicionales
             candidateProfile: account.candidateProfile || null,
             employerProfile: account.employerProfile || null,
+            pushToken: account.pushToken || null,
         };
 
         await this.collection.doc(account.idCuenta.getValue()).set(data);
@@ -63,6 +64,7 @@ export class FirestoreAccountRepository implements IAccountRepository {
             // Mapear perfiles adicionales
             candidateProfile: data.candidateProfile || undefined,
             employerProfile: data.employerProfile || undefined,
+            pushToken: data.pushToken || undefined,
         });
     }
 }

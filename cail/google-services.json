@@ -1,0 +1,29 @@
+{
+    "project_info": {
+        "project_number": "346693146426",
+        "project_id": "cail-backend-prod",
+        "storage_bucket": "cail-backend-prod.firebasestorage.app"
+    },
+    "client": [
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:346693146426:android:9bad6c4ca0a05665b92203",
+                "android_client_info": {
+                    "package_name": "com.bolsa.empleo.app"
+                }
+            },
+            "oauth_client": [],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyAG_S-VzturtGgMs7SR1W2xX3AhF9kxzl8"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": []
+                }
+            }
+        }
+    ],
+    "configuration_version": "1"
+}

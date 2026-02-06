@@ -5,6 +5,7 @@
     },
     "functions": [
         {
+            "runtime": "nodejs20",
             "source": "functions/usuarios",
             "codebase": "usuarios",
             "ignore": [
@@ -15,6 +16,7 @@
             ]
         },
         {
+            "runtime": "nodejs20",
             "source": "functions/ofertas",
             "codebase": "ofertas",
             "ignore": [
@@ -25,6 +27,7 @@
             ]
         },
         {
+            "runtime": "nodejs20",
             "source": "functions/matching",
             "codebase": "matching",
             "ignore": [

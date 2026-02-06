@@ -137,7 +137,7 @@ export function EmployerProfileScreen() {
           </View>
         </MotiView>
 
-        <MotiView 
+        <MotiView
           from={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 100 }}
@@ -206,7 +206,7 @@ export function EmployerProfileScreen() {
                 />
               </View>
             </View>
-            
+
             <View style={styles.sectionDivider} />
 
             <View style={styles.formGrid}>
@@ -224,7 +224,7 @@ export function EmployerProfileScreen() {
           </View>
         </MotiView>
 
-        <MotiView 
+        <MotiView
           from={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 200 }}
@@ -269,7 +269,7 @@ export function EmployerProfileScreen() {
           </View>
         </MotiView>
 
-        <MotiView 
+        <MotiView
           from={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 300 }}
@@ -321,7 +321,7 @@ export function EmployerProfileScreen() {
           </View>
         </MotiView>
 
-        <MotiView 
+        <MotiView
           from={{ opacity: 0, translateY: 20 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ delay: 400 }}
@@ -336,7 +336,7 @@ export function EmployerProfileScreen() {
           />
         </MotiView>
 
-        <MotiView 
+        <MotiView
           from={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 500 }}
@@ -350,7 +350,7 @@ export function EmployerProfileScreen() {
           </Text>
         </MotiView>
 
-        <MotiView 
+        <MotiView
           from={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 600 }}
