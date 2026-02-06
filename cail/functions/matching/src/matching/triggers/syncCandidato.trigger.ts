@@ -46,6 +46,8 @@ interface CandidateProfileData {
     resumenProfesional?: string;
     experienciaLaboral?: any[];
     competencias?: string[];
+    pais?: string;
+    modalidadPreferida?: string;
 }
 
 interface UserDocument {
@@ -220,6 +222,8 @@ export const syncCandidatoFromUsuario = onDocumentWritten(
             id_nivel_actual: profile.nivelProfesional || '',
             id_sector_industrial: profile.sectorIndustrial || '',
             ciudad: profile.ciudad || '',
+            pais: profile.pais || '',
+            modalidad_preferida: profile.modalidadPreferida || '',
             resumen_profesional: profile.resumenProfesional || '',
             experiencia_laboral: profile.experienciaLaboral || [],
             fecha_actualizacion: new Date(),

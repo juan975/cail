@@ -36,6 +36,8 @@ export class FirestoreAplicacionRepository implements IMatchingRepository {
             id_sector_industrial: data.id_sector_industrial || data.sectorIndustrial || '',
             id_nivel_requerido: data.id_nivel_requerido || data.experiencia_requerida || '',
             modalidad: data.modalidad,
+            ciudad: data.ciudad || data.ubicacion?.ciudad,
+            pais: data.pais || data.ubicacion?.pais,
             competencias_requeridas: data.competencias_requeridas || [],
             habilidades_obligatorias: this.mapHabilidades(data.habilidades_obligatorias, true),
             habilidades_deseables: this.mapHabilidades(data.habilidades_deseables, false)
@@ -129,13 +131,19 @@ export class FirestoreAplicacionRepository implements IMatchingRepository {
      */
     private mapToPostulante(doc: FirebaseFirestore.DocumentSnapshot): Postulante {
         const data = doc.data()!;
+        const candidateProfile = data.candidateProfile || {};
+
         return {
             id: doc.id,
-            nombre: data.nombre || '',
-            habilidades_tecnicas: data.habilidades_tecnicas || [],
-            id_nivel_actual: data.id_nivel_actual || '',
+            nombre: data.nombre || data.nombreCompleto || '',
+            habilidades_tecnicas: data.habilidades_tecnicas || candidateProfile.habilidadesTecnicas || [],
+            id_nivel_actual: data.id_nivel_actual || candidateProfile.nivelEducativo || '',
             id_sector_industrial: data.id_sector_industrial || '',
-            embedding_habilidades: data.embedding_habilidades
+            embedding_habilidades: data.embedding_habilidades,
+            // Campos de ubicación desde root o candidateProfile
+            ciudad: data.ciudad || candidateProfile.ciudad,
+            pais: data.pais || candidateProfile.pais,
+            modalidad_preferida: data.modalidad_preferida
         };
     }
 

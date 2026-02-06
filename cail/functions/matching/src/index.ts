@@ -173,7 +173,7 @@ export default app;
 // FIRESTORE TRIGGERS (Firebase Functions v2)
 // ============================================
 // Trigger para sincronizar usuarios → candidatos (genera embedding_habilidades)
-// export { syncCandidatoFromUsuario } from './matching/triggers/syncCandidato.trigger';
+export { syncCandidatoFromUsuario } from './matching/triggers/syncCandidato.trigger';
 
 // Trigger para generar embeddings de ofertas (genera embedding_oferta)
 // export { syncOfertaEmbedding } from './matching/triggers/syncOferta.trigger';

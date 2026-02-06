@@ -24,10 +24,11 @@ import {
  * Pesos basados en especificación CU08
  */
 const SCORING_WEIGHTS = {
-    SIMILITUD_VECTORIAL: 0.40,      // 40% - Balanced with Skills
-    HABILIDADES_OBLIGATORIAS: 0.40, // 40% - Trust deterministic inference
-    HABILIDADES_DESEABLES: 0.10,    // 10%
-    NIVEL_JERARQUICO: 0.10          // 10%
+    SIMILITUD_VECTORIAL: 0.35,      // 35% - Vector Relevance
+    HABILIDADES: 0.35,              // 35% - Skills Match
+    UBICACION: 0.15,                // 15% - Location (City/Country)
+    NIVEL_JERARQUICO: 0.10,         // 10% - Experience Level
+    MODALIDAD: 0.05                 // 5%  - Remote/Hybrid/Onsite
 };
 
 const MAX_POSTULACIONES_DIA = 10;
@@ -307,11 +308,19 @@ export class MatchingService {
         // Score de nivel jerárquico
         const scoreNivel = (!candidato.id_nivel_actual || candidato.id_nivel_actual === oferta.id_nivel_requerido) ? 1.0 : 0.5;
 
+        // Score de Ubicación
+        const scoreUbicacion = this.calcularScoreUbicacion(candidato, oferta);
+
+        // Score de Modalidad
+        const scoreModalidad = this.calcularScoreModalidad(candidato, oferta);
+
         // Score ponderado final con vectorización
         const matchScore =
             (scoreSimilitud * SCORING_WEIGHTS.SIMILITUD_VECTORIAL) +
-            (scoreHabilidades * (SCORING_WEIGHTS.HABILIDADES_OBLIGATORIAS + SCORING_WEIGHTS.HABILIDADES_DESEABLES)) +
-            (scoreNivel * SCORING_WEIGHTS.NIVEL_JERARQUICO);
+            (scoreHabilidades * SCORING_WEIGHTS.HABILIDADES) +
+            (scoreNivel * SCORING_WEIGHTS.NIVEL_JERARQUICO) +
+            (scoreUbicacion * SCORING_WEIGHTS.UBICACION) +
+            (scoreModalidad * SCORING_WEIGHTS.MODALIDAD);
 
         return {
             oferta,
@@ -319,7 +328,9 @@ export class MatchingService {
             score_detalle: {
                 similitud_vectorial: scoreSimilitud,
                 habilidades_match: scoreHabilidades,
-                nivel_jerarquico: scoreNivel
+                nivel_jerarquico: scoreNivel,
+                ubicacion: scoreUbicacion,
+                modalidad: scoreModalidad
             }
         };
     }
@@ -383,15 +394,25 @@ export class MatchingService {
         // Score de nivel jerárquico
         const scoreNivel = (!candidato.id_nivel_actual || candidato.id_nivel_actual === oferta.id_nivel_requerido) ? 1.0 : 0.5;
 
+        // Score de Ubicación
+        const scoreUbicacion = this.calcularScoreUbicacion(candidato, oferta);
+
+        // Score de Modalidad
+        const scoreModalidad = this.calcularScoreModalidad(candidato, oferta);
+
         // Score de similitud vectorial (implícito en el orden de KNN, normalizamos a 0.8)
         const scoreSimilitud = 0.8; // Base score por estar en top KNN
+
+        // Score combinado de habilidades para el detalle
+        const scoreHabilidadesTotal = (scoreObligatorias * 0.7) + (scoreDeseables * 0.3);
 
         // Cálculo ponderado final
         const matchScore =
             (scoreSimilitud * SCORING_WEIGHTS.SIMILITUD_VECTORIAL) +
-            (scoreObligatorias * SCORING_WEIGHTS.HABILIDADES_OBLIGATORIAS) +
-            (scoreDeseables * SCORING_WEIGHTS.HABILIDADES_DESEABLES) +
-            (scoreNivel * SCORING_WEIGHTS.NIVEL_JERARQUICO);
+            (scoreHabilidadesTotal * SCORING_WEIGHTS.HABILIDADES) +
+            (scoreNivel * SCORING_WEIGHTS.NIVEL_JERARQUICO) +
+            (scoreUbicacion * SCORING_WEIGHTS.UBICACION) +
+            (scoreModalidad * SCORING_WEIGHTS.MODALIDAD);
 
         return {
             postulante: candidato,
@@ -400,7 +421,9 @@ export class MatchingService {
                 similitud_vectorial: scoreSimilitud,
                 habilidades_obligatorias: scoreObligatorias,
                 habilidades_deseables: scoreDeseables,
-                nivel_jerarquico: scoreNivel
+                nivel_jerarquico: scoreNivel,
+                ubicacion: scoreUbicacion,
+                modalidad: scoreModalidad
             }
         };
     }
@@ -409,12 +432,20 @@ export class MatchingService {
     // LOGICA DE INFERENCIA
     // ============================================
     private readonly SKILL_INFERENCE_MAP: Record<string, string[]> = {
-        'javascript': ['react', 'angular', 'vue', 'node', 'typescript', 'express', 'next'],
-        'node.js': ['express', 'nest', 'mean', 'mern', 'javascript', 'typescript'],
-        'sql': ['mysql', 'postgresql', 'postgres', 'oracle', 'sql server', 'database', 'bases de datos'],
-        'python': ['django', 'flask', 'fastapi', 'pandas', 'numpy', 'pytorch', 'tensorflow'],
-        'java': ['spring', 'hibernate', 'jakarta'],
-        'c#': ['.net', 'dotnet', 'entity framework'],
+        'javascript': ['react', 'angular', 'vue', 'node', 'typescript', 'express', 'next', 'nest', 'react native'],
+        'typescript': ['angular', 'nest', 'react', 'vue', 'next'],
+        'node.js': ['express', 'nest', 'mean', 'mern', 'javascript', 'typescript', 'fastify'],
+        'sql': ['mysql', 'postgresql', 'postgres', 'oracle', 'sql server', 'database', 'bases de datos', 'mariadb', 'sqlite'],
+        'nosql': ['mongodb', 'firebase', 'firestore', 'dynamodb', 'redis', 'cassandra'],
+        'python': ['django', 'flask', 'fastapi', 'pandas', 'numpy', 'pytorch', 'tensorflow', 'scikit-learn', 'data science'],
+        'java': ['spring', 'hibernate', 'jakarta', 'kotlin', 'android'],
+        'c#': ['.net', 'dotnet', 'entity framework', 'unity', 'asp.net'],
+        'css': ['sass', 'less', 'tailwind', 'bootstrap', 'material ui', 'chakra ui', 'styled components'],
+        'html': ['react', 'angular', 'vue', 'web components'],
+        'git': ['github', 'gitlab', 'bitbucket', 'azure devops'],
+        'docker': ['kubernetes', 'k8s', 'containers', 'docker-compose'],
+        'aws': ['ec2', 'lambda', 's3', 'serverless', 'dynamodb', 'cloudformation'],
+        'cloud': ['aws', 'azure', 'gcp', 'google cloud', 'firebase'],
     };
 
     /**
@@ -462,5 +493,46 @@ export class MatchingService {
         }
 
         return pesoTotal > 0 ? pesoCoincidencias / pesoTotal : 0;
+    }
+
+    /**
+     * Calcula score de ubicación (Ciudad/País)
+     * 1.0 = Ciudad exacta
+     * 0.5 = Mismo país
+     * 0.0 = Distinto país
+     */
+    private calcularScoreUbicacion(candidato: Postulante, oferta: Oferta): number {
+        if (!oferta.ciudad && !oferta.pais) return 1.0; // Si oferta no tiene ubicación, no penalizar
+        if (!candidato.ciudad && !candidato.pais) return 0.5; // Neutro si candidato no tiene data
+
+        const ciudadCandidato = (candidato.ciudad || '').toLowerCase();
+        const paisCandidato = (candidato.pais || '').toLowerCase();
+        const ciudadOferta = (oferta.ciudad || '').toLowerCase();
+        const paisOferta = (oferta.pais || '').toLowerCase();
+
+        if (ciudadOferta && ciudadCandidato === ciudadOferta) return 1.0;
+        if (paisOferta && paisCandidato === paisOferta) return 0.5;
+
+        return 0.0;
+    }
+
+    /**
+     * Calcula score de modalidad (Remoto/Híbrido/Presencial)
+     */
+    private calcularScoreModalidad(candidato: Postulante, oferta: Oferta): number {
+        if (!oferta.modalidad) return 1.0;
+        if (!candidato.modalidad_preferida) return 0.5;
+
+        const modOferta = oferta.modalidad.toLowerCase();
+        const modCandidato = candidato.modalidad_preferida.toLowerCase();
+
+        if (modCandidato === 'remoto' && modOferta === 'remoto') return 1.0;
+        if (modCandidato === 'hibrido' && (modOferta === 'hibrido' || modOferta === 'remoto')) return 1.0;
+        if (modCandidato === 'presencial' && modOferta === 'presencial') return 1.0;
+
+        // Si candidato quiere remoto pero oferta es presencial -> bajo score
+        if (modCandidato === 'remoto' && modOferta === 'presencial') return 0.0;
+
+        return 0.5; // Match parcial
     }
 }

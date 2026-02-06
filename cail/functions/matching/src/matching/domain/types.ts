@@ -33,6 +33,10 @@ export interface Postulante {
     id_nivel_actual: string;
     id_sector_industrial: string;
     embedding_habilidades?: number[];
+    // Campos de ubicación para scoring
+    ciudad?: string;
+    pais?: string;
+    modalidad_preferida?: string;
 }
 
 /**
@@ -47,10 +51,15 @@ export interface Oferta {
     id_nivel_requerido: string;
     // Campos adicionales sincronizados con ofertas microservice
     modalidad?: string;
+    ciudad?: string;
+    pais?: string;
+    salario_min?: number;
+    salario_max?: number;
+
     competencias_requeridas?: string[];
     habilidades_obligatorias?: OfertaSkill[];
     habilidades_deseables?: OfertaSkill[];
-    // Vector embedding para búsqueda semántica (generado de título + descripción + habilidades)
+    // Vector embedding para búsqueda semántica
     embedding_oferta?: number[];
 }
 
@@ -86,6 +95,8 @@ export interface MatchResult {
         habilidades_obligatorias: number;
         habilidades_deseables: number;
         nivel_jerarquico: number;
+        ubicacion: number;
+        modalidad: number;
     };
 }
 
@@ -100,6 +111,8 @@ export interface OfferMatchResult {
         similitud_vectorial: number;
         habilidades_match: number;
         nivel_jerarquico: number;
+        ubicacion: number;
+        modalidad: number;
     };
 }
 
