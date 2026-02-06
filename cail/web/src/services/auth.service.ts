@@ -54,7 +54,12 @@ class AuthService {
             // 3. Obtener perfil del backend
             const profileResponse = await apiService.get<{ status: string; data: any }>('/users/profile');
 
-            const tipoUsuario = profileResponse.data.tipoUsuario || 'POSTULANTE';
+            if (!profileResponse || !profileResponse.data) {
+                console.warn('⚠️ Invalid profile response format:', profileResponse);
+            }
+
+            const profileData = profileResponse?.data || {};
+            const tipoUsuario = profileData.tipoUsuario || 'POSTULANTE';
             const actualRole: UIUserRole = tipoUsuario === 'POSTULANTE' ? 'candidate' : 'employer';
 
             // 4. Validar que el rol coincida (si se especificó un rol esperado)
@@ -68,10 +73,10 @@ class AuthService {
             return {
                 idCuenta: user.uid,
                 email: user.email || email,
-                nombreCompleto: profileResponse.data.nombreCompleto || 'Usuario',
+                nombreCompleto: profileData.nombreCompleto || 'Usuario',
                 tipoUsuario: tipoUsuario,
                 token: idToken,
-                needsPasswordChange: profileResponse.data.needsPasswordChange || false,
+                needsPasswordChange: profileData.needsPasswordChange || false,
             };
         } catch (error) {
             if (error instanceof RoleMismatchError) {

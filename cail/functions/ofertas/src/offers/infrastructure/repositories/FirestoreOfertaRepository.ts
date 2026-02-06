@@ -106,7 +106,7 @@ export class FirestoreOfertaRepository implements IOfertaRepository {
     private mapToEntity(data: any, docId?: string): Oferta {
         return new Oferta({
             // Use docId as fallback if idOferta is not stored in document
-            idOferta: data.idOferta || docId,
+            idOferta: data.idOferta || docId!,
             titulo: data.titulo,
             descripcion: data.descripcion,
             empresa: data.empresa,

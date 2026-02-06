@@ -5,17 +5,17 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api/usuarios': {
+      '/api/users': {
         target: 'https://us-central1-cail-backend-prod.cloudfunctions.net',
         changeOrigin: true,
         secure: true,
-        rewrite: (path) => path.replace(/^\/api\/usuarios/, '/usuarios'),
+        rewrite: (path) => path.replace(/^\/api\/users/, '/users'),
       },
-      '/api/ofertas': {
+      '/api/offers': {
         target: 'https://us-central1-cail-backend-prod.cloudfunctions.net',
         changeOrigin: true,
         secure: true,
-        rewrite: (path) => path.replace(/^\/api\/ofertas/, '/ofertas'),
+        rewrite: (path) => path.replace(/^\/api\/offers/, '/offers'),
       },
       '/api/matching': {
         target: 'https://us-central1-cail-backend-prod.cloudfunctions.net/matching',

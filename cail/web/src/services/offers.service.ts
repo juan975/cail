@@ -33,7 +33,7 @@ class OffersService {
         }
 
         const response = await apiService.get<OfferApiResponse<Offer[]>>(url);
-        return response.data;
+        return response?.data || [];
     }
 
     /**
@@ -107,7 +107,7 @@ class OffersService {
         const response = await apiService.get<OfferApiResponse<Offer[]>>(
             `/matching/discover${params}`
         );
-        return response.data;
+        return response?.data || [];
     }
 }
 

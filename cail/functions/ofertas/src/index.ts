@@ -59,7 +59,10 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 // Rutas de Ofertas
+// Rutas de Ofertas
 app.use('/offers', offersRoutes);
+app.use('/api/ofertas', offersRoutes);
+app.use('/api/offers', offersRoutes);
 
 // Error handler
 app.use(errorHandler);

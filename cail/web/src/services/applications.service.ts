@@ -41,7 +41,7 @@ class ApplicationsService {
         const response = await apiService.get<ApplicationApiResponse<Application[]>>(
             '/matching/applications'
         );
-        return response.data;
+        return response?.data || [];
     }
 
     /**
@@ -63,16 +63,31 @@ class ApplicationsService {
                             empresa: '', // Restricted for candidates
                         }
                     };
-                } catch {
-                    // Si la oferta ya no existe, retornar sin información
+                } catch (error: any) {
+                    console.warn(`Could not load offer ${app.idOferta} for application ${app.idAplicacion}:`, error);
+                    // Si la oferta ya no existe (404) o el servicio falla, retornar sin información
                     return {
                         ...app,
                         oferta: {
-                            titulo: 'Oferta no disponible',
-                            empresa: '',
-                            ciudad: '-',
-                            modalidad: '-',
-                        }
+                            id: app.idOferta, // Mantener el ID original
+                            title: 'Oferta no disponible',
+                            company: '',
+                            description: 'Esta oferta ya no está disponible o fue eliminada',
+                            location: '-',
+                            modality: '-',
+                            salaryRange: '-',
+                            employmentType: '-',
+                            industry: '-',
+                            hierarchyLevel: '-',
+                            requiredCompetencies: [],
+                            requiredExperience: '-',
+                            requiredEducation: '-',
+                            professionalArea: '-',
+                            economicSector: '-',
+                            experienceLevel: '-',
+                            postedDate: '-',
+                            technicalSkills: []
+                        } as any // Cast temporal para evitar problemas de tipos con campos faltantes
                     };
                 }
             })
@@ -88,7 +103,7 @@ class ApplicationsService {
         const response = await apiService.get<ApplicationApiResponse<Application[]>>(
             `/matching/oferta/${idOferta}/applications`
         );
-        return response.data;
+        return response?.data || [];
     }
 
     /**
@@ -99,7 +114,7 @@ class ApplicationsService {
         const response = await apiService.get<ApplicationApiResponse<ApplicationWithCandidate[]>>(
             `/matching/oferta/${idOferta}/applications-detailed`
         );
-        return response.data;
+        return response?.data || [];
     }
 
     /**

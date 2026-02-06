@@ -1,9 +1,9 @@
 export const API_CONFIG = {
     // URLs de Microservicios en Producción (GCP)
     SERVICES: {
-        USUARIOS: '/api/usuarios',
-        OFERTAS: '/api/ofertas',
-        MATCHING: '/api', // Routes already include /matching prefix
+        USUARIOS: '/api',
+        OFERTAS: '/api',
+        MATCHING: '/api',
     },
     TIMEOUT: 15000,
     ENDPOINTS: {

@@ -139,7 +139,9 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 // Rutas de Matching
+// Rutas de Matching
 app.use('/matching', matchingRoutes);
+app.use('/api/matching', matchingRoutes);
 
 // Error handler
 app.use(errorHandler);

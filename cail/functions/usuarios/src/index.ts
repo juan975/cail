@@ -85,12 +85,38 @@ app.get('/health', (_req: Request, res: Response) => {
 // ============================================
 // Rutas de Autenticación
 // ============================================
+// Debug Logger
+app.use((req, res, next) => {
+    console.log(`[DEBUG] Request: ${req.method} ${req.originalUrl}`);
+    next();
+});
+
+// ============================================
+// Rutas de Autenticación
+// ============================================
 app.use('/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 
 // ============================================
 // Rutas de Usuarios/Perfiles
 // ============================================
 app.use('/users', usersRoutes);
+app.use('/api/users', usersRoutes);
+
+// ============================================
+// Debug Catch-All (Temporary)
+// ============================================
+app.use('*', (req, res) => {
+    res.status(404).json({
+        status: 'debug_404',
+        message: 'Route not found in Express App',
+        path: req.path,
+        originalUrl: req.originalUrl,
+        baseUrl: req.baseUrl,
+        method: req.method,
+        routes: ['/auth', '/api/auth', '/users', '/api/users']
+    });
+});
 
 // ============================================
 // Manejador de errores global
