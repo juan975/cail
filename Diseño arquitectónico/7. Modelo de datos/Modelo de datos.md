@@ -93,7 +93,8 @@ El modelo conceptual anterior se implementa en **Firebase Firestore** como una b
 
 ### Diagrama de Colecciones Firestore
 
-![Diagrama Firestore](assets/Diagrama_Firestore.png)
+<img width="1777" height="1760" alt="Diagrama " src="https://github.com/user-attachments/assets/acaa45be-2988-40c8-b1b8-67ea04c243c4" />
+
 
 ---
 
@@ -195,22 +196,22 @@ Colección auxiliar para catálogos del sistema (áreas, habilidades, niveles).
 │                    RELACIONES ENTRE COLECCIONES                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   USUARIOS ──────┬────────── 1:1 ──────────── CANDIDATOS                   │
+│   USUARIOS ──────┬────────── 1:1 ──────────── CANDIDATOS                    │
 │                  │                            (tiene_perfil)                │
 │                  │                                                          │
-│                  └────────── 1:1 ──────────── EMPRESAS                     │
+│                  └────────── 1:1 ──────────── EMPRESAS                      │
 │                                               (tiene_perfil)                │
 │                                                                             │
-│   EMPRESAS ─────────────── 1:N ──────────── OFERTAS                        │
+│   EMPRESAS ─────────────── 1:N ──────────── OFERTAS                         │
 │                                              (publica)                      │
 │                                                                             │
-│   OFERTAS ──────────────── 1:N ──────────── POSTULACIONES                  │
+│   OFERTAS ──────────────── 1:N ──────────── POSTULACIONES                   │
 │                                              (recibe)                       │
 │                                                                             │
-│   CANDIDATOS ───────────── 1:N ──────────── POSTULACIONES                  │
+│   CANDIDATOS ───────────── 1:N ──────────── POSTULACIONES                   │
 │                                              (envía)                        │
 │                                                                             │
-│   CATALOGS ─ ─ ─ ─ ─ ─ ─  lookup ─ ─ ─ ─ ─  OFERTAS                        │
+│   CATALOGS ─ ─ ─ ─ ─ ─ ─  lookup ─ ─ ─ ─ ─  OFERTAS                         │
 │                                              (sirve_de_catalogo)            │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -250,6 +251,7 @@ candidatos: { ciudad: ASC, fecha_actualizacion: DESC }
 
 ---
 
-*Modelo de datos actualizado - Febrero 2026*
+
+
 
 
