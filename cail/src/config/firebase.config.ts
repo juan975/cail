@@ -1,15 +1,21 @@
+/**
+ * Configuración de Firebase para la App Móvil
+ * 
+ * Credenciales de Firebase Console - cail-backend-prod
+ */
+
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import Constants from 'expo-constants';
 
+// Configuración de Firebase - cail-backend-prod
 const firebaseConfig = {
-    apiKey: Constants.expoConfig?.extra?.firebaseApiKey || process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-    authDomain: Constants.expoConfig?.extra?.firebaseAuthDomain || process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: Constants.expoConfig?.extra?.firebaseProjectId || process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-    storageBucket: Constants.expoConfig?.extra?.firebaseStorageBucket || process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: Constants.expoConfig?.extra?.firebaseMessagingSenderId || process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: Constants.expoConfig?.extra?.firebaseAppId || process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
-    measurementId: Constants.expoConfig?.extra?.firebaseMeasurementId || process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
+    apiKey: "AIzaSyA2nDXPnQeCmePp3-6xDmurhUBeSRuNW_g",
+    authDomain: "cail-backend-prod.firebaseapp.com",
+    projectId: "cail-backend-prod",
+    storageBucket: "cail-backend-prod.firebasestorage.app",
+    messagingSenderId: "346693146426",
+    appId: "1:346693146426:web:0f8dde0713d71fe8b92203",
+    measurementId: "G-7QFNGV9J2K"
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
