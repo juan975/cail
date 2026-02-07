@@ -24,8 +24,7 @@ En el contexto de CAIL, este diagrama muestra:
 
 ## Diagrama de Despliegue (Bolsa de Empleos CAIL)
 
-<img width="975" height="573" alt="Diagrama de Despliegue CAIL" src="https://github.com/user-attachments/assets/5858a6bc-3e86-4cb6-82ee-c6b9cd87f16f" />
-
+<img width="9339" height="4878" alt="Diagrama Despliegue CAIL Serverless Final" src="https://github.com/user-attachments/assets/2599a507-d1e1-42af-8fb3-1b5315aef513" />
 
 
 ---
